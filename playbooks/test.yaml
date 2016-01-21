@@ -5,4 +5,4 @@
     a: toto
   tasks:
     - name: Create test file
-      template: src=templates/test.txt dest=/tmp/test.txt
+      template: src=templates/test.txt.j2 dest=/tmp/test.txt
