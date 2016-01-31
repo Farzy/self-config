@@ -3,3 +3,11 @@ packages:
   - dmidecode
   - screen
   - tshark
+  - less
+  - zsh
+  - tcpdump
+  - strace
+  - ltrace
+  - nmap
+  - mtr
+  - lftp
