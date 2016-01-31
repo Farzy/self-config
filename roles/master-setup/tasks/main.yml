@@ -20,6 +20,24 @@
     shell: /bin/bash
     password: "{{ passwords.farzy }}"
 
+- name: Set up authorized_keys for farzy
+  authorized_key:
+    user: farzy
+    exclusive: yes
+    manage_dir: yes
+    key: "{{ item }}"
+  with_file:
+    - files/ssh-pubkey-farzy
+
+- name: Set up authorized_keys for root
+  authorized_key:
+    user: root
+    exclusive: yes
+    manage_dir: yes
+    key: "{{ item }}"
+  with_file:
+    - files/ssh-pubkey-farzy
+
 - name: Install packages
   apt: name={{ item }} state=present
   with_items: "{{packages}}"
