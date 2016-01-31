@@ -1,0 +1,13 @@
+---
+
+- name: Create test file
+  template: src=templates/test.txt.j2 dest=/tmp/test.txt
+- name: Debugging
+  debug: msg="Install package {{ item }}..."
+  with_items: "{{packages}}"
+
+# Config shell
+# compte farzy
+# config ssh
+# config vim, screen, etc
+# config mail
