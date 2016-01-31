@@ -1,5 +1,25 @@
 ---
 
+- name: Create Farzad's group
+  group:
+    name: farzy
+    gid: 1000
+    state: present
+
+- name: Create Farzad's user
+  user:
+    name: farzy
+    uid: 1000
+    state: present
+    append: yes
+    comment: Farzad FARID
+    group: farzy
+#    groups:
+#      - sudo
+#      - adm
+    shell: /bin/bash
+    password: "{{ passwords.farzy }}"
+
 - name: Install packages
   apt: name={{ item }} state=present
   with_items: "{{packages}}"
