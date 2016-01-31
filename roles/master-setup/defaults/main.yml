@@ -1,13 +1,49 @@
 ---
 packages:
+  - bzip2
   - dmidecode
-  - screen
-  - tshark
+  - dnsutils
+  - gnupg
+  - iftop
   - less
-  - zsh
-  - tcpdump
-  - strace
-  - ltrace
-  - nmap
-  - mtr
   - lftp
+  - logrotate
+  - lsof
+  - ltrace
+  - lynx
+  - mlocate
+  - mmv
+  - mtr
+  - mutt
+  - ncftp
+  - nmap
+  - rsync
+  - screen
+  - strace
+  - sudo
+  - tcpdump
+  - traceroute
+  - tshark
+  - unzip
+  - vim
+  - wdiff
+  - wget
+  - whois
+  - zip
+  - zsh
+  - dlocate
+  - aptitude
+  - apt-listchanges
+  - apt-listbugs
+  - apt-rdepends
+  - apt-show-source
+  - apt-show-versions
+  - apt-utils
+  - cron-apt
+  - devscripts
+  - fakeroot
+  - reportbug
+  - build-essential
+  - debsums
+  - dh-make
+  - deborphan
