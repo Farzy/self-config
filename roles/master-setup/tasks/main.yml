@@ -14,9 +14,7 @@
     append: yes
     comment: Farzad FARID
     group: farzy
-#    groups:
-#      - sudo
-#      - adm
+    groups: "sudo,adm"
     shell: /bin/bash
     password: "{{ passwords.farzy }}"
 
