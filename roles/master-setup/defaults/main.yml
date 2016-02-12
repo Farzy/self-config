@@ -1,5 +1,6 @@
 ---
 packages:
+  - awscli
   - bzip2
   - dmidecode
   - dnsutils
