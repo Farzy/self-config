@@ -49,3 +49,5 @@
 # Configuration Dropbox
 # locale
 # mdadm
+# PAM
+# rsyslog
