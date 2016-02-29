@@ -16,7 +16,6 @@ packages:
   - mmv
   - mtr
   - mutt
-  - ncftp
   - nmap
   - rsync
   - screen
