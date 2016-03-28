@@ -5,6 +5,7 @@ packages:
   - dmidecode
   - dnsutils
   - gnupg
+  - haskell-platform
   - iftop
   - less
   - lftp
