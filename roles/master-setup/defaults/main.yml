@@ -24,6 +24,7 @@ packages:
   - strace
   - sudo
   - tcpdump
+  - tmux
   - traceroute
   - tshark
   - unzip
