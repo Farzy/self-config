@@ -5,6 +5,7 @@ packages:
   - dmidecode
   - dnsutils
   - gnupg
+  - haskell-platform
   - iftop
   - less
   - lftp
@@ -16,7 +17,6 @@ packages:
   - mmv
   - mtr
   - mutt
-  - ncftp
   - nmap
   - powerline
   - rsync

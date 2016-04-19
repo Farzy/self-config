@@ -38,7 +38,7 @@
 
 - name: Install packages
   apt: name={{ item }} state=present
-  with_items: packages
+  with_items: "{{packages}}"
   tags: packages
 
 # Config shell
@@ -46,3 +46,8 @@
 # config ssh
 # config vim, screen, etc
 # config mail
+# Configuration Dropbox
+# locale
+# mdadm
+# PAM
+# rsyslog
