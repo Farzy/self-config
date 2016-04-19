@@ -18,6 +18,7 @@ packages:
   - mutt
   - ncftp
   - nmap
+  - powerline
   - rsync
   - screen
   - strace
@@ -27,6 +28,7 @@ packages:
   - tshark
   - unzip
   - vim
+  - vim-addon-manager
   - wdiff
   - wget
   - whois
