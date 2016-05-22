@@ -3,3 +3,6 @@ master.pragmatic-source.com
 
 [new]
 silence.farzy.org
+
+[mac]
+delerium ansible_connection=local ansible_user=ffarid
