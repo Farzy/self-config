@@ -46,11 +46,12 @@ packages:
 
 packages_with_config:
   - awscli
+  - cron-apt
   - git
+  - postfix
   - powerline
   - screen
   - tmux
   - vim
   - vim-addon-manager
   - zsh
-  - cron-apt
