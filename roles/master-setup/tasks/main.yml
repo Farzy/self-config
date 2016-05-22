@@ -52,3 +52,4 @@
 # mdadm
 # PAM
 # rsyslog
+# /etc/reportbug.conf
