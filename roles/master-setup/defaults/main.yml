@@ -1,9 +1,22 @@
 ---
 packages:
-  - awscli
+  - aptitude
+  - apt-listchanges
+  - apt-listbugs
+  - apt-rdepends
+  - apt-show-source
+  - apt-show-versions
+  - apt-utils
+  - build-essential
   - bzip2
+  - deborphan
+  - debsums
+  - devscripts
+  - dh-make
+  - dlocate
   - dmidecode
   - dnsutils
+  - fakeroot
   - gnupg
   - haskell-platform
   - iftop
@@ -18,36 +31,26 @@ packages:
   - mtr
   - mutt
   - nmap
-  - powerline
+  - reportbug
   - rsync
-  - screen
   - strace
   - sudo
   - tcpdump
-  - tmux
   - traceroute
   - tshark
   - unzip
-  - vim
-  - vim-addon-manager
   - wdiff
   - wget
   - whois
   - zip
+
+packages_with_config:
+  - awscli
+  - git
+  - powerline
+  - screen
+  - tmux
+  - vim
+  - vim-addon-manager
   - zsh
-  - dlocate
-  - aptitude
-  - apt-listchanges
-  - apt-listbugs
-  - apt-rdepends
-  - apt-show-source
-  - apt-show-versions
-  - apt-utils
   - cron-apt
-  - devscripts
-  - fakeroot
-  - reportbug
-  - build-essential
-  - debsums
-  - dh-make
-  - deborphan
