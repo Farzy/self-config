@@ -41,6 +41,13 @@
   with_items: "{{packages}}"
   tags: packages
 
+- name: Install Git config
+  template: src=gitconfig.j2 dest={{ farzy.home }}/.gitconfig mode="0600" owner=farzy group=farzy
+
+- name: Install personnal config files
+  copy: src="dotfiles/{{ item.name }}" dest="{{ farzy.home }}/.{{ item.name }}" mode={{ item.mode }} owner=farzy group=farzy
+  with_items: "{{ farzy.dotfiles }}"
+
 # Config shell
 # compte farzy
 # config ssh

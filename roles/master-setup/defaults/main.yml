@@ -1,4 +1,14 @@
 ---
+farzy:
+  name: "Farzad FARID"
+  email:
+    personal: "farzy@farzy.org"
+    pro: "ffarid@pragmatic-source.com"
+  home: "/home/farzy"
+  dotfiles:
+    - name: "gitignore_global"
+      mode: "0644"
+
 packages:
   - aptitude
   - apt-listchanges
@@ -17,6 +27,7 @@ packages:
   - dmidecode
   - dnsutils
   - fakeroot
+  - git
   - gnupg
   - haskell-platform
   - iftop
@@ -47,7 +58,6 @@ packages:
 packages_with_config:
   - awscli
   - cron-apt
-  - git
   - postfix
   - powerline
   - screen
