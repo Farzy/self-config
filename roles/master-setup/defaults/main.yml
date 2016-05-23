@@ -9,6 +9,13 @@ farzy:
     - name: "gitignore_global"
       mode: "0644"
 
+global:
+  etcfiles:
+    - name: "profile.d"
+      mode: "0644"
+    - name: "vim"
+      mode: "0644"
+
 packages:
   - aptitude
   - apt-listchanges
