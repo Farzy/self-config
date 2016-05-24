@@ -1,5 +1,5 @@
 # Script de configuration bash, exécuté pour les shell interactifs.
-# FICHIER GÉRÉ PAR PUPPET. NE PAS MODIFIER.
+# {{ ansible_managed }}
 
 # see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
 # for examples
@@ -132,8 +132,8 @@ umask 022
 
 # Fonction shell qui permet de récupérer ssh-agent dans un screen
 # détaché et rattaché à un ssh différent.
-ssh-screen-auth () 
-{ 
+ssh-screen-auth ()
+{
     local SCREENPID SOCK DISP;
     local -a SCREENPIDS;
     SCREENPIDS=($(pgrep -f "screen -(r|dr|DR)" -u $UID));
