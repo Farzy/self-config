@@ -7,7 +7,8 @@ farzy:
   home: "/home/farzy"
   dotfiles:
     - name: ".gitignore_global"
-      mode: "0644"
+    - name: ".bashrc"
+    - name: ".profile"
 
 global:
   etcfiles:
