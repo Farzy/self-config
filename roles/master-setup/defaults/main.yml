@@ -6,7 +6,7 @@ farzy:
     pro: "ffarid@pragmatic-source.com"
   home: "/home/farzy"
   dotfiles:
-    - name: "gitignore_global"
+    - name: ".gitignore_global"
       mode: "0644"
 
 global:
