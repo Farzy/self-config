@@ -15,6 +15,11 @@ if [ -n "$BASH_VERSION" ]; then
     if [ -f "$HOME/.bashrc" ]; then
 	. "$HOME/.bashrc"
     fi
+
+    # Powerline configuration
+    powerline-daemon -q
+    POWERLINE_BASH_CONTINUATION=1
+    POWERLINE_BASH_SELECT=1
     . /usr/share/powerline/bindings/bash/powerline.sh
 fi
 
