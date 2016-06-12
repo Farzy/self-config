@@ -15,53 +15,57 @@ global:
       mode: "0644"
     - name: "vim"
       mode: "0644"
-
-packages:
-  - aptitude
-  - apt-listchanges
-  - apt-listbugs
-  - apt-rdepends
-  - apt-show-source
-  - apt-show-versions
-  - apt-utils
-  - build-essential
-  - bzip2
-  - debconf
-  - deborphan
-  - debsums
-  - devscripts
-  - dh-make
-  - dlocate
-  - dmidecode
-  - dnsutils
-  - fakeroot
-  - git
-  - gnupg
-  - haskell-platform
-  - iftop
-  - less
-  - lftp
-  - logrotate
-  - lsof
-  - ltrace
-  - lynx
-  - mlocate
-  - mmv
-  - mtr
-  - mutt
-  - nmap
-  - reportbug
-  - rsync
-  - strace
-  - sudo
-  - tcpdump
-  - traceroute
-  - tshark
-  - unzip
-  - wdiff
-  - wget
-  - whois
-  - zip
+  debconf:
+    - name: postfix
+      question: mailname
+      value: "pragmatic-source.com"
+      vtype: string
+  packages:
+    - aptitude
+    - apt-listchanges
+    - apt-listbugs
+    - apt-rdepends
+    - apt-show-source
+    - apt-show-versions
+    - apt-utils
+    - build-essential
+    - bzip2
+    - debconf
+    - deborphan
+    - debsums
+    - devscripts
+    - dh-make
+    - dlocate
+    - dmidecode
+    - dnsutils
+    - fakeroot
+    - git
+    - gnupg
+    - haskell-platform
+    - iftop
+    - less
+    - lftp
+    - logrotate
+    - lsof
+    - ltrace
+    - lynx
+    - mlocate
+    - mmv
+    - mtr
+    - mutt
+    - nmap
+    - reportbug
+    - rsync
+    - strace
+    - sudo
+    - tcpdump
+    - traceroute
+    - tshark
+    - unzip
+    - wdiff
+    - wget
+    - whois
+    - zip
 
 packages_with_config:
   - awscli

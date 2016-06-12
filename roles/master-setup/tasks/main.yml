@@ -36,9 +36,14 @@
   with_file:
     - files/ssh-pubkey-farzy
 
+- name: Setup Debian packages configuration (debconf)
+  debconf: name="{{ item.name }}" question="{{ item.question }}" value="{{ item.value }}" vtype="{{ item.vtype }}"
+  with_items: "{{ global.debconf }}"
+  tags: configuration
+
 - name: Install packages
   apt: name={{ item }} state=present
-  with_items: "{{packages}}"
+  with_items: "{{ global.packages }}"
   tags: packages
 
 - name: Install global /etc files
