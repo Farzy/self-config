@@ -9,6 +9,7 @@ farzy:
     - name: ".gitignore_global"
     - name: ".bashrc"
     - name: ".profile"
+    - name: ".tmux.conf"
 
 global:
   etcfiles:
