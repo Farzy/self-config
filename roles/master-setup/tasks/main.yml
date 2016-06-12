@@ -58,5 +58,5 @@
   template: src=gitconfig.j2 dest={{ farzy.home }}/.gitconfig mode="0600" owner=farzy group=farzy
 
 - name: Install personal config files
-  copy: src="dotfiles/{{ item.name }}" dest="{{ farzy.home }}/{{ item.name }}" mode={{ item.mode | default("0644") }} owner=farzy group=farzy
+  copy: src="dotfiles/{{ item.name }}" dest="{{ farzy.home }}/" mode={{ item.mode | default("0644") }} owner=farzy group=farzy
   with_items: "{{ farzy.dotfiles }}"

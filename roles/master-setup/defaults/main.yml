@@ -45,6 +45,7 @@ global:
     - git
     - gnupg
     - haskell-platform
+    - htop
     - iftop
     - less
     - lftp
