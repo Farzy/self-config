@@ -4,7 +4,7 @@ farzy:
   email:
     personal: "farzy@farzy.org"
     pro: "ffarid@pragmatic-source.com"
-  home: "/home/farzy"
+  home: "/data/home/farzy"
   dotfiles:
     - name: ".gitignore_global"
     - name: ".bashrc"
