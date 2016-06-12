@@ -10,6 +10,7 @@ farzy:
     - name: ".bashrc"
     - name: ".profile"
     - name: ".tmux.conf"
+    - name: ".config"
 
 global:
   etcfiles:
@@ -56,6 +57,7 @@ global:
     - mtr
     - mutt
     - nmap
+    - powerline
     - python-pip
     - reportbug
     - rsync
@@ -74,7 +76,6 @@ packages_with_config:
   - awscli
   - cron-apt
   - postfix
-  - powerline
   - screen
   - tmux
   - vim
