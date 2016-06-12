@@ -26,6 +26,7 @@ packages:
   - apt-utils
   - build-essential
   - bzip2
+  - debconf
   - deborphan
   - debsums
   - devscripts
