@@ -60,3 +60,8 @@
 - name: Install personal config files
   copy: src="dotfiles/{{ item.name }}" dest="{{ farzy.home }}/" mode={{ item.mode | default("0644") }} owner=farzy group=farzy
   with_items: "{{ farzy.dotfiles }}"
+
+- name: Install Dropbox
+  become: yes
+  become_user: farzy
+  shell: cd ~ && wget -O - "https://www.dropbox.com/download?plat=lnx.x86_64" | tar xzf - creates="{{ farzy.home }}/.dropbox-dist"
