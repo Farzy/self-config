@@ -52,16 +52,23 @@
 - name: Install global /etc files
   copy: src="etcfiles/{{ item.name }}" dest="/etc/" mode={{ item.mode | default("0644") }} owner=root group=root
   with_items: "{{ global.etcfiles }}"
+  tags: configuration
 
 
 - name: Install Git config
   template: src=gitconfig.j2 dest={{ farzy.home }}/.gitconfig mode="0600" owner=farzy group=farzy
+  tags: configuration
 
 - name: Install personal config files
   copy: src="dotfiles/{{ item.name }}" dest="{{ farzy.home }}/" mode={{ item.mode | default("0644") }} owner=farzy group=farzy
   with_items: "{{ farzy.dotfiles }}"
+  tags: configuration
 
 - name: Install Dropbox
   become: yes
   become_user: farzy
   shell: cd ~ && wget -O - "https://www.dropbox.com/download?plat=lnx.x86_64" | tar xzf - creates="{{ farzy.home }}/.dropbox-dist"
+  tags: packages
+
+- name: Sysctl settings for Dropbox
+  sysctl: name="fs.inotify.max_user_watches" value=100000 sysctl_set=yes state=present reload=yes
