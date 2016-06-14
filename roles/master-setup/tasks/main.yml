@@ -75,6 +75,7 @@
 
 - name: Unit file for Dropbox
   copy: src="dropbox-farzy.service" dest="/lib/systemd/system" mode="0644" owner=root group=root
+  notify: Reload systemd
 
-- name: Activate Dropbox Unit
-  systemd: name="dropbox-farzy.service" enabled=yes state=started
+#- name: Activate Dropbox Unit
+#  systemd: name="dropbox-farzy.service" enabled=yes state=started
