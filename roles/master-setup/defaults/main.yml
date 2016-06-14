@@ -10,7 +10,7 @@ farzy:
     - name: ".bashrc"
     - name: ".profile"
     - name: ".tmux.conf"
-    - name: ".config"
+    #- name: ".config"
 
 global:
   etcfiles:
