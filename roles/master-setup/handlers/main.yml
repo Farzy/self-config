@@ -1,5 +1,5 @@
 ---
 
 - name: Reload systemd
-  command: /bin/systemctl reload-daemon
+  command: /bin/systemctl daemon-reload
 
