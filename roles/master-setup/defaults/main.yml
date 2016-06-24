@@ -57,6 +57,7 @@ global:
     - mmv
     - mtr
     - mutt
+    - ncdu
     - nmap
     - powerline
     - python-pip
