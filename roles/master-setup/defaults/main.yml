@@ -69,6 +69,7 @@ global:
     - traceroute
     - tshark
     - unzip
+    - vsftpd
     - wdiff
     - wget
     - whois
