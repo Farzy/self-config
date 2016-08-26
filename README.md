@@ -18,9 +18,12 @@ Ansible configuration for my servers
 * config vim, screen, etc
 * config tmux
 * config mail
-* Configuration Dropbox
 * locale
 * mdadm
 * PAM
 * rsyslog
 * /etc/reportbug.conf
+* MariaDB
+* PHP
+* Postfix
+* Tinyproxy
