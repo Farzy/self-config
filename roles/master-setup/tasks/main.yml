@@ -36,6 +36,12 @@
   with_file:
     - files/ssh-pubkey-farzy
 
+- name: Setup Debian backports
+  apt_repository:
+    repo: 'deb http://ftp.debian.org/debian jessie-backports main contrib non-free'
+    state: present
+    filename: 'jessie-backports'
+
 - name: Setup Debian packages configuration (debconf)
   debconf: name="{{ item.name }}" question="{{ item.question }}" value="{{ item.value }}" vtype="{{ item.vtype }}"
   with_items: "{{ global.debconf }}"
