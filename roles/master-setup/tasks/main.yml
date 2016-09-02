@@ -67,7 +67,9 @@
 - name: Install Dropbox
   become: yes
   become_user: farzy
-  shell: cd ~ && wget -O - "https://www.dropbox.com/download?plat=lnx.x86_64" | tar xzf - creates="{{ farzy.home }}/.dropbox-dist"
+  shell: cd ~ && wget -O - "https://www.dropbox.com/download?plat=lnx.x86_64" | tar xzf -
+  args:
+    creates: "{{ farzy.home }}/.dropbox-dist"
   tags: packages
 
 - name: Sysctl settings for Dropbox
