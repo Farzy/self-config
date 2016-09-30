@@ -27,3 +27,8 @@ Ansible configuration for my servers
 * PHP
 * Postfix
 * Tinyproxy
+* FTP :
+
+
+    pure-pw useradd scanner -u $(id -u farzy) -g $(id -g farzy) -d /data/home/farzy/Dropbox/Scanner -c "FTP Scanner" 
+    pure-pw mkdb

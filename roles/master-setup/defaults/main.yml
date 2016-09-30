@@ -60,6 +60,7 @@ global:
     - ncdu
     - nmap
     - powerline
+    - pure-ftpd
     - python-pip
     - reportbug
     - rsync
@@ -69,7 +70,6 @@ global:
     - traceroute
     - tshark
     - unzip
-    - vsftpd
     - wdiff
     - wget
     - whois

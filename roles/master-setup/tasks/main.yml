@@ -88,3 +88,14 @@
 
 - name: Activate Dropbox Unit
   service: name="dropbox-farzy" enabled=yes state=started
+
+- name: Cleanup Pure-FTPd configuration
+  file: path="/etc/pure-ftpd/auth/{{ item }}" state=absent
+  with_items:
+   - 65unix
+   - 70pam
+  notify: Reload Pure-FTPd
+
+- name: Add PureDB to Pure-FTPd
+  file: path="/etc/pure-ftpd/auth/60puredb" src="../conf/PureDB" state=link
+  notify: Reload Pure-FTPd
