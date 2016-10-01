@@ -18,6 +18,8 @@ global:
       mode: "0644"
     - name: "vim"
       mode: "0644"
+    - name: "screenrc"
+      mode: "0644"
   debconf:
     - name: postfix
       question: mailname
