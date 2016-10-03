@@ -22,11 +22,11 @@ global:
       mode: "0644"
   debconf:
     - name: debconf
-      question: priority
+      question: "debconf/priority"
       value: low
       vtype: select
     - name: postfix
-      question: mailname
+      question: "postfix/mailname"
       value: "pragmatic-source.com"
       vtype: string
   packages:
