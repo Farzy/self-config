@@ -21,6 +21,10 @@ global:
     - name: "screenrc"
       mode: "0644"
   debconf:
+    - name: debconf
+      question: priority
+      value: low
+      vtype: select
     - name: postfix
       question: mailname
       value: "pragmatic-source.com"
