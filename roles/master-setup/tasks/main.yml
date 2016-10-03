@@ -36,12 +36,19 @@
   with_file:
     - files/ssh-pubkey-farzy
 
+- name: Add APT keys
+  apt_key: keyserver={{ item.keyserver }} id={{ item.id }} state={{ item.state | default("present") }}
+  with_items: "{{ global.apt_keys }}"
+  tags: configuration
+
 # For Let's Encrypt
-- name: Setup Debian backports
+- name: Setup Debian repositories
   apt_repository:
-    repo: 'deb http://ftp.debian.org/debian jessie-backports main contrib non-free'
-    state: present
-    filename: 'jessie-backports'
+    repo: "{{ item.repo }}"
+    state: "{{ item.state | default('present') }}"
+    filename: "{{ item.filename }}"
+  with_items: "{{ global.apt_repositories }}"
+  tags: configuration
 
 - name: Setup Debian packages configuration (debconf)
   debconf: name="{{ item.name }}" question="{{ item.question }}" value="{{ item.value }}" vtype="{{ item.vtype }}"

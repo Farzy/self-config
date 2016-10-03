@@ -20,6 +20,15 @@ global:
       mode: "0644"
     - name: "screenrc"
       mode: "0644"
+  apt_repositories:
+    - repo: 'deb http://ftp.debian.org/debian jessie-backports main contrib non-free'
+      state: present
+      filename: 'jessie-backports'
+    - repo: "deb [arch=amd64,i386] http://ftp.igh.cnrs.fr/pub/mariadb/repo/10.1/debian jessie main"
+      filename: "mariadb"
+  apt_keys:
+    - keyserver: "hkp://keyserver.ubuntu.com:80"
+      id: "0xcbcb082a1bb943db"
   debconf:
     - name: debconf
       question: "debconf/priority"
