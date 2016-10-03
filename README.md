@@ -32,3 +32,8 @@ Ansible configuration for my servers
 
     pure-pw useradd scanner -u $(id -u farzy) -g $(id -g farzy) -d /data/home/farzy/Dropbox/Scanner -c "FTP Scanner" 
     pure-pw mkdb
+
+* Dolibarr
+  * v3.6.1
+  * Données : /data/srv/dolibarr/documents
+  * Backup MySQL : /data/srv/dolibarr/documents/admin/backup/mysqldump_dolibarr_3.6.1_201610022351.sql.bz2
