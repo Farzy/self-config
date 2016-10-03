@@ -50,12 +50,12 @@
   with_items: "{{ global.apt_repositories }}"
   tags: configuration
 
-- name: "Setup Debian packages configuration (debconf): {{ item.name }}"
+- name: Setup Debian packages configuration (debconf)
   debconf: name="{{ item.name }}" question="{{ item.question }}" value="{{ item.value }}" vtype="{{ item.vtype }}"
   with_items: "{{ global.debconf }}"
   tags: configuration
 
-- name: "Install package {{ item.name }}"
+- name: Install packages
   apt: name={{ item }} state=present
   with_items: "{{ global.packages }}"
   tags: packages
@@ -63,7 +63,7 @@
 - name: Install Powerline Gitstatus
   pip: name="powerline-gitstatus" state=latest
 
-- name: "Install global /etc files: {{ item.name }}"
+- name: Install global /etc files
   copy: src="etcfiles/{{ item.name }}" dest="/etc/" mode={{ item.mode | default("0644") }} owner=root group=root
   with_items: "{{ global.etcfiles }}"
   tags: configuration
@@ -73,7 +73,7 @@
   template: src=gitconfig.j2 dest={{ farzy.home }}/.gitconfig mode="0600" owner=farzy group=farzy
   tags: configuration
 
-- name: "Install personal config files: {{ item.name }}"
+- name: Install personal config files
   copy: src="dotfiles/{{ item.name }}" dest="{{ farzy.home }}/" mode={{ item.mode | default("0644") }} owner=farzy group=farzy
   with_items: "{{ farzy.dotfiles }}"
   tags: configuration
