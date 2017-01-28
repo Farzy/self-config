@@ -1,0 +1,4 @@
+# {{ ansible_managed }}
+*~
+.DS_Store
+.idea

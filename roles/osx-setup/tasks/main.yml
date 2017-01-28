@@ -1,0 +1,6 @@
+---
+
+- name: Install personal config files
+  template: src="dotfiles/{{ item.key }}" dest="{{ me.home }}/{{ item.value.name }}" mode={{ item.value.mode | default("0644") }} owner={{ me.user }} group={{ me.group }}
+  with_dict: "{{ me.dotfiles }}"
+  tags: configuration

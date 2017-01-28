@@ -1,0 +1,10 @@
+---
+
+- hosts: delerium
+
+  name: "Deploy Mac Delerium"
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    - role: osx-setup
+      tags: deploy
