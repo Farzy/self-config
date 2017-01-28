@@ -70,12 +70,12 @@
 
 
 - name: Install Git config
-  template: src=gitconfig.j2 dest={{ farzy.home }}/.gitconfig mode="0600" owner=farzy group=farzy
+  template: src=gitconfig.j2 dest={{ me.home }}/.gitconfig mode="0600" owner=farzy group=farzy
   tags: configuration
 
 - name: Install personal config files
-  copy: src="dotfiles/{{ item.name }}" dest="{{ farzy.home }}/" mode={{ item.mode | default("0644") }} owner=farzy group=farzy
-  with_items: "{{ farzy.dotfiles }}"
+  copy: src="dotfiles/{{ item.name }}" dest="{{ me.home }}/" mode={{ item.mode | default("0644") }} owner=farzy group=farzy
+  with_items: "{{ me.dotfiles }}"
   tags: configuration
 
 - name: Install Dropbox
@@ -83,7 +83,7 @@
   become_user: farzy
   shell: cd ~ && wget -O - "https://www.dropbox.com/download?plat=lnx.x86_64" | tar xzf -
   args:
-    creates: "{{ farzy.home }}/.dropbox-dist"
+    creates: "{{ me.home }}/.dropbox-dist"
   tags: packages
 
 - name: Sysctl settings for Dropbox

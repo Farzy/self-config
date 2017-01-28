@@ -1,29 +1,37 @@
 # {{ ansible_managed }}
 [user]
-  name = {{ farzy.name }}
-  email = {{ farzy.email.pro }}
+    name = {{ me.name }}
+    email = {{ me.email.pro }}
 [color]
-  pager = true
-  diff = auto
-  status = auto
-  branch = auto
-  interactive = auto
+    pager = true
+    diff = auto
+    status = auto
+    branch = auto
+    interactive = auto
     ui = auto
 [alias]
-  st = status
-  ci = commit
-  co = checkout
-  fp = format-patch
-  lg = log --graph --pretty=tformat:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%an %cr)%Creset' --abbrev-commit --date=relative
-  lg2 = log --oneline --decorate --graph
-  oops = commit --amend -a -C HEAD
-  prev = checkout HEAD^1
-  next = "!sh -c 'git log --reverse --pretty=%H master | awk \"/$(git rev-parse HEAD)/{getline;print}\" | xargs git checkout'"
+    st = status
+    ci = commit
+    co = checkout
+    fp = format-patch
+    lg = log --graph --pretty=tformat:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%an %cr)%Creset' --abbrev-commit --date=relative
+    lg2 = log --oneline --decorate --graph
+    oops = commit --amend -a -C HEAD
+    prev = checkout HEAD^1
+    next = "!sh -c 'git log --reverse --pretty=%H master | awk \"/$(git rev-parse HEAD)/{getline;print}\" | xargs git checkout'"
+    b = branch -v
+	r = remote -v
+	t = tag -l
+	unstage = reset HEAD
+	uncommit = reset --soft HEAD^
+    spull = !git pull && git submodule sync --recursive && git submodule update --init --recursive
+[merge]
+	#stat = true
 [core]
-  #pager = cat
-  pager = less -FRX
-  excludesfile = {{ farzy.home }}/.gitignore_global
-  quotepath = false
+    #pager = cat
+    pager = less -FRX
+    excludesfile = {{ me.home }}/.gitignore_global
+    quotepath = false
 [github]
   user = Farzy
   token = {{ passwords.github_token }}
@@ -37,3 +45,7 @@
 [mergetool "sourcetree"]
   cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
   trustExitCode = true
+[push]
+    default = upstream
+[credential]
+    helper = osxkeychain
