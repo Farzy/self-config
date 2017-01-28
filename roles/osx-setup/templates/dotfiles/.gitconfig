@@ -20,13 +20,13 @@
     prev = checkout HEAD^1
     next = "!sh -c 'git log --reverse --pretty=%H master | awk \"/$(git rev-parse HEAD)/{getline;print}\" | xargs git checkout'"
     b = branch -v
-	r = remote -v
-	t = tag -l
-	unstage = reset HEAD
-	uncommit = reset --soft HEAD^
+    r = remote -v
+    t = tag -l
+    unstage = reset HEAD
+    uncommit = reset --soft HEAD^
     spull = !git pull && git submodule sync --recursive && git submodule update --init --recursive
 [merge]
-	#stat = true
+    #stat = true
 [core]
     #pager = cat
     pager = less -FRX
