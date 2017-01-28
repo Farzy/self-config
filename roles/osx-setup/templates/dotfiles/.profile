@@ -31,6 +31,7 @@ eval "$(rbenv init -)"
 # Stack / Haskell
 # https://docs.haskellstack.org/en/stable/install_and_upgrade/#path
 export PATH="$HOME/.local/bin:$PATH"
+eval "$(stack --bash-completion-script stack)"
 
 LS_OPTIONS="-G"
 export PAGER=less
