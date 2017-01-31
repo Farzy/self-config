@@ -26,6 +26,7 @@
     key: "{{ item }}"
   with_file:
     - files/ssh-pubkey-farzy
+    - files/ssh-pubkey-farzad-chauffeur-prive
 
 - name: Set up authorized_keys for root
   authorized_key:
