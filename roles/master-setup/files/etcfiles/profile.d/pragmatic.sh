@@ -136,7 +136,7 @@ ssh-screen-auth ()
 {
     local SCREENPID SOCK DISP;
     local -a SCREENPIDS;
-    SCREENPIDS=($(pgrep -f "screen -(r|dr|DR)" -u $UID));
+    SCREENPIDS=($(pgrep -f "screen.* -(r|dr|DR)" -u $UID));
     if [ ${#SCREENPIDS[*]} -ne 1 ]; then
         echo "Il y a plusieurs sessions screen en cours pour l'utilisateur ${USER}(${UID})";
         return 1;
