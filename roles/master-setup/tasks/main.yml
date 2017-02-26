@@ -26,7 +26,7 @@
     key: "{{ item }}"
   with_file:
     - files/ssh-pubkey-farzy
-    - files/ssh-pubkey-farzad-chauffeur-prive
+  tags: auth
 
 - name: Set up authorized_keys for root
   authorized_key:
@@ -36,6 +36,7 @@
     key: "{{ item }}"
   with_file:
     - files/ssh-pubkey-farzy
+  tags: auth
 
 - name: Add APT keys
   apt_key: keyserver={{ item.keyserver }} id={{ item.id }} state={{ item.state | default("present") }}
