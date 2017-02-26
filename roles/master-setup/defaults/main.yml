@@ -48,6 +48,7 @@ global:
     - apt-utils
     - build-essential
     - bzip2
+    - cronolog
     - debconf
     - deborphan
     - debsums
