@@ -20,10 +20,6 @@ export PATH=/usr/local/bin:/usr/local/sbin:$HOME/bin:$PATH
 export GOPATH=$HOME/Dropbox/src/gowork
 export PATH=$PATH:/usr/local/opt/go/libexec/bin:$GOPATH/bin
 
-# export EDITOR='/usr/bin/mate -w'
-# export VISUAL='/usr/bin/mate -w'
-# export LESSEDIT='mate -w -l %lm %f'
-
 # rbenv
 export RBENV_ROOT=/usr/local/var/rbenv
 eval "$(rbenv init -)"
