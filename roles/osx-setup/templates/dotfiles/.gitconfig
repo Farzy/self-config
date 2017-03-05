@@ -49,3 +49,5 @@
     default = upstream
 [credential]
     helper = osxkeychain
+[commit]
+    template = /Users/ffarid/.stCommitMsg
