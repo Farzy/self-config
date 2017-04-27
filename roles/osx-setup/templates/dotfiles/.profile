@@ -110,3 +110,8 @@ fi
 # pyenv-virtual
 if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -)"; fi
 . /usr/local/bin/virtualenvwrapper.sh
+
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f '/Users/ffarid/google-cloud-sdk/path.bash.inc' ]; then source '/Users/ffarid/google-cloud-sdk/path.bash.inc'; fi
+# The next line enables shell command completion for gcloud.
+if [ -f '/Users/ffarid/google-cloud-sdk/completion.bash.inc' ]; then source '/Users/ffarid/google-cloud-sdk/completion.bash.inc'; fi
