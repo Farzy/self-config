@@ -106,3 +106,7 @@ else
     # Setup your normal PS1 here.
     export PS1='\[\e[0;36m\][\A] \u@\h:\[\e[0m\e[0;32m\]\W\[\e[1;33m\]$(__git_ps1 " (%s)")\[\e[0;37m\] \$\[\e[0m\] '
 fi
+
+# pyenv-virtual
+if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -)"; fi
+. /usr/local/bin/virtualenvwrapper.sh
