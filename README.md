@@ -14,6 +14,7 @@ Terraform /Ansible configuration for my servers
   * Storage: `standard`
 * Delete default VPC network called `default`
 * Delete default firewall rules
+* Add public SSH key to Compute Engine Metadata
 
 
 ## Terraform
