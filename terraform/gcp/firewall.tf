@@ -47,3 +47,14 @@ resource "google_compute_firewall" "production-default-allow-ssf" {
 
   enable_logging = true
 }
+
+resource "google_compute_firewall" "production-allow-traffic-from-lb" {
+  name    = "${google_compute_network.production.name}-allow-traffic-from-lb"
+  network = google_compute_network.production.name
+
+  allow {
+    protocol = "tcp"
+  }
+
+  source_ranges = data.google_compute_lb_ip_ranges.lb-ip-ranges.http_ssl_tcp_internal
+}
