@@ -20,8 +20,7 @@
   tags: configuration
 
 - name: Install packages
-  apt: name={{ item }} state=present
-  loop: "{{ global.packages }}"
+  apt: name={{ global.packages }} state=present
   tags: packages
 
 - name: Install global /etc files
