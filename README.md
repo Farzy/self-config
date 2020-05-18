@@ -27,7 +27,11 @@ Terraform /Ansible configuration for my servers
 
 ## Ansible
 
-TODO
+* Install `pipenv`
+* Run `pipenv sync` after each `Pipfile.lock` update
+* Run `pipenv shell`
+* `cd ansible`
+
 
 ### Sample
 
