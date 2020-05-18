@@ -1,7 +1,34 @@
 # self-config
-Ansible configuration for my servers
 
-## Sample
+Terraform /Ansible configuration for my servers
+
+## GCP configuration
+
+* Create a GCP project
+* Create a Service Account and give it **Project Owner** role
+* Create JSON Key
+* Save key under name `terraform/_auth/gcp-admin.json` and in a safe place (**1Password**)
+* Create a GCS bucket:
+  * Name: `farzad-infrastructure`
+  * Location: `eu`
+  * Storage: `standard`
+* Delete default VPC network called `default`
+* Delete default firewall rules
+
+
+## Terraform
+
+* Configure GCP project name and region in `terraform/gcp/setup.tf`
+* `terraform init`
+* `terraform plan`
+* `terraform apply`
+
+
+## Ansible
+
+TODO
+
+### Sample
 
     ansible-playbook playbooks/site.yml --ask-vault-pass -v --diff
     ansible-playbook playbooks/site.yml --tags=deploy --skip-tags=packages --ask-vault-pass -v --diff
@@ -9,31 +36,3 @@ Ansible configuration for my servers
     ansible-vault decrypt --output - vault.yml
     ansible-playbook playbooks/site.yml --list-tasks --ask-vault-pass
     ansible-playbook playbooks/site.yml -v --list-tags
-
-## TODO
-
-* Config shell
-* compte farzy
-* config ssh
-* config vim, screen, etc
-* config tmux
-* config mail
-* locale
-* mdadm
-* PAM
-* rsyslog
-* /etc/reportbug.conf
-* MariaDB
-* PHP
-* Postfix
-* Tinyproxy
-* FTP :
-
-
-    pure-pw useradd scanner -u $(id -u farzy) -g $(id -g farzy) -d /data/home/farzy/Dropbox/Scanner -c "FTP Scanner" 
-    pure-pw mkdb
-
-* Dolibarr
-  * v3.6.1
-  * Données : /data/srv/dolibarr/documents
-  * Backup MySQL : /data/srv/dolibarr/documents/admin/backup/mysqldump_dolibarr_3.6.1_201610022351.sql.bz2
