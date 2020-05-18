@@ -1,25 +1,13 @@
 ---
-me:
-  name: "Farzad FARID"
-  email:
-    personal: "farzy@farzy.org"
-    pro: "ffarid@pragmatic-source.com"
-  home: "/data/home/farzy"
-  dotfiles:
-    - name: ".gitignore_global"
-    - name: ".bashrc"
-    - name: ".profile"
-    - name: ".tmux.conf"
-    #- name: ".config"
 
 global:
   etcfiles:
     - name: "profile.d"
       mode: "0644"
-    - name: "vim"
-      mode: "0644"
-    - name: "screenrc"
-      mode: "0644"
+#    - name: "vim"
+#      mode: "0644"
+#    - name: "screenrc"
+#      mode: "0644"
   apt_repositories:
     - repo: 'deb http://ftp.debian.org/debian jessie-backports main contrib non-free'
       state: present
@@ -36,67 +24,54 @@ global:
       vtype: select
     - name: postfix
       question: "postfix/mailname"
-      value: "pragmatic-source.com"
+      value: "farzy.org"
       vtype: string
   packages:
-    - aptitude
-    - apt-listchanges
-    - apt-listbugs
-    - apt-rdepends
-    - apt-show-source
-    - apt-show-versions
-    - apt-utils
-    - build-essential
+#    - aptitude
+#    - apt-listchanges
+#    - apt-listbugs
+#    - apt-rdepends
+#    - apt-show-source
+#    - apt-show-versions
+#    - apt-utils
+#    - build-essential
     - bzip2
-    - cronolog
+#    - cronolog
     - debconf
     - deborphan
-    - debsums
-    - devscripts
-    - dh-make
+#    - debsums
+#    - devscripts
+#    - dh-make
     - dlocate
-    - dmidecode
+#    - dmidecode
     - dnsutils
-    - fakeroot
+#    - fakeroot
     - git
-    - gnupg
-    - haskell-platform
+#    - gnupg
     - htop
-    - iftop
+#    - iftop
     - less
-    - lftp
-    - logrotate
+#    - lftp
+#    - logrotate
     - lsof
     - ltrace
-    - lynx
     - mlocate
     - mmv
     - mtr
-    - mutt
+#    - mutt
     - ncdu
     - nmap
-    - powerline
-    - pure-ftpd
-    - python-pip
-    - reportbug
     - rsync
+    - screen
     - strace
-    - sudo
     - tcpdump
+    - tmux
     - traceroute
     - tshark
     - unzip
+    - vim
     - wdiff
-    - wget
+#    - wget
     - whois
     - zip
-
-packages_with_config:
-  - awscli
-  - cron-apt
-  - postfix
-  - screen
-  - tmux
-  - vim
-  - vim-addon-manager
-  - zsh
+    - zsh

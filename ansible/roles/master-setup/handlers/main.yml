@@ -3,6 +3,3 @@
 - name: Reload systemd
   command: /bin/systemctl daemon-reload
 
-- name: Reload Pure-FTPd
-  service: name="pure-ftpd" state=restarted
-

@@ -1,110 +1,57 @@
 ---
 
-- name: Create Farzad's group
-  group:
-    name: farzy
-    gid: 1000
-    state: present
-
-- name: Create Farzad's user
-  user:
-    name: farzy
-    uid: 1000
-    state: present
-    append: yes
-    comment: Farzad FARID
-    group: farzy
-    groups: "sudo,adm"
-    shell: /bin/bash
-    password: "{{ passwords.farzy }}"
-
-- name: Set up authorized_keys for farzy
-  authorized_key:
-    user: farzy
-    exclusive: yes
-    manage_dir: yes
-    key: "{{ item }}"
-  with_file:
-    - files/ssh-pubkey-farzy
-  tags: auth
-
-- name: Set up authorized_keys for root
-  authorized_key:
-    user: root
-    exclusive: yes
-    manage_dir: yes
-    key: "{{ item }}"
-  with_file:
-    - files/ssh-pubkey-farzy
-  tags: auth
-
-- name: Add APT keys
-  apt_key: keyserver={{ item.keyserver }} id={{ item.id }} state={{ item.state | default("present") }}
-  with_items: "{{ global.apt_keys }}"
-  tags: configuration
+#- name: Add APT keys
+#  apt_key: keyserver={{ item.keyserver }} id={{ item.id }} state={{ item.state | default("present") }}
+#  loop: "{{ global.apt_keys }}"
+#  tags: configuration
 
 # For Let's Encrypt
-- name: Setup Debian repositories
-  apt_repository:
-    repo: "{{ item.repo }}"
-    state: "{{ item.state | default('present') }}"
-    filename: "{{ item.filename }}"
-  with_items: "{{ global.apt_repositories }}"
-  tags: configuration
+#- name: Setup Debian repositories
+#  apt_repository:
+#    repo: "{{ item.repo }}"
+#    state: "{{ item.state | default('present') }}"
+#    filename: "{{ item.filename }}"
+#  loop: "{{ global.apt_repositories }}"
+#  tags: configuration
 
 - name: Setup Debian packages configuration (debconf)
   debconf: name="{{ item.name }}" question="{{ item.question }}" value="{{ item.value }}" vtype="{{ item.vtype }}"
-  with_items: "{{ global.debconf }}"
+  loop: "{{ global.debconf }}"
   tags: configuration
 
 - name: Install packages
   apt: name={{ item }} state=present
-  with_items: "{{ global.packages }}"
+  loop: "{{ global.packages }}"
   tags: packages
-
-- name: Install Powerline Gitstatus
-  pip: name="powerline-gitstatus" state=latest
 
 - name: Install global /etc files
   copy: src="etcfiles/{{ item.name }}" dest="/etc/" mode={{ item.mode | default("0644") }} owner=root group=root
-  with_items: "{{ global.etcfiles }}"
+  loop: "{{ global.etcfiles }}"
   tags: configuration
 
+#- name: Install Git config
+#  template: src=gitconfig.j2 dest={{ me.home }}/.gitconfig mode="0600" owner=farzy group=farzy
+#  tags: configuration
+#
+#- name: Install personal config files
+#  copy: src="dotfiles/{{ item.name }}" dest="{{ me.home }}/" mode={{ item.mode | default("0644") }} owner=farzy group=farzy
+#  with_items: "{{ me.dotfiles }}"
+#  tags: configuration
 
-- name: Install Git config
-  template: src=gitconfig.j2 dest={{ me.home }}/.gitconfig mode="0600" owner=farzy group=farzy
-  tags: configuration
-
-- name: Install personal config files
-  copy: src="dotfiles/{{ item.name }}" dest="{{ me.home }}/" mode={{ item.mode | default("0644") }} owner=farzy group=farzy
-  with_items: "{{ me.dotfiles }}"
-  tags: configuration
-
-- name: Install Dropbox
-  become: yes
-  become_user: farzy
-  shell: cd ~ && wget -O - "https://www.dropbox.com/download?plat=lnx.x86_64" | tar xzf -
-  args:
-    creates: "{{ me.home }}/.dropbox-dist"
-  tags: packages
-
-- name: Sysctl settings for Dropbox
-  sysctl: name="fs.inotify.max_user_watches" value=100000 sysctl_set=yes state=present reload=yes
-
-- name: Unit file for Dropbox
-  template: src="dropbox-farzy.service.j2" dest="/lib/systemd/system/dropbox-farzy.service" mode="0644" owner=root group=root
-#  notify: Reload systemd
-
-- name: Activate Dropbox Unit
-  service: name="dropbox-farzy" enabled=yes state=started
-
-- name: Cleanup Pure-FTPd configuration
-  file: path="/etc/pure-ftpd/auth/{{ item }}" state=absent
-  with_items:
-   - 65unix
-   - 70pam
-  notify: Reload Pure-FTPd
-
-- name: Add PureDB to Pure-FTPd
-  file: path="/etc/pure-ftpd/auth/60puredb" src="../conf/PureDB" state=link
-  notify: Reload Pure-FTPd
+#- name: Install Dropbox
+#  become: yes
+#  become_user: farzy
+#  shell: cd ~ && wget -O - "https://www.dropbox.com/download?plat=lnx.x86_64" | tar xzf -
+#  args:
+#    creates: "{{ me.home }}/.dropbox-dist"
+#  tags: packages
+#
+#- name: Sysctl settings for Dropbox
+#  sysctl: name="fs.inotify.max_user_watches" value=100000 sysctl_set=yes state=present reload=yes
+#
+#- name: Unit file for Dropbox
+#  template: src="dropbox-farzy.service.j2" dest="/lib/systemd/system/dropbox-farzy.service" mode="0644" owner=root group=root
+##  notify: Reload systemd
+#
+#- name: Activate Dropbox Unit
+#  service: name="dropbox-farzy" enabled=yes state=started

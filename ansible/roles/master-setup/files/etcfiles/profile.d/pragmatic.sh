@@ -5,9 +5,9 @@
 # for examples
 
 # If not running interactively, don't do anything
-[ -z "$PS1" ] && return
+[[ -z "$PS1" ]] && return
 # Do not run under ZSH
-[ -n "$ZSH_VERSION" ] && return
+[[ -n "$ZSH_VERSION" ]] && return
 
 # don't put duplicate lines in the history. See bash(1) for more options
 # don't overwrite GNU Midnight Commander's setting of `ignorespace'.
@@ -28,7 +28,7 @@ export HISTTIMEFORMAT='%F %T '
 shopt -s checkwinsize
 
 # make less more friendly for non-text input files, see lesspipe(1)
-[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+[[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)"
 export LESS='-MiR'
 export LESSCHARSET=utf-8
 
@@ -47,8 +47,8 @@ esac
 # should be on the output of commands, not on the prompt
 force_color_prompt=yes
 
-if [ -n "$force_color_prompt" ]; then
-    if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
+if [[ -n "$force_color_prompt" ]]; then
+    if [[ -x /usr/bin/tput ]] && tput setaf 1 >&/dev/null; then
 	# We have color support; assume it's compliant with Ecma-48
 	# (ISO/IEC-6429). (Lack of such support is extremely rare, and such
 	# a case would tend to support setf rather than setaf.)
@@ -92,7 +92,7 @@ xterm*|rxvt*)
 esac
 
 # enable color support of ls and also add handy aliases
-if [ -x /usr/bin/dircolors ]; then
+if [[ -x /usr/bin/dircolors ]]; then
     test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
     alias ls='ls --color=auto'
     #alias dir='dir --color=auto'
@@ -108,7 +108,7 @@ fi
 # ~/.bash_aliases, instead of adding them here directly.
 # See /usr/share/doc/bash-doc/examples in the bash-doc package.
 
-if [ -f ~/.bash_aliases ]; then
+if [[ -f ~/.bash_aliases ]]; then
     . ~/.bash_aliases
 fi
 
@@ -137,19 +137,19 @@ ssh-screen-auth ()
     local SCREENPID SOCK DISP;
     local -a SCREENPIDS;
     SCREENPIDS=($(pgrep -f "screen.* -(r|dr|DR)" -u $UID));
-    if [ ${#SCREENPIDS[*]} -ne 1 ]; then
+    if [[ ${#SCREENPIDS[*]} -ne 1 ]]; then
         echo "Il y a plusieurs sessions screen en cours pour l'utilisateur ${USER}(${UID})";
         return 1;
     fi;
     SCREENPID=${SCREENPIDS[0]};
     SOCK=$(sudo cat /proc/${SCREENPID}/environ | tr "\0" "\n" | grep SSH_AUTH_SOCK);
-    if [ -n "${SOCK}" ]; then
-        eval $SOCK;
+    if [[ -n "${SOCK}" ]]; then
+        eval ${SOCK};
         export SSH_AUTH_SOCK;
     fi;
     DISP=$(sudo cat /proc/${SCREENPID}/environ | tr "\0" "\n" | grep DISPLAY);
-    if [ -n "${DISP}" ]; then
-        eval $DISP;
+    if [[ -n "${DISP}" ]]; then
+        eval ${DISP};
         export DISPLAY;
     fi
 }
