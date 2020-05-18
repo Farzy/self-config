@@ -1,4 +1,3 @@
-# {{ ansible_managed }}
 # $Id: screenrc,v 1.15 2003/10/08 11:39:03 zal Exp $
 #
 # /etc/screenrc
@@ -66,10 +65,10 @@ bind } history
 # The vt100 description does not mention "dl". *sigh*
 termcapinfo vt100 dl=5\E[M
 
-# turn sending of screen messages to hardstatus off
+# turn sending of screen messages to hardstatus on
 hardstatus on
 # Set the hardstatus prop on gui terms to set the titlebar/icon title
-termcapinfo xterm*|rxvt*|kterm*|Eterm*|linux* hs:ts=\E]0;:fs=\007:ds=\E]0;\007
+termcapinfo xterm*|rxvt*|kterm*|Eterm* hs:ts=\E]0;:fs=\007:ds=\E]0;\007
 # use this for the hard status string
 hardstatus string "%h%? users: %u%?"
 
@@ -129,9 +128,9 @@ altscreen on
 # fenêtres, 2 normales, 1 root
 
 # Crée une fenêtre par aide en ligne
-screen -t "sh1"    0
-screen -t "sh2"    1
-screen -t "root"   2 sudo -i
+#screen -t "sh1"    0
+#screen -t "sh2"    1
+#screen -t "root"   2 sudo -i
 # Sélectionne la première page
 select 0
 

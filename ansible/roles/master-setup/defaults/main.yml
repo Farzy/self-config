@@ -4,10 +4,10 @@ global:
   etcfiles:
     - name: "profile.d"
       mode: "0644"
-#    - name: "vim"
-#      mode: "0644"
-#    - name: "screenrc"
-#      mode: "0644"
+    - name: "vim"
+      mode: "0644"
+    - name: "screenrc"
+      mode: "0644"
   apt_repositories:
     - repo: 'deb http://ftp.debian.org/debian jessie-backports main contrib non-free'
       state: present
