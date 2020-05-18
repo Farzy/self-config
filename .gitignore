@@ -299,5 +299,10 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-# Local addons
+### Local addons
+
+# Log files
 log/*.log
+
+# GCP keys
+terraform/_auth/*.json
