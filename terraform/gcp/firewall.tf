@@ -6,7 +6,7 @@ resource "google_compute_firewall" "production-default-allow-icmp" {
     protocol = "icmp"
   }
 
-  source_ranges = [ "0.0.0.0/0" ]
+  source_ranges = ["0.0.0.0/0"]
 
   enable_logging = true
 }
@@ -21,15 +21,15 @@ resource "google_compute_firewall" "production-default-allow-internal" {
 
   allow {
     protocol = "tcp"
-    ports = [ "0-65535" ]
+    ports    = ["0-65535"]
   }
 
   allow {
     protocol = "udp"
-    ports = [ "0-65535" ]
+    ports    = ["0-65535"]
   }
 
-  source_ranges = [ google_compute_subnetwork.production-subnetwork-europe-west1.ip_cidr_range ]
+  source_ranges = [google_compute_subnetwork.production-subnetwork-europe-west1.ip_cidr_range]
 
   enable_logging = true
 }
@@ -40,10 +40,10 @@ resource "google_compute_firewall" "production-default-allow-ssf" {
 
   allow {
     protocol = "tcp"
-    ports = [ "22" ]
+    ports    = ["22"]
   }
 
-  source_ranges = [ "0.0.0.0/0" ]
+  source_ranges = ["0.0.0.0/0"]
 
   enable_logging = true
 }

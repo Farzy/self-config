@@ -1,7 +1,7 @@
 terraform {
   backend "gcs" {
-    bucket                  = "farzad-infrastructure"
-    prefix                     = "gcp"
+    bucket      = "farzad-infrastructure"
+    prefix      = "gcp"
     credentials = "../_auth/gcp-admin.json"
   }
 }
