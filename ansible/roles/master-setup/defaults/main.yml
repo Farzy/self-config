@@ -2,8 +2,6 @@
 
 global:
   etcfiles:
-    - name: "bash.bashrc"
-      mode: "0644"
     - name: "profile.d"
       mode: "0644"
     - name: "vim"
