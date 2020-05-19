@@ -1,6 +1,6 @@
 # self-config
 
-Terraform /Ansible configuration for my servers
+Terraform / Ansible configuration for my servers
 
 ## GCP configuration
 
@@ -27,8 +27,17 @@ Terraform /Ansible configuration for my servers
 
 ## Ansible
 
+### Initial configuration
 * Install `pipenv`
 * Run `pipenv sync` after each `Pipfile.lock` update
+
+### Git subtrees
+
+* `git remote add -f ansible-role-nginx https://github.com/nginxinc/ansible-role-nginx.git`
+* `git subtree add --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash`
+
+### Using
+
 * Run `pipenv shell`
 * `cd ansible`
 
