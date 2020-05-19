@@ -9,20 +9,35 @@ Terraform / Ansible configuration for my servers
 * Create JSON Key
 * Save key under name `terraform/_auth/gcp-admin.json` and in a safe place (**1Password**)
 * Create a GCS bucket:
-  * Name: `farzad-infrastructure`
-  * Location: `eu`
-  * Storage: `standard`
+  * This first step uses a local `terraform.state` to create the Terraform backend
+    for the rest of terraform playbooks.
+
+
+    cd terraform/gcp-management
+    terraform init
+    terraform plan
+    terraform apply
+
+  * If the GCS already exists but not `terraform.state` is present, import it instead of
+    running `terraform apply`:
+
+
+    terraform import google_storage_bucket.farzad-infrastructure farzad-infrastructure
+
 * Delete default VPC network called `default`
 * Delete default firewall rules
-* Add public SSH key to Compute Engine Metadata
+* Add public SSH key to Compute Engine Metadata with the login `farzad_farid`
 
 
 ## Terraform
 
 * Configure GCP project name and region in `terraform/gcp/setup.tf`
-* `terraform init`
-* `terraform plan`
-* `terraform apply`
+
+
+    cd terraform/gcp
+    terraform init
+    terraform plan
+    terraform apply
 
 
 ## Ansible
@@ -33,13 +48,15 @@ Terraform / Ansible configuration for my servers
 
 ### Git subtrees
 
-* `git remote add -f ansible-role-nginx https://github.com/nginxinc/ansible-role-nginx.git`
-* `git subtree add --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash`
+
+    git remote add -f ansible-role-nginx https://github.com/nginxinc/ansible-role-nginx.git
+    git subtree add --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
 
 ### Using
 
-* Run `pipenv shell`
-* `cd ansible`
+
+    pipenv shell
+    cd ansible
 
 
 ### Sample
