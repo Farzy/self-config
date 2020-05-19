@@ -12,6 +12,10 @@ resource "google_compute_instance_group" "farzad-01" {
     port = 80
   }
   named_port {
+    name = "http-81"
+    port = 81
+  }
+  named_port {
     name = "https"
     port = 443
   }
@@ -103,6 +107,6 @@ resource "google_compute_http_health_check" "default" {
   name               = "http-health-check"
   port               = 80
   request_path       = "/"
-  check_interval_sec = 1
+  check_interval_sec = 10
   timeout_sec        = 1
 }
