@@ -2,6 +2,8 @@
 
 global:
   etcfiles:
+    - name: "bash.bashrc"
+      mode: "0644"
     - name: "profile.d"
       mode: "0644"
     - name: "vim"
@@ -34,6 +36,7 @@ global:
 #    - apt-show-source
 #    - apt-show-versions
 #    - apt-utils
+    - bash-completion
 #    - build-essential
     - bzip2
 #    - cronolog
