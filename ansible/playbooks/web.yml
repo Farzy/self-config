@@ -6,3 +6,5 @@
   roles:
     - role: master-setup
       tags: deploy
+    - role: nginxinc.nginx
+      tags: nginx
