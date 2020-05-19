@@ -43,10 +43,10 @@ Terraform / Ansible configuration for my servers
 ## Ansible
 
 ### Initial configuration
+
 * Install `pipenv`
 * Run `pipenv sync` after each `Pipfile.lock` update
-
-### Git subtrees
+* Configure Git subtrees
 
 
     git remote add -f ansible-role-nginx https://github.com/nginxinc/ansible-role-nginx.git
@@ -58,12 +58,22 @@ Terraform / Ansible configuration for my servers
     pipenv shell
     cd ansible
 
+### Updting
+
+* Update Git subtrees
+
+
+    git subtree pull --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
 
 ### Sample
 
-    ansible-playbook playbooks/site.yml --ask-vault-pass -v --diff
-    ansible-playbook playbooks/site.yml --tags=deploy --skip-tags=packages --ask-vault-pass -v --diff
-    ansible-playbook playbooks/site.yml -v --diff --check --skip-tags=packages
-    ansible-vault decrypt --output - vault.yml
-    ansible-playbook playbooks/site.yml --list-tasks --ask-vault-pass
-    ansible-playbook playbooks/site.yml -v --list-tags
+    ansible-playbook playbooks/web.yml -v --diff
+    ansible-playbook playbooks/web.yml --tags=nginx --skip-tags=deploy -v --diff
+    ansible-playbook playbooks/web.yml -v --diff --check
+    ansible-playbook playbooks/web.yml --list-tasks
+    ansible-playbook playbooks/web.yml --list-tags
+    ansible-vault decrypt --output - vars/vault.yml
+
+## References
+
+* Git Subtree: https://www.atlassian.com/git/tutorials/git-subtree
