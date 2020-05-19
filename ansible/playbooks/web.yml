@@ -8,3 +8,34 @@
       tags: deploy
     - role: nginxinc.nginx
       tags: nginx
+  vars:
+    nginx_cleanup_config: true
+
+    nginx_http_template_enable: true
+    nginx_http_template:
+      default:
+        template_file: http/default.conf.j2
+        conf_file_name: default.conf
+        conf_file_location: /etc/nginx/conf.d/
+        servers:
+          http2https:
+            listen:
+              listen_ipv4:
+                # ip: 0.0.0.0
+                port: 81
+                opts:
+                  - default_server
+              listen_ipv6:
+                ip: "[::]"
+                port: 81
+                opts:
+                  - default_server
+            server_name: _
+            returns:
+              redirect_307:
+                location: /
+                code: 307
+                value: https://$host$request_uri
+            access_log:
+              - location: /var/log/nginx/access_http2https.log
+                name: ""

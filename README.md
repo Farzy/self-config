@@ -69,6 +69,7 @@ Terraform / Ansible configuration for my servers
 
     ansible-playbook playbooks/web.yml -v --diff
     ansible-playbook playbooks/web.yml --tags=nginx --skip-tags=deploy -v --diff
+    ansible-playbook playbooks/web.yml --tags=nginx_template_config -v --diff
     ansible-playbook playbooks/web.yml -v --diff --check
     ansible-playbook playbooks/web.yml --list-tasks
     ansible-playbook playbooks/web.yml --list-tags
