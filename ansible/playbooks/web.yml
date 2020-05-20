@@ -11,7 +11,7 @@
   tasks:
     - name: Prepare web directory
       file:
-        path: /srv/www
+        path: /srv/www/farzy.org
         state: directory
         owner: www-data
         group: www-data
@@ -52,4 +52,15 @@
                 if ($request_method !~ ^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$ ){
                     return 403;
                 }#
-
+            web_server:
+              locations:
+                default:
+                  location: /
+                  add_headers:
+                    strict_transport_security:
+                      name: Strict-Transport-Security
+                      value: max-age=300; includeSubDomains
+                      always: true
+                  html_file_location: /srv/www/farzy.org
+                  html_file_name: index.html
+              http_demo_conf: false
