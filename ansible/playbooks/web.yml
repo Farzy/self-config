@@ -9,7 +9,7 @@
     - role: nginxinc.nginx
       tags: nginx
   vars:
-    nginx_cleanup_config: true
+#    nginx_cleanup_config: true
 
     nginx_http_template_enable: true
     nginx_http_template:
@@ -18,24 +18,29 @@
         conf_file_name: default.conf
         conf_file_location: /etc/nginx/conf.d/
         servers:
-          http2https:
+          default:
             listen:
               listen_ipv4:
                 # ip: 0.0.0.0
-                port: 81
-                opts:
-                  - default_server
+                port: 80
               listen_ipv6:
                 ip: "[::]"
-                port: 81
-                opts:
-                  - default_server
-            server_name: _
-            returns:
-              redirect_307:
-                location: /
-                code: 307
-                value: https://$host$request_uri
+                port: 80
+            server_name: farzy.org www.farzy.org
             access_log:
-              - location: /var/log/nginx/access_http2https.log
-                name: ""
+              - location: /var/log/nginx/access_farzy.log
+                name: combined
+            error_log:
+              location: /var/log/nginx/error_farzy.log
+              level: warn
+            custom_options:
+              - |-
+                # Always redirect HTTP to HTTPS, keeping the same hostname
+                if ($http_x_forwarded_proto = "http") {
+                    return 308 https://$host$request_uri;
+                }#
+              - |-
+                if ($request_method !~ ^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$ ){
+                    return 403;
+                }#
+
