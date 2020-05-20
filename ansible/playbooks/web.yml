@@ -14,9 +14,10 @@
         path: /srv/www/farzy.org
         state: directory
         owner: www-data
-        group: www-data
-        mode: 0755
+        group: adm
+        mode: 02775
       tags: www
+
   vars:
 #    nginx_cleanup_config: true
 
@@ -52,6 +53,7 @@
                 if ($request_method !~ ^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$ ){
                     return 403;
                 }#
+              - error_page 404 /404.html
             web_server:
               locations:
                 default:
