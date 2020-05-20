@@ -8,6 +8,15 @@
       tags: deploy
     - role: nginxinc.nginx
       tags: nginx
+  tasks:
+    - name: Prepare web directory
+      file:
+        path: /srv/www
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: 0755
+      tags: www
   vars:
 #    nginx_cleanup_config: true
 
