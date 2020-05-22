@@ -16,11 +16,12 @@ resource "google_dns_record_set" "mx" {
   type = "MX"
 }
 
-resource "google_dns_record_set" "txt-spf" {
+resource "google_dns_record_set" "txt" {
   managed_zone = google_dns_managed_zone.farzy-org.name
   name = google_dns_managed_zone.farzy-org.dns_name
   rrdatas = [
     "\"v=spf1 include:spf.messagingengine.com ?all\"",
+    "google-site-verification=kbVrgpukI6ov2ahYx7_J90_PQ4VfO-zNvH63Tj8Zv3s",
   ]
   ttl = 3600
   type = "TXT"
