@@ -2,4 +2,4 @@
 farzad-01.farzy.org ansible_user=farzad_farid ansible_python_interpreter=python3
 
 [mac]
-delerium ansible_connection=local ansible_user=ffarid
+localhost ansible_connection=local ansible_become=false

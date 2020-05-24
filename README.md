@@ -73,7 +73,9 @@ Terraform / Ansible configuration for my servers
     ansible-playbook playbooks/web.yml -v --diff --check
     ansible-playbook playbooks/web.yml --list-tasks
     ansible-playbook playbooks/web.yml --list-tags
+    ansible-playbook -v --diff --vault-id personal@~/.ansible-personal-key playbooks/mac.yml
     ansible-vault decrypt --output - vars/vault.yml
+    ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key --encrypt-vault-id personal 'XXXX' --name github_token
 
 ## References
 
