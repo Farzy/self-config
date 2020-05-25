@@ -7,10 +7,34 @@
   loop:
     - kubernetes-cli
 
+- name: Test the installation of Oh My Zsh
+  stat:
+    path: "{{ oh_my_zsh_home }}"
+  register: stat_omz
+  check_mode: false
+
+- name: Install Oh My Zsh
+  shell:
+    cmd: "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    chdir: /tmp
+  when: stat_omz.stat.exists == False
+
+- name: Install OMZ theme Powerlevel10k
+  git:
+    repo: "https://github.com/romkatv/powerlevel10k.git"
+    version: "master"
+    dest: "{{ oh_my_zsh_home }}/custom/themes/powerlevel10k"
+    accept_hostkey: yes
+
+# Change Ansible/Jinja block delimiters in order to avoid issues with shell
+# syntax '${%…}'.
 - name: Install personal config files
   template:
     src: "dotfiles/{{ item }}"
     dest: "~/{{ item }}"
+    block_start_string: "{|"
+    block_end_string: "|}"
   loop:
     - .zshrc
+    - .p10k.zsh
   tags: configuration
