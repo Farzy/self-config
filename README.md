@@ -34,6 +34,7 @@ Terraform / Ansible configuration for my servers
 * Configure GCP project name and region in `terraform/gcp/setup.tf`
 
 
+
     cd terraform/gcp
     terraform init
     terraform plan
