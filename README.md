@@ -58,14 +58,8 @@ Terraform / Ansible configuration for my servers
     pipenv shell
     cd ansible
 
-### Updting
+Here are some sample ansible commands:
 
-* Update Git subtrees
-
-
-    git subtree pull --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
-
-### Sample
 
     ansible-playbook playbooks/web.yml -v --diff
     ansible-playbook playbooks/web.yml --tags=nginx --skip-tags=deploy -v --diff
@@ -76,6 +70,15 @@ Terraform / Ansible configuration for my servers
     ansible-playbook -v --diff --vault-id personal@~/.ansible-personal-key playbooks/mac.yml
     ansible-vault decrypt --output - vars/vault.yml
     ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key --encrypt-vault-id personal 'XXXX' --name github_token
+
+### Updating
+
+* Update Git subtrees
+
+
+    git fetch --all -v
+    git pull --rebase
+    git subtree pull --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
 
 ## References
 
