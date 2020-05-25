@@ -13,9 +13,16 @@
   register: stat_omz
   check_mode: false
 
+- name: Download the Oh My Zsh installer
+  get_url:
+    url: https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh
+    dest: /tmp/omz-installer.sh
+    mode: '0755'
+  when: stat_omz.stat.exists == False
+
 - name: Install Oh My Zsh
   shell:
-    cmd: "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    cmd: "/tmp/omz-installer.sh"
     chdir: /tmp
   when: stat_omz.stat.exists == False
 
