@@ -1,19 +1,3 @@
-data "google_compute_default_service_account" "default" {}
-
-resource "google_compute_disk" "farzad-01-system" {
-
-  name = "farzad-01"
-  zone = var.zone
-
-  type  = "pd-standard"
-  size  = "20"
-  image = "debian-10-buster-v20200413"
-
-  labels = {
-    env = "prod"
-  }
-}
-
 resource "google_compute_address" "farzad-01-address-internal" {
   name         = "farzad-01-address-internal"
   region       = var.region
@@ -25,6 +9,21 @@ resource "google_compute_address" "farzad-01-address" {
   name         = "farzad-01-address"
   region       = var.region
   address_type = "EXTERNAL"
+}
+
+resource "google_compute_disk" "farzad-01-system" {
+
+  name = "farzad-01"
+  zone = var.zone
+
+  type  = "pd-standard"
+  size  = "20"
+  // Use latest Debian 10 image
+  image = "debian-cloud/debian-10"
+
+  labels = {
+    env = "prod"
+  }
 }
 
 resource "google_compute_instance" "farzad-01" {
