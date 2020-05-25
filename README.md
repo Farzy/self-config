@@ -12,17 +12,15 @@ Terraform / Ansible configuration for my servers
   * This first step uses a local `terraform.state` to create the Terraform backend
     for the rest of terraform playbooks.
 
+        cd terraform/gcp-management
+        terraform init
+        terraform plan
+        terraform apply
 
-    cd terraform/gcp-management
-    terraform init
-    terraform plan
-    terraform apply
-
-  * If the GCS already exists but not `terraform.state` is present, import it instead of
+  * If the GCS already exists but no `terraform.state` is present, import it instead of
     running `terraform apply`:
 
-
-    terraform import google_storage_bucket.farzad-infrastructure farzad-infrastructure
+        terraform import google_storage_bucket.farzad-infrastructure farzad-infrastructure
 
 * Delete default VPC network called `default`
 * Delete default firewall rules
@@ -33,13 +31,10 @@ Terraform / Ansible configuration for my servers
 
 * Configure GCP project name and region in `terraform/gcp/setup.tf`
 
-
-
-    cd terraform/gcp
-    terraform init
-    terraform plan
-    terraform apply
-
+        cd terraform/gcp
+        terraform init
+        terraform plan
+        terraform apply
 
 ## Ansible
 
@@ -49,18 +44,15 @@ Terraform / Ansible configuration for my servers
 * Run `pipenv sync` after each `Pipfile.lock` update
 * Configure Git subtrees
 
-
-    git remote add -f ansible-role-nginx https://github.com/nginxinc/ansible-role-nginx.git
-    git subtree add --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
+        git remote add -f ansible-role-nginx https://github.com/nginxinc/ansible-role-nginx.git
+        git subtree add --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
 
 ### Using
-
 
     pipenv shell
     cd ansible
 
 Here are some sample ansible commands:
-
 
     ansible-playbook playbooks/web.yml -v --diff
     ansible-playbook playbooks/web.yml --tags=nginx --skip-tags=deploy -v --diff
@@ -74,12 +66,14 @@ Here are some sample ansible commands:
 
 ### Updating
 
-* Update Git subtrees
+* Update Python modules:
 
+        pipenv sync
 
-    git fetch --all -v
-    git pull --rebase
-    git subtree pull --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
+* Update Git subtrees:
+
+        git fetch --all -v
+        git subtree pull --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
 
 ## References
 
