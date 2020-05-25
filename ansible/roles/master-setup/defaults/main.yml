@@ -46,6 +46,7 @@ global:
     - dlocate
 #    - dmidecode
     - dnsutils
+    - elinks
 #    - fakeroot
     - git
 #    - gnupg
