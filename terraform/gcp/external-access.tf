@@ -25,7 +25,7 @@ resource "google_compute_instance_group" "farzad-01" {
 
 resource "google_compute_global_address" "farzy-org" {
   name         = "farzy-org-address"
-  description = "Global load-balancer adresse for website"
+  description  = "Global load-balancer adresse for website"
   address_type = "EXTERNAL"
 }
 

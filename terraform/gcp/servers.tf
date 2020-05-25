@@ -18,8 +18,7 @@ resource "google_compute_disk" "farzad-01-system" {
 
   type  = "pd-standard"
   size  = "20"
-  // Use latest Debian 10 image
-  image = "debian-cloud/debian-10"
+  image = "debian-cloud/debian-10" // Use latest Debian 10 image
 
   labels = {
     env = "prod"
@@ -31,7 +30,7 @@ resource "google_compute_instance" "farzad-01" {
   zone         = var.zone
   machine_type = "e2-small"
 
-  tags = [ "env-prod" ]
+  tags = ["env-prod"]
 
   boot_disk {
     source      = google_compute_disk.farzad-01-system.self_link
