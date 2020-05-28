@@ -147,7 +147,6 @@ export LESSCHARSET=utf-8
 
 # Ansible
 export ANSIBLE_VAULT_PASSWORD_FILE=~/.ansible-vault-password
-
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES # See https://github.com/ansible/ansible/issues/32499
 
 export NPM_TOKEN={{ npm_token }}
@@ -175,6 +174,8 @@ alias psu='ps ux | ${PAGER}'
 
 alias kctx=kubectx
 alias gctx=gcloudctx
+
+alias ansible-playbook="no_proxy='*' command ansible-playbook" # See https://bugs.python.org/issue30385
 
 # Brew completion
 if type brew &>/dev/null; then
