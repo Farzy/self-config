@@ -197,7 +197,7 @@ if [[ -n "${KAPTEN_SRC}" ]]; then
     # Reload repository not more than once a day
     TIME_MARKER=/tmp/kapten-src-last-update.txt
     if [[ ! -f "${TIME_MARKER}" || $(( $(date +%s) - $(date -r "${TIME_MARKER}" +%s) )) -gt 86400 ]]; then
-        echo -n "Updating k8s-helper repository… "
+        #echo -n "Updating k8s-helper repository… "
         # Check network connectivity, ignore all if computer is offline
         curl --silent --connect-timeout 0.5 https://github.com >/dev/null 2>&1
         if [[ $? -eq 0 ]]; then
@@ -207,7 +207,7 @@ if [[ -n "${KAPTEN_SRC}" ]]; then
             git -C ${KAPTEN_SRC}/devops-scripts pull --rebase >/dev/null 2>&1
             touch "${TIME_MARKER}"
         fi
-        echo "done."
+        #echo "done."
     fi
 
     # Source helper only if it exists, fail silently otherwise
