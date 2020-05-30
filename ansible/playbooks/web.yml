@@ -61,7 +61,7 @@
                   add_headers:
                     strict_transport_security:
                       name: Strict-Transport-Security
-                      value: max-age=300; includeSubDomains
+                      value: max-age=15768000; includeSubDomains
                       always: true
                   html_file_location: /srv/www/farzy.org
                   html_file_name: index.html
