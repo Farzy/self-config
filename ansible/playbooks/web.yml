@@ -48,12 +48,12 @@
                 # Always redirect HTTP to HTTPS, keeping the same hostname
                 if ($http_x_forwarded_proto = "http") {
                     return 308 https://$host$request_uri;
-                }#
+                }
               - |-
                 if ($request_method !~ ^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$ ){
                     return 403;
-                }#
-              - error_page 404 /en/404.html
+                }
+              - error_page 404 /en/404.html;
             web_server:
               locations:
                 default:
