@@ -298,11 +298,11 @@
                   html_file_location: /usr/share/nginx/html
                   autoindex: false
                   custom_options:
-                    - fastcgi_split_path_info ^(.+\.php)(/.+)$
-                    - fastcgi_pass unix:/run/php/php7.2-fpm.sock
-                    - fastcgi_index index.php
-                    - include fastcgi_params
-                    - fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name
+                    - fastcgi_split_path_info ^(.+\.php)(/.+)$;
+                    - fastcgi_pass unix:/run/php/php7.2-fpm.sock;
+                    - fastcgi_index index.php;
+                    - include fastcgi_params;
+                    - fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
               sub_filter:
                 # sub_filters: []
                 last_modified: "off"
@@ -351,16 +351,3 @@
                 port: 8091
                 weight: 1
                 health_check: max_fails=1 fail_timeout=10s
-
-    nginx_logrotate_conf_enable: true
-    nginx_logrotate_conf:
-      paths:
-        - "/var/log/nginx/*.log"
-      options:
-        - daily
-        - missingok
-        - rotate 14
-        - compress
-        - delaycompress
-        - notifempty
-        - sharedscripts
