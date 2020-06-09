@@ -175,7 +175,8 @@ alias psu='ps ux | ${PAGER}'
 alias kctx=kubectx
 alias gctx=gcloudctx
 
-alias ansible-playbook="no_proxy='*' command ansible-playbook" # See https://bugs.python.org/issue30385
+# Disable temporarily as this messes up Kapten Playbook that call kubectl
+#alias ansible-playbook="no_proxy='*' command ansible-playbook" # See https://bugs.python.org/issue30385
 
 # Brew completion
 if type brew &>/dev/null; then
