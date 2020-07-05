@@ -33,6 +33,13 @@
     dest: "{{ oh_my_zsh_home }}/custom/themes/powerlevel10k"
     accept_hostkey: yes
 
+- name: Install ZSH Autosuggestions plugin
+  git:
+    repo: "https://github.com/zsh-users/zsh-autosuggestions.git"
+    version: "master"
+    dest: "{{ oh_my_zsh_home }}/custom/plugins/zsh-autosuggestions"
+    accept_hostkey: yes
+
 # Change Ansible/Jinja block delimiters in order to avoid issues with shell
 # syntax '${%…}'.
 - name: Install personal config files
