@@ -5,7 +5,12 @@
     name: "{{ item }}"
     state: present
   loop:
+    - golang
+    - rustup
     - kubernetes-cli
+    - awscli
+    - coreutils
+    - htop
 
 - name: Test the installation of Oh My Zsh
   stat:
