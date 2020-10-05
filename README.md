@@ -40,6 +40,10 @@ Terraform / Ansible configuration for my servers
 
 ### Initial configuration
 
+* Install Ansible personal key
+
+        echo "THIS PASSWORD" > ~/.ansible-personal-key
+
 * Install `pipenv`
 * Run `pipenv sync` after each `Pipfile.lock` update
 * Configure Git subtrees
