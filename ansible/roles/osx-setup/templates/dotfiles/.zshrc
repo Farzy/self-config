@@ -221,3 +221,10 @@ if [[ -n "${KAPTEN_SRC}" ]]; then
 else
     echo "Shell variable KAPTEN_SRC is not defined, cannot create shell functions." 2>&1
 fi
+
+# BackMarket
+export OKTA_USERNAME={{ okta_username }}
+export OKTA_MFA=PUSH
+
+# Direnv activation
+eval "$(direnv hook zsh)"
