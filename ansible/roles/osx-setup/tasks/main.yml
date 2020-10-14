@@ -20,9 +20,31 @@
     - bat
     - fd
     - ncdu
-
+    - colordiff
+    - gnu-sed
+    - htop
+    - htop-osx
+    - hugo
+    - ipcalc
+    - kube-ps1
+    - mmv
+    - ncdu
+    - nmap
+    - node
+    - nvm
+    - pipenv
+    - pwgen
+    - python@3.8
+    - terraform@0.12
+    - watch
+    - yq
 
 # TODO: helm plugin install https://github.com/hypnoglow/helm-s3.git
+- name: Install Helm plugins
+  shell:
+    cmd: "helm plugin install {{ item }}"
+  loop:
+    - https://github.com/hypnoglow/helm-s3.git
 
 - name: Test the installation of Oh My Zsh
   stat:

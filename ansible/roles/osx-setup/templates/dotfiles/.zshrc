@@ -2,16 +2,22 @@
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 # Cargo / Rust
-export PATH="$HOME/.cargo/bin:$PATH"
+if [[ -d "$HOME/.cargo" ]]; then
+    export PATH="$HOME/.cargo/bin:$PATH"
+fi
 
 # Python 3.8
-export PATH="/usr/local/opt/python@3.8/bin:$PATH"
+if [[ -d "/usr/local/opt/python@3.8" ]]; then
+    export PATH="/usr/local/opt/python@3.8/bin:$PATH"
+fi
 
 # Pour Brew
 export PATH=/usr/local/bin:/usr/local/sbin:$HOME/bin:$PATH
 
 # Go
-export PATH=$PATH:${HOME}/src/GO/bin
+if [[ -d "$HOME/src/GO" ]]; then
+    export PATH=$PATH:${HOME}/src/GO/bin
+fi
 
 # rbenv
 if type rbenv &>/dev/null; then
@@ -25,7 +31,9 @@ if [[ -d "${KREW_ROOT:-$HOME/.krew}/bin" ]]; then
 fi
 
 # Terraform 0.12
-export PATH="/usr/local/opt/terraform@0.12/bin:$PATH"
+if [[ -d "/usr/local/opt/terraform@0.12" ]]; then
+    export PATH="/usr/local/opt/terraform@0.12/bin:$PATH"
+fi
 
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
@@ -189,7 +197,7 @@ if type brew &>/dev/null; then
     compinit
 fi
 
-# # Please define KAPTEN_SRC to the absolute path where you host your projects' sources.
+# # Please define KAPTEN_SRC to the absolute path where you host your projects' sources.
 # if [ -d "${HOME}/src/Kapten" ]; then
 #     KAPTEN_SRC="${HOME}/src/Kapten"
 # elif [ -d "${HOME}/src" ]; then
