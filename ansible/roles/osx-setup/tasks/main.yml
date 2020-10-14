@@ -2,49 +2,56 @@
 
 - name: Install packages
   homebrew:
-    name: "{{ item }}"
+    name:
+      - golang
+      - rustup
+      #- kubernetes-cli
+      #- awscli
+      - coreutils
+      - htop
+      - direnv
+      - kubernetes-helm
+      - jq
+      - kops
+      - p7zip
+      - ripgrep
+      - bat
+      - fd
+      - ncdu
+      - colordiff
+      - gnu-sed
+      - htop
+      - htop-osx
+      - hugo
+      - ipcalc
+      - kube-ps1
+      - mmv
+      - ncdu
+      - nmap
+      - node
+      - nvm
+      - pipenv
+      - pwgen
+      - python@3.8
+      - terraform@0.12
+      - watch
+      - yq
     state: present
-  loop:
-    - golang
-    - rustup
-    #- kubernetes-cli
-    #- awscli
-    - coreutils
-    - htop
-    - direnv
-    - kubernetes-helm
-    - jq
-    - kops
-    - p7zip
-    - ripgrep
-    - bat
-    - fd
-    - ncdu
-    - colordiff
-    - gnu-sed
-    - htop
-    - htop-osx
-    - hugo
-    - ipcalc
-    - kube-ps1
-    - mmv
-    - ncdu
-    - nmap
-    - node
-    - nvm
-    - pipenv
-    - pwgen
-    - python@3.8
-    - terraform@0.12
-    - watch
-    - yq
 
-# TODO: helm plugin install https://github.com/hypnoglow/helm-s3.git
+- name: List installed Heml plugins
+  shell:
+    cmd: "helm plugin list | tail -n +2 | cut -f 1"
+  register: helm_plugins
+  check_mode: false
+  changed_when: false
+
 - name: Install Helm plugins
   shell:
-    cmd: "helm plugin install {{ item }}"
+    cmd: "helm plugin install {{ item.url }} || helm plugin update {{ item.name }}"
   loop:
-    - https://github.com/hypnoglow/helm-s3.git
+    - url: https://github.com/hypnoglow/helm-s3.git
+      name: s3
+  when: item.name not in helm_plugins.stdout
 
 - name: Test the installation of Oh My Zsh
   stat:
