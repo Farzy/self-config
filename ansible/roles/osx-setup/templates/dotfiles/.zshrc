@@ -189,38 +189,38 @@ if type brew &>/dev/null; then
     compinit
 fi
 
-# Please define KAPTEN_SRC to the absolute path where you host your projects' sources.
-if [ -d "${HOME}/src/Kapten" ]; then
-    KAPTEN_SRC="${HOME}/src/Kapten"
-elif [ -d "${HOME}/src" ]; then
-    KAPTEN_SRC="${HOME}/src"
-fi
-export KAPTEN_SRC
-
-if [[ -n "${KAPTEN_SRC}" ]]; then
-    # Reload repository not more than once a day
-    TIME_MARKER=/tmp/kapten-src-last-update.txt
-    if [[ ! -f "${TIME_MARKER}" || $(( $(date +%s) - $(date -r "${TIME_MARKER}" +%s) )) -gt 86400 ]]; then
-        #echo -n "Updating k8s-helper repository… "
-        # Check network connectivity, ignore all if computer is offline
-        curl --silent --connect-timeout 0.5 https://github.com >/dev/null 2>&1
-        if [[ $? -eq 0 ]]; then
-            if [[ ! -d ${KAPTEN_SRC}/devops-scripts ]]; then
-            git -C ${KAPTEN_SRC} clone git@github.com:transcovo/devops-scripts.git
-            fi
-            git -C ${KAPTEN_SRC}/devops-scripts pull --rebase >/dev/null 2>&1
-            touch "${TIME_MARKER}"
-        fi
-        #echo "done."
-    fi
-
-    # Source helper only if it exists, fail silently otherwise
-    if [[ -f "${KAPTEN_SRC}/devops-scripts/kubernetes/k8s-helper.sh" ]]; then
-        source "${KAPTEN_SRC}/devops-scripts/kubernetes/k8s-helper.sh"
-    fi
-else
-    echo "Shell variable KAPTEN_SRC is not defined, cannot create shell functions." 2>&1
-fi
+# # Please define KAPTEN_SRC to the absolute path where you host your projects' sources.
+# if [ -d "${HOME}/src/Kapten" ]; then
+#     KAPTEN_SRC="${HOME}/src/Kapten"
+# elif [ -d "${HOME}/src" ]; then
+#     KAPTEN_SRC="${HOME}/src"
+# fi
+# export KAPTEN_SRC
+#
+# if [[ -n "${KAPTEN_SRC}" ]]; then
+#     # Reload repository not more than once a day
+#     TIME_MARKER=/tmp/kapten-src-last-update.txt
+#     if [[ ! -f "${TIME_MARKER}" || $(( $(date +%s) - $(date -r "${TIME_MARKER}" +%s) )) -gt 86400 ]]; then
+#         #echo -n "Updating k8s-helper repository… "
+#         # Check network connectivity, ignore all if computer is offline
+#         curl --silent --connect-timeout 0.5 https://github.com >/dev/null 2>&1
+#         if [[ $? -eq 0 ]]; then
+#             if [[ ! -d ${KAPTEN_SRC}/devops-scripts ]]; then
+#             git -C ${KAPTEN_SRC} clone git@github.com:transcovo/devops-scripts.git
+#             fi
+#             git -C ${KAPTEN_SRC}/devops-scripts pull --rebase >/dev/null 2>&1
+#             touch "${TIME_MARKER}"
+#         fi
+#         #echo "done."
+#     fi
+#
+#     # Source helper only if it exists, fail silently otherwise
+#     if [[ -f "${KAPTEN_SRC}/devops-scripts/kubernetes/k8s-helper.sh" ]]; then
+#         source "${KAPTEN_SRC}/devops-scripts/kubernetes/k8s-helper.sh"
+#     fi
+# else
+#     echo "Shell variable KAPTEN_SRC is not defined, cannot create shell functions." 2>&1
+# fi
 
 # BackMarket
 export OKTA_USERNAME={{ okta_username }}
