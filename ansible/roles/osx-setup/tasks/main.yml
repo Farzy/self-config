@@ -37,6 +37,8 @@
       - watch
       - yq
     state: present
+  tags:
+    - packages
 
 - name: List installed Heml plugins
   shell:
@@ -44,6 +46,9 @@
   register: helm_plugins
   check_mode: false
   changed_when: false
+  tags:
+    - packages
+    - helm
 
 - name: Install Helm plugins
   shell:
@@ -52,12 +57,18 @@
     - url: https://github.com/hypnoglow/helm-s3.git
       name: s3
   when: item.name not in helm_plugins.stdout
+  tags:
+    - packages
+    - helm
 
 - name: Test the installation of Oh My Zsh
   stat:
     path: "{{ oh_my_zsh_home }}"
   register: stat_omz
   check_mode: false
+  tags:
+    - configuration
+    - zsh
 
 - name: Download the Oh My Zsh installer
   get_url:
@@ -65,12 +76,18 @@
     dest: /tmp/omz-installer.sh
     mode: '0755'
   when: stat_omz.stat.exists == False
+  tags:
+    - configuration
+    - zsh
 
 - name: Install Oh My Zsh
   shell:
     cmd: "/tmp/omz-installer.sh"
     chdir: /tmp
   when: stat_omz.stat.exists == False
+  tags:
+    - configuration
+    - zsh
 
 - name: Install OMZ theme Powerlevel10k
   git:
@@ -78,6 +95,9 @@
     version: "master"
     dest: "{{ oh_my_zsh_home }}/custom/themes/powerlevel10k"
     accept_hostkey: yes
+  tags:
+    - configuration
+    - zsh
 
 - name: Install ZSH Autosuggestions plugin
   git:
@@ -85,6 +105,9 @@
     version: "master"
     dest: "{{ oh_my_zsh_home }}/custom/plugins/zsh-autosuggestions"
     accept_hostkey: yes
+  tags:
+    - configuration
+    - zsh
 
 # Change Ansible/Jinja block delimiters in order to avoid issues with shell
 # syntax '${%…}'.
@@ -97,4 +120,6 @@
   loop:
     - .zshrc
     - .p10k.zsh
-  tags: configuration
+  tags:
+    - configuration
+    - zsh
