@@ -40,6 +40,10 @@ Terraform / Ansible configuration for my servers
 
 ### Initial configuration
 
+* Install XCode command line tools
+  
+        xcode-select --install
+  
 * Install Ansible personal key
 
         echo "THIS PASSWORD" > ~/.ansible-personal-key
