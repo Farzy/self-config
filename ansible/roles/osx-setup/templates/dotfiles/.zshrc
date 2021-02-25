@@ -157,15 +157,15 @@ export LESS="-MiR"
 export LESSCHARSET=utf-8
 
 # Ansible
-export ANSIBLE_VAULT_PASSWORD_FILE=~/.ansible-vault-password
+# export ANSIBLE_VAULT_PASSWORD_FILE=~/.ansible-vault-password
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES # See https://github.com/ansible/ansible/issues/32499
 
-export NPM_TOKEN={{ npm_token }}
-export NESTOR_NPM_TOKEN=${NPM_TOKEN}
+# export NPM_TOKEN={{ npm_token }}
+# export NESTOR_NPM_TOKEN=${NPM_TOKEN}
 export GITHUB_TOKEN={{ github_token }}
 export HOMEBREW_GITHUB_API_TOKEN={{ github_homebrew_token }}
-export NESTOR_GITHUB_TOKEN=${GITHUB_TOKEN}
-export NGINXAPIKEY="{{ nginx_api_key }}"
+# export NESTOR_GITHUB_TOKEN=${GITHUB_TOKEN}
+# export NGINXAPIKEY="{{ nginx_api_key }}"
 
 # Set personal aliases, overriding those provided by oh-my-zsh libs,
 # plugins, and themes. Aliases can be placed here, though oh-my-zsh
