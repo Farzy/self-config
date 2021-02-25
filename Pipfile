@@ -10,11 +10,11 @@ ansible = "==2.9.*"
 apache-libcloud = "*"
 boto = "*"
 boto3 = "*"
-cryptography = ">=3.2"
+cryptography = ">=3.2.2"
 #pycrypto = "*"
 jmespath = "*"
 passlib = "*"
 openshift = "*"
 
 [requires]
-python_version = "3.8"
+python_version = "3.9"
