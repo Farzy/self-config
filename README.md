@@ -50,6 +50,11 @@ Terraform / Ansible configuration for my servers
 
 * Install `pipenv`
 * Run `pipenv sync` after each `Pipfile.lock` update
+* If `pipenv` fails when install `cryptography`, run the following commands then `pipenv sync` again:
+  
+        pipenv shell
+        pip install -U pip
+
 * Configure Git subtrees
 
         git remote add -f ansible-role-nginx https://github.com/nginxinc/ansible-role-nginx.git
