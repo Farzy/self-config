@@ -5,14 +5,13 @@
     name:
       - golang
       - rustup
-      #- kubernetes-cli
-      #- awscli
+      - kubernetes-cli
+      - awscli
       - coreutils
       - htop
       - direnv
       - kubernetes-helm
       - jq
-      - kops
       - p7zip
       - ripgrep
       - bat
@@ -32,7 +31,7 @@
       - nvm
       - pipenv
       - pwgen
-      - python@3.8
+      - python@3.9
       - terraform@0.12
       - watch
       - yq

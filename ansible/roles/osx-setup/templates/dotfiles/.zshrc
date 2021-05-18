@@ -157,7 +157,6 @@ export LESS="-MiR"
 export LESSCHARSET=utf-8
 
 # Ansible
-# export ANSIBLE_VAULT_PASSWORD_FILE=~/.ansible-vault-password
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES # See https://github.com/ansible/ansible/issues/32499
 
 # export NPM_TOKEN={{ npm_token }}
