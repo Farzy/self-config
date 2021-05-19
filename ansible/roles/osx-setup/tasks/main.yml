@@ -108,6 +108,20 @@
     - configuration
     - zsh
 
+- name: Fix some permissions
+  file:
+    path: '{{ item }}'
+    mode: '755'
+    state: directory
+    recurse: false
+  loop:
+    - /usr/local/share
+    - /usr/local/share/zsh
+    - /usr/local/share/zsh/site-functions
+  tags:
+    - configuration
+    - zsh
+
 # Change Ansible/Jinja block delimiters in order to avoid issues with shell
 # syntax '${%…}'.
 - name: Install personal config files
