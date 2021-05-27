@@ -10,6 +10,7 @@
       - direnv
       - fd
       - gnu-sed
+      - gnupg
       - golang
       - htop
       - htop
