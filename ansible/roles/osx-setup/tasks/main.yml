@@ -36,6 +36,7 @@
       - terraform@0.12
       - vault
       - watch
+      - yarn
       - yq
     state: present
   tags:
