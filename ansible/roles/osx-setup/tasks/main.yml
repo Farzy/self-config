@@ -3,36 +3,37 @@
 - name: Install packages
   homebrew:
     name:
-      - golang
-      - rustup
-      - kubernetes-cli
       - awscli
-      - coreutils
-      - htop
-      - direnv
-      - kubernetes-helm
-      - jq
-      - p7zip
-      - ripgrep
       - bat
-      - fd
-      - ncdu
       - colordiff
+      - coreutils
+      - direnv
+      - fd
       - gnu-sed
+      - golang
+      - htop
       - htop
       - htop-osx
       - hugo
       - ipcalc
+      - jq
       - kube-ps1
+      - kubernetes-cli
+      - kubernetes-helm
       - mmv
+      - ncdu
       - ncdu
       - nmap
       - node
       - nvm
+      - p7zip
       - pipenv
       - pwgen
       - python@3.9
+      - ripgrep
+      - rustup
       - terraform@0.12
+      - vault
       - watch
       - yq
     state: present
