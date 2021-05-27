@@ -233,3 +233,5 @@ eval "$(direnv hook zsh)"
 # -----------------------
 
 unalias gg # gg is a GitGuardian command line tool
+
+export VAULT_ADDR={{ vault_addr }}
