@@ -1,7 +1,8 @@
 # {{ ansible_managed }}
-[user]
-    name = {{ me.name }}
-    email = {{ me.email.personal }}
+[includeIf "gitdir:~/src/personal/"]
+  	path = .gitconfig-personal
+[includeIf "gitdir:~/src/gg-code/"]
+  	path = .gitconfig-professional
 [color]
     pager = true
     diff = auto
@@ -30,11 +31,11 @@
 [core]
     #pager = cat
     pager = less -FRX
-    excludesfile = {{ me.home }}/.gitignore_global
+    excludesfile = ~/.gitignore_global
     quotepath = false
 [github]
     user = Farzy
-    token = {{ passwords.github_token }}
+    token = {{ github_token }}
 [http]
     sslVerify = false
 [gist]
@@ -50,4 +51,6 @@
 [credential]
     helper = osxkeychain
 [commit]
-    template = /Users/ffarid/.stCommitMsg
+    template = ~/.stCommitMsg
+[pull]
+    rebase = true

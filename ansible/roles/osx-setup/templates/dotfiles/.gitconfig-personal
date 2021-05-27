@@ -1,0 +1,3 @@
+[user]
+    name = {{ me.name }}
+    email = {{ me.email.personal }}

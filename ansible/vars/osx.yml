@@ -1,5 +1,11 @@
 ---
 
+me:
+  name: "Farzad FARID"
+  email:
+    personal: farzy@farzy.org
+    professional: farzad.farid@gitguardian.com
+
 github_token: !vault |
   $ANSIBLE_VAULT;1.2;AES256;personal
   39663433346266613762313336316333656432333037323734643130373830623439396432383666

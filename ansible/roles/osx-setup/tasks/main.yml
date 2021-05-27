@@ -10,9 +10,8 @@
       - direnv
       - fd
       - gnu-sed
-      - gnupg
+      - gpg2
       - golang
-      - htop
       - htop
       - htop-osx
       - hugo
@@ -23,11 +22,11 @@
       - kubernetes-helm
       - mmv
       - ncdu
-      - ncdu
       - nmap
       - node
       - nvm
       - p7zip
+      - pinentry-mac
       - pipenv
       - pwgen
       - python@3.9
@@ -134,6 +133,10 @@
     block_start_string: "{|"
     block_end_string: "|}"
   loop:
+    - .gitconfig
+    - .gitconfig-personal
+    - .gitconfig-professional
+    - .gitignore_global
     - .zshrc
     - .p10k.zsh
   tags:
