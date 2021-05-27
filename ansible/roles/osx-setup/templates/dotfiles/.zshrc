@@ -232,3 +232,8 @@ fi
 
 # Direnv activation
 eval "$(direnv hook zsh)"
+
+# GitGuardian integration
+# -----------------------
+
+unalias gg # gg is a GitGuardian command line tool
