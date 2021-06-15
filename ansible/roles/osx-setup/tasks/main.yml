@@ -1,6 +1,6 @@
 ---
 
-- name: Install packages
+- name: Install Brew packages
   homebrew:
     name:
       - awscli
@@ -32,12 +32,20 @@
       - python@3.9
       - ripgrep
       - rustup
-      - terraform@0.12
+      - terraform@0.13
       - vault
       - watch
       - yarn
       - yq
     state: present
+  tags:
+    - packages
+
+- name: Remove Brew packages
+  homebrew:
+    name:
+      - terraform@0.12
+    state: absent
   tags:
     - packages
 

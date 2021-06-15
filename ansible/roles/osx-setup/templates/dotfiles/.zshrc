@@ -30,9 +30,9 @@ if [[ -d "${KREW_ROOT:-$HOME/.krew}/bin" ]]; then
     export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 fi
 
-# Terraform 0.12
-if [[ -d "/usr/local/opt/terraform@0.12" ]]; then
-    export PATH="/usr/local/opt/terraform@0.12/bin:$PATH"
+# Terraform 0.13
+if [[ -d "/usr/local/opt/terraform@0.13" ]]; then
+    export PATH="/usr/local/opt/terraform@0.13/bin:$PATH"
 fi
 
 # Path to your oh-my-zsh installation.
