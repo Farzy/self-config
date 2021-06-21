@@ -26,6 +26,8 @@
     unstage = reset HEAD
     uncommit = reset --soft HEAD^
     spull = !git pull && git submodule sync --recursive && git submodule update --init --recursive
+    # See https://stackoverflow.com/a/21284342/59855
+    grep-all = !sh -c 'git grep "$0" "$@" "$(git for-each-ref --format=\"%(refname)\" refs/)"'
 [merge]
     #stat = true
 [core]
