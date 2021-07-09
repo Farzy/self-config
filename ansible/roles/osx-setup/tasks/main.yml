@@ -8,6 +8,7 @@
       - colordiff
       - coreutils
       - direnv
+      - dog
       - fd
       - gnu-sed
       - gpg2
