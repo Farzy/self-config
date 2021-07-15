@@ -3,6 +3,8 @@
   	path = .gitconfig-personal
 [includeIf "gitdir:~/src/gg-code/"]
   	path = .gitconfig-professional
+[includeIf "gitdir:~/src/sre/"]
+  	path = .gitconfig-professional
 [color]
     pager = true
     diff = auto
