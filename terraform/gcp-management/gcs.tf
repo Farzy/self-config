@@ -3,7 +3,7 @@ resource "google_storage_bucket" "farzad-infrastructure" {
   location      = "EU"
   force_destroy = false
 
-  bucket_policy_only = false
+  uniform_bucket_level_access = false
 
   versioning {
     enabled = true

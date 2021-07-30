@@ -33,7 +33,7 @@
       - python@3.9
       - ripgrep
       - rustup
-      - terraform@0.13
+      - tfenv
       - vault
       - watch
       - yarn
@@ -46,11 +46,12 @@
   homebrew:
     name:
       - terraform@0.12
+      - terraform@0.13
     state: absent
   tags:
     - packages
 
-- name: List installed Heml plugins
+- name: List installed Helm plugins
   shell:
     cmd: "helm plugin list | tail -n +2 | cut -f 1"
   register: helm_plugins

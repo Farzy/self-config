@@ -8,7 +8,9 @@ resource "google_compute_firewall" "production-default-allow-icmp" {
 
   source_ranges = ["0.0.0.0/0"]
 
-  enable_logging = true
+  log_config {
+    metadata = "INCLUDE_ALL_METADATA"
+  }
 }
 
 resource "google_compute_firewall" "production-default-allow-internal" {
@@ -31,10 +33,12 @@ resource "google_compute_firewall" "production-default-allow-internal" {
 
   source_ranges = [google_compute_subnetwork.production-subnetwork-europe-west1.ip_cidr_range]
 
-  enable_logging = true
+  log_config {
+    metadata = "INCLUDE_ALL_METADATA"
+  }
 }
 
-resource "google_compute_firewall" "production-default-allow-ssf" {
+resource "google_compute_firewall" "production-default-allow-ssh" {
   name    = "default-allow-ssh"
   network = google_compute_network.production.name
 
@@ -45,7 +49,9 @@ resource "google_compute_firewall" "production-default-allow-ssf" {
 
   source_ranges = ["0.0.0.0/0"]
 
-  enable_logging = true
+  log_config {
+    metadata = "INCLUDE_ALL_METADATA"
+  }
 }
 
 resource "google_compute_firewall" "production-allow-traffic-from-lb" {

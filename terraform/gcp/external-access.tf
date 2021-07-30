@@ -1,5 +1,5 @@
 locals {
-  managed_domains = list("www.farzy.org", "farzy.org")
+  managed_domains = ["www.farzy.org", "farzy.org"]
 }
 
 resource "google_compute_instance_group" "farzad-01" {

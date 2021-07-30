@@ -63,8 +63,8 @@ resource "google_dns_record_set" "txt-keybase" {
 
 resource "google_dns_record_set" "comodoca" {
   managed_zone = google_dns_managed_zone.farzy-org.name
-  name         = "1DD8F84CE7D1701062F3375DC90414E3.www.${google_dns_managed_zone.farzy-org.dns_name}"
-  rrdatas      = ["930F706B41145B8F94E4F484EBEA46595CD2C01D.comodoca.com."]
+  name         = "1dd8f84ce7d1701062f3375dc90414e3.www.${google_dns_managed_zone.farzy-org.dns_name}"
+  rrdatas      = ["930f706b41145b8f94e4f484ebea46595cd2c01d.comodoca.com."]
   ttl          = 10800
   type         = "CNAME"
 }
