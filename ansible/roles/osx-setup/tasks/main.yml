@@ -27,6 +27,7 @@
       - node
       - nvm
       - p7zip
+      - packer
       - pinentry-mac
       - pipenv
       - pwgen
