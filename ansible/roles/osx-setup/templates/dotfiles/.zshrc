@@ -241,6 +241,15 @@ export VAULT_ADDR={{ vault_addr }}
 ec2-list () {
     local FILTER_SERVICE=""
     local FILTER_FOLE=""
+    local AWS_PROFILE
+
+    usage() {
+        cat <<EOF
+Usage: ec2-list [-s service] [-r role] <aws profile>
+
+Example: ec2-list -s enterprise-app staging
+EOF
+    }
 
     while getopts "hs:r:" arg; do
       case $arg in
@@ -248,22 +257,19 @@ ec2-list () {
           FILTER_SERVICE="Name=tag:Service,Values=$OPTARG"
           ;;
         r)
-          FILTER_FOLE="Name=tag:Role,Values=$OPTARG"
+          FILTER_ROLE="Name=tag:Role,Values=$OPTARG"
           ;;
         *)
-          cat <<EOF
-Usage: ec2-list [-s service] [-r role] <aws profile>
-
-Example: ec2-list -s enterprise-app staging
-EOF
+          usage
           return 1
           ;;
       esac
     done
     shift $((OPTIND-1))
+    [ $# = 1 ] || { usage ; return 1; }
     AWS_PROFILE=$1
 
-	aws ec2 --profile=$AWS_PROFILE-readonly describe-instances --filter $FILTER_SERVICE $FILTER_FOLE --region us-west-2 \
+	aws ec2 --profile=$AWS_PROFILE-readonly describe-instances --filter $FILTER_SERVICE $FILTER_ROLE --region us-west-2 \
 	--query 'Reservations[].Instances[].{Id:InstanceId, Name:Tags[?Key==`Name`]|[0].Value, Service:Tags[?Key==`Service`]|[0].Value, _Role:Tags[?Key==`Role`]|[0].Value, Env:Tags[?Key==`Env`]|[0].Value, __PrivateIp:PrivateIpAddress, __PublicIP:PublicIpAddress} | sort_by(@, &to_string(@.Name))' \
 	--output table
 }
