@@ -240,6 +240,6 @@ export VAULT_ADDR={{ vault_addr }}
 # Useful AWS function
 ec2-list () {
 	aws ec2 --profile=$1-readonly describe-instances --region us-west-2 \
-	--query 'Reservations[].Instances[].{Id:InstanceId, Name:Tags[?Key==`Name`]|[0].Value, Service:Tags[?Key==`Service`]|[0].Value, _Role:Tags[?Key==`Role`]|[0].Value, Env:Tags[?Key==`Env`]|[0].Value, __PrivateIp:PrivateIpAddress, __PublicIP:PublicIpAddress} | sort_by(@, &@.Name)' \
+	--query 'Reservations[].Instances[].{Id:InstanceId, Name:Tags[?Key==`Name`]|[0].Value, Service:Tags[?Key==`Service`]|[0].Value, _Role:Tags[?Key==`Role`]|[0].Value, Env:Tags[?Key==`Env`]|[0].Value, __PrivateIp:PrivateIpAddress, __PublicIP:PublicIpAddress} | sort_by(@, &to_string(@.Name)' \
 	--output table
 }
