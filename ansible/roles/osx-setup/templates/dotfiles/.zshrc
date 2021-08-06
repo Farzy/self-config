@@ -240,7 +240,7 @@ export VAULT_ADDR={{ vault_addr }}
 # Useful AWS function
 ec2-list () {
     local FILTER_SERVICE=""
-    local FILTER_FOLE=""
+    local FILTER_ROLE=""
     local AWS_PROFILE
 
     usage() {
