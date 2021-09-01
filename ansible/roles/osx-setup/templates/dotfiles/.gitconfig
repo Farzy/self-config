@@ -17,15 +17,18 @@
     ci = commit
     co = checkout
     fp = format-patch
-    lg = log --graph --pretty=tformat:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%an %cr)%Creset' --abbrev-commit --date=relative
-    lg2 = log --oneline --decorate --graph
+    last = log -1 HEAD
+    ll = log --pretty=format:"%C(yellow)%h%Cred%d\\ %Creset%s%Cblue\\ [%cn]" --decorate --numstat
+    ld = log --pretty=format:"%C(yellow)%h\\ %C(green)%ad%Cred%d\\ %Creset%s%Cblue\\ [%cn]" --decorate --date=short --graph
+    ls = log --pretty=format:"%C(green)%h\\ %C(yellow)[%ad]%Cred%d\\ %Creset%s%Cblue\\ [%cn]" --decorate --date=relative
+    lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
     oops = commit --amend -a -C HEAD
     prev = checkout HEAD^1
     next = "!sh -c 'git log --reverse --pretty=%H master | awk \"/$(git rev-parse HEAD)/{getline;print}\" | xargs git checkout'"
     b = branch -v
     r = remote -v
     t = tag -l
-    unstage = reset HEAD
+    unstage = reset HEAD --
     uncommit = reset --soft HEAD^
     spull = !git pull && git submodule sync --recursive && git submodule update --init --recursive
     # See https://stackoverflow.com/a/21284342/59855
