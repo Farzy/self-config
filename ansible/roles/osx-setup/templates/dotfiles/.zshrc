@@ -236,6 +236,7 @@ unalias gg # gg is a GitGuardian command line tool
 alias ggg="gg vault login ; gg ssh generate"
 
 export VAULT_ADDR={{ vault_addr }}
+export AWS_PROFILE={{ aws_profile }}
 
 # Useful AWS function
 ec2-list () {
