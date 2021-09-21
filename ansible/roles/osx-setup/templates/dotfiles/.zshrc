@@ -179,8 +179,14 @@ alias psx='ps aux | ${PAGER}'
 # Affiche la liste de tous vos processus
 alias psu='ps ux | ${PAGER}'
 
+# Google Cloud
 alias kctx=kubectx
 alias gctx=gcloudctx
+
+if [ -d /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk ]; then
+    source /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc
+    source /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc
+fi
 
 # Disable temporarily as this messes up Kapten Playbook that call kubectl
 #alias ansible-playbook="no_proxy='*' command ansible-playbook" # See https://bugs.python.org/issue30385

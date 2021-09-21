@@ -43,6 +43,23 @@
   tags:
     - packages
 
+- name: Detect Cask google-cloud-sdk
+  shell:
+    cmd: "brew info google-cloud-sdk | grep 'Not installed' ; exit 0"
+  register: brew_gcloud_installed
+  check_mode: false
+  changed_when: false
+  tags:
+    - packages
+
+- name: Install google-cloud-sdk
+  homebrew:
+    name: homebrew/cask/google-cloud-sdk
+    state: present
+  when: '"Not installed" in brew_gcloud_installed.stdout'
+  tags:
+    - packages
+
 - name: Remove Brew packages
   homebrew:
     name:
