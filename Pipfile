@@ -6,7 +6,7 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-ansible = "==4.2.*"
+ansible = "==4.6.*"
 apache-libcloud = "*"
 boto = "*"
 boto3 = "*"
