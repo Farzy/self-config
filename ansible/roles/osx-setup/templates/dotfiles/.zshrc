@@ -280,3 +280,17 @@ EOF
 	--query 'Reservations[].Instances[].{Id:InstanceId, Name:Tags[?Key==`Name`]|[0].Value, Service:Tags[?Key==`Service`]|[0].Value, _Role:Tags[?Key==`Role`]|[0].Value, Env:Tags[?Key==`Env`]|[0].Value, __PrivateIp:PrivateIpAddress, __PublicIP:PublicIpAddress} | sort_by(@, &to_string(@.Name))' \
 	--output table
 }
+
+ghlive-ban-repo() {
+    for env in 'staging' 'preprod' 'prod'
+    do
+        ssh -t $(aws ec2 --profile=$env-readonly describe-instances --filters 'Name=tag:Service,Values=ghlive' 'Name=tag:Role,Values=pullers' --region us-west-2 --query 'Reservations[].Instances[].{__PrivateIp:PrivateIpAddress}' --output text | head -n 1) docker run -ti --rm redis:6 redis-cli --insecure -u '$(sed -n -e "/REDIS_URI/ s#^.*//:#rediss://#p" /home/app/.env)' SADD commit_banlist:repo_name $*
+    done
+}
+
+ghlive-ban-user() {
+    for env in 'staging' 'preprod' 'prod'
+    do
+        ssh -t $(aws ec2 --profile=$env-readonly describe-instances --filters 'Name=tag:Service,Values=ghlive' 'Name=tag:Role,Values=pullers' --region us-west-2 --query 'Reservations[].Instances[].{__PrivateIp:PrivateIpAddress}' --output text | head -n 1) docker run -ti --rm redis:6 redis-cli --insecure -u '$(sed -n -e "/REDIS_URI/ s#^.*//:#rediss://#p" /home/app/.env)' SADD commit_banlist:actor_login $*
+    done
+}
