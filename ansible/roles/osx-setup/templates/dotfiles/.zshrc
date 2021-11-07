@@ -15,8 +15,8 @@ if [[ -d "/usr/local/opt/python@3.8" ]]; then
 fi
 
 # Go
-if [[ -d "$HOME/src/GO" ]]; then
-    export PATH=$PATH:${HOME}/src/GO/bin
+if [[ -d "$HOME/go" ]]; then
+    export PATH=$PATH:${HOME}/go/bin
 fi
 
 # rbenv
