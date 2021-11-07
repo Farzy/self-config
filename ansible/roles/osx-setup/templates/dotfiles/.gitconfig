@@ -1,6 +1,8 @@
 # {{ ansible_managed }}
 [includeIf "gitdir:~/src/personal/"]
   	path = .gitconfig-personal
+[includeIf "gitdir:~/go/src/"]
+  	path = .gitconfig-personal
 [includeIf "gitdir:~/src/gg-code/"]
   	path = .gitconfig-professional
 [includeIf "gitdir:~/src/sre/"]
