@@ -178,6 +178,8 @@ alias rm='rm -i'
 alias psx='ps aux | ${PAGER}'
 # Affiche la liste de tous vos processus
 alias psu='ps ux | ${PAGER}'
+# Git alias "gm" conflicts with GraphicsMagick
+unalias gm
 
 # Google Cloud
 alias kctx=kubectx
