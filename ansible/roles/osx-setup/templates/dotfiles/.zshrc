@@ -254,19 +254,39 @@ ec2-list () {
 
     usage() {
         cat <<EOF
-Usage: ec2-list [-s service] [-r role] <aws profile>
+Usage: ec2-list [-s service] [-r role] [-t] [-f FIELD]<aws profile>
+
+ -s: Restrict list to a Service (AWS tags)
+ -r: Restrict list to a Role (AWS tags)
+ -t: Output in text format, space separated columns
+ -f FIELD: Output only some fields (text format is automatically selected)
+    Field values:
+      all: Default, output all values
+      ip: Internal IP
+      eip: External IP
+      id: EC2 instance id
+      name: EC2 instance name
 
 Example: ec2-list -s enterprise-app staging
 EOF
     }
 
-    while getopts "hs:r:" arg; do
+    OUTPUT_FORMAT=table
+    OUTPUT_FIELD=all
+    while getopts "hs:r:tf:" arg; do
       case $arg in
         s)
           FILTER_SERVICE="Name=tag:Service,Values=$OPTARG"
           ;;
         r)
           FILTER_ROLE="Name=tag:Role,Values=$OPTARG"
+          ;;
+        t)
+          OUTPUT_FORMAT=text
+          ;;
+        f)
+          OUTPUT_FORMAT=text
+          OUTPUT_FIELD="${OPTARG}"
           ;;
         *)
           usage
@@ -278,9 +298,32 @@ EOF
     [ $# = 1 ] || { usage ; return 1; }
     AWS_PROFILE=$1
 
-	aws ec2 --profile=$AWS_PROFILE-readonly describe-instances --filter $FILTER_SERVICE $FILTER_ROLE --region us-west-2 \
-	--query 'Reservations[].Instances[].{Id:InstanceId, Name:Tags[?Key==`Name`]|[0].Value, Service:Tags[?Key==`Service`]|[0].Value, _Role:Tags[?Key==`Role`]|[0].Value, Env:Tags[?Key==`Env`]|[0].Value, __PrivateIp:PrivateIpAddress, __PublicIP:PublicIpAddress} | sort_by(@, &to_string(@.Name))' \
-	--output table
+    case "$OUTPUT_FIELD" in
+      all)
+        QUERY='Reservations[].Instances[].{Id:InstanceId, Name:Tags[?Key==`Name`]|[0].Value, Service:Tags[?Key==`Service`]|[0].Value, _Role:Tags[?Key==`Role`]|[0].Value, Env:Tags[?Key==`Env`]|[0].Value, __PrivateIp:PrivateIpAddress, __PublicIP:PublicIpAddress} | sort_by(@, &to_string(@.Name))'
+        ;;
+      ip)
+        QUERY='Reservations[].Instances[].{__PrivateIp:PrivateIpAddress} | sort_by(@, &to_string(@.Name))'
+        ;;
+      eip)
+        QUERY='Reservations[].Instances[].{__PublicIP:PublicIpAddress} | sort_by(@, &to_string(@.Name))'
+        ;;
+      id)
+        QUERY='Reservations[].Instances[].{Id:InstanceId} | sort_by(@, &to_string(@.Name))'
+        ;;
+      name)
+        QUERY='Reservations[].Instances[].{Name:Tags[?Key==`Name`]|[0].Value} | sort_by(@, &to_string(@.Name))'
+        ;;
+      *)
+        echo "ERROR: Invalid field '$OUTPUT_FIELD'"
+        usage
+        return 1
+        ;;
+    esac
+
+    aws ec2 --profile=$AWS_PROFILE-readonly describe-instances --filter $FILTER_SERVICE $FILTER_ROLE --region us-west-2 \
+	  --query $QUERY \
+	  --output $OUTPUT_FORMAT
 }
 
 ghlive-ban-repo() {
