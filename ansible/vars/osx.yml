@@ -36,3 +36,45 @@ vault_addr: !vault |
   63323638386462313665663463313735656132643232363437626435323464313039383864346531
   3632383434353232320a656338646237636362343334363162636462383335633937343138663562
   39383532653962373463666166393166646330633064353538376564346262626430
+homebrew_packages:
+  - awscli
+  - bat
+  - colordiff
+  - coreutils
+  - direnv
+  - dog
+  - fd
+  - fzf
+  - gnu-sed
+  - gpg2
+  - golang
+  - graphicsmagick
+  - htop
+  - htop-osx
+  - hugo
+  - ipcalc
+  - jq
+  - kube-ps1
+  - kubectx
+  - kubernetes-cli
+  - kubernetes-helm
+  - kubie
+  - mmv
+  - ncdu
+  - nmap
+  - node
+  - nvm
+  - p7zip
+  - packer
+  - pinentry-mac
+  - pipenv
+  - poetry
+  - pwgen
+  - python@3.9
+  - ripgrep
+  - rustup
+  - tfenv
+  - vault
+  - watch
+  - yarn
+  - yq

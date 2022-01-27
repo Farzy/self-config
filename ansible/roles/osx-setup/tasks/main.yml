@@ -2,46 +2,7 @@
 
 - name: Install Brew packages
   homebrew:
-    name:
-      - awscli
-      - bat
-      - colordiff
-      - coreutils
-      - direnv
-      - dog
-      - fd
-      - fzf
-      - gnu-sed
-      - gpg2
-      - golang
-      - graphicsmagick
-      - htop
-      - htop-osx
-      - hugo
-      - ipcalc
-      - jq
-      - kube-ps1
-      - kubectx
-      - kubernetes-cli
-      - kubernetes-helm
-      - mmv
-      - ncdu
-      - nmap
-      - node
-      - nvm
-      - p7zip
-      - packer
-      - pinentry-mac
-      - pipenv
-      - pwgen
-      - python@3.9
-      - ripgrep
-      - rustup
-      - tfenv
-      - vault
-      - watch
-      - yarn
-      - yq
+    name: "{{ homebrew_packages }}"
     state: present
   tags:
     - packages
