@@ -35,6 +35,29 @@ if [[ -d "/usr/local/opt/terraform@0.13" ]]; then
     export PATH="/usr/local/opt/terraform@0.13/bin:$PATH"
 fi
 
+# Automatic Poetry shell activation/deactivation
+_togglePoetryShell() {
+  # deactivate shell if pyproject.toml doesn't exist and not in a subdir
+  if [[ ! -f "$PWD/pyproject.toml" ]]; then
+    if [[ "$POETRY_ACTIVE" == 1 ]]; then
+      if [[ "$PWD" != "$pyproject_dir"* ]]; then
+        exit
+      fi
+    fi
+  fi
+
+  # activate the shell if pyproject.toml exists
+  if [[ "$POETRY_ACTIVE" != 1 ]]; then
+    if [[ -f "$PWD/pyproject.toml" ]]; then
+      export pyproject_dir="$PWD"
+      poetry shell
+    fi
+  fi
+}
+autoload -U add-zsh-hook
+add-zsh-hook chpwd _togglePoetryShell
+_togglePoetryShell
+
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
