@@ -71,6 +71,7 @@ homebrew_packages:
   - poetry
   - pwgen
   - python@3.9
+  - python@3.10
   - ripgrep
   - rustup
   - tfenv
@@ -78,3 +79,5 @@ homebrew_packages:
   - watch
   - yarn
   - yq
+homebrew_packages_removed:
+  - python@3.8

@@ -9,9 +9,9 @@ fi
 # Pour Brew
 export PATH=/usr/local/bin:/usr/local/sbin:$HOME/bin:$PATH
 
-# Python 3.8
-if [[ -d "/usr/local/opt/python@3.8" ]]; then
-    export PATH="/usr/local/opt/python@3.8/bin:$PATH"
+# Python 3.10
+if [[ -d "/usr/local/opt/python@3.10" ]]; then
+    export PATH="/usr/local/opt/python@3.10/bin:$PATH"
 fi
 
 # Go
