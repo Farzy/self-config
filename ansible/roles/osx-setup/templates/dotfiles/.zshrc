@@ -271,6 +271,8 @@ alias ggg="gg vault login ; gg ssh generate"
 
 export VAULT_ADDR={{ vault_addr }}
 export AWS_PROFILE={{ aws_profile }}
+export GITLAB_HOST={{ gitguardian_gitlab_host }}
+export GITLAB_TOKEN={{ gitguardian_gitlab_token }}
 
 # Useful AWS function
 ec2-list () {
