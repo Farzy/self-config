@@ -22,6 +22,7 @@ resource "google_dns_record_set" "txt" {
   rrdatas = [
     "\"v=spf1 include:spf.messagingengine.com ?all\"",
     "google-site-verification=kbVrgpukI6ov2ahYx7_J90_PQ4VfO-zNvH63Tj8Zv3s",
+    "ddosify=e097a376-b741-48c7-aca5-d350884357d3",
   ]
   ttl  = 3600
   type = "TXT"
