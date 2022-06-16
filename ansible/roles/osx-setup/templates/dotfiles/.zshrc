@@ -25,6 +25,11 @@ if type rbenv &>/dev/null; then
     eval "$(rbenv init -)"
 fi
 
+# Kubernetes
+if [[ -d "/usr/local/opt/kubernetes-cli@1.22/bin" ]]; then
+    export PATH="/usr/local/opt/kubernetes-cli@1.22/bin:$PATH"
+fi
+
 # Krew https://github.com/kubernetes-sigs/krew
 if [[ -d "${KREW_ROOT:-$HOME/.krew}/bin" ]]; then
     export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
@@ -204,8 +209,11 @@ alias psu='ps ux | ${PAGER}'
 # Git alias "gm" conflicts with GraphicsMagick
 unalias gm
 
-# Google Cloud
+# Kubernetes
 alias kctx=kubectx
+alias kns=kubens
+
+# Google Cloud
 alias gctx=gcloudctx
 
 if [ -d /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk ]; then
