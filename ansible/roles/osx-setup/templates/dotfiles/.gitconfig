@@ -59,6 +59,7 @@
     trustExitCode = true
 [push]
     default = upstream
+    autoSetupRemote = true
 [credential]
     helper = osxkeychain
 [commit]
