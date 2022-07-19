@@ -2,7 +2,7 @@
 # Based on romkatv/powerlevel10k/config/p10k-rainbow.zsh.
 # Wizard options: nerdfont-complete + powerline, small icons, rainbow, unicode,
 # 24h time, angled separators, sharp heads, flat tails, 2 lines, dotted, left frame,
-# lightest-ornaments, compact, many icons, fluent, transient_prompt,
+# lightest-ornaments, compact, many icons, fluent,
 # instant_prompt=verbose.
 # Type `p10k configure` to generate another config.
 #
@@ -1709,7 +1709,7 @@
   #   - always:   Trim down prompt when accepting a command line.
   #   - same-dir: Trim down prompt when accepting a command line unless this is the first command
   #               typed after changing current working directory.
-  typeset -g POWERLEVEL9K_TRANSIENT_PROMPT=always
+  typeset -g POWERLEVEL9K_TRANSIENT_PROMPT=off
 
   # Instant prompt mode.
   #
