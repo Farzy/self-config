@@ -109,16 +109,26 @@
     - configuration
     - zsh
 
+- name: Find Brew prefix directory
+  shell:
+    cmd: "brew --prefix"
+  register: brew_prefix
+  check_mode: false
+  changed_when: false
+  tags:
+    - configuration
+    - zsh
+
 - name: Fix some permissions
   file:
-    path: '{{ item }}'
+    path: '{{ brew_prefix.stdout_lines[0] }}/{{ item }}'
     mode: '755'
     state: directory
     recurse: false
   loop:
-    - /usr/local/share
-    - /usr/local/share/zsh
-    - /usr/local/share/zsh/site-functions
+    - share
+    - share/zsh
+    - share/zsh/site-functions
   tags:
     - configuration
     - zsh
