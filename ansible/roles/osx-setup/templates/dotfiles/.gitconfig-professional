@@ -1,5 +1,6 @@
 [user]
     name = {{ me.name }}
     email = {{ me.email.professional }}
+    signingkey = {{ me.gpg.professional }}
 [commit]
     gpgSign = true
