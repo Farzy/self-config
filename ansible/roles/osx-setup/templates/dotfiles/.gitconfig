@@ -3,11 +3,7 @@
   	path = .gitconfig-personal
 [includeIf "gitdir:~/go/src/"]
   	path = .gitconfig-personal
-[includeIf "gitdir:~/src/gitguardian/"]
-  	path = .gitconfig-professional
-[includeIf "gitdir:~/src/gg-code/"]
-  	path = .gitconfig-professional
-[includeIf "gitdir:~/src/sre/"]
+[includeIf "gitdir:~/src/dfns/"]
   	path = .gitconfig-professional
 [color]
     pager = true

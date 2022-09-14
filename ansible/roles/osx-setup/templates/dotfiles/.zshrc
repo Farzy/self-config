@@ -223,9 +223,6 @@ if [ -d /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk ]; then
     source /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc
 fi
 
-# Disable temporarily as this messes up Kapten Playbook that call kubectl
-#alias ansible-playbook="no_proxy='*' command ansible-playbook" # See https://bugs.python.org/issue30385
-
 # Brew completion
 if type brew &>/dev/null; then
     FPATH=$(brew --prefix)/share/zsh-completions:$FPATH
@@ -237,42 +234,19 @@ fi
 # FZF
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-# # Please define KAPTEN_SRC to the absolute path where you host your projects' sources.
-# if [ -d "${HOME}/src/Kapten" ]; then
-#     KAPTEN_SRC="${HOME}/src/Kapten"
-# elif [ -d "${HOME}/src" ]; then
-#     KAPTEN_SRC="${HOME}/src"
-# fi
-# export KAPTEN_SRC
-#
-# if [[ -n "${KAPTEN_SRC}" ]]; then
-#     # Reload repository not more than once a day
-#     TIME_MARKER=/tmp/kapten-src-last-update.txt
-#     if [[ ! -f "${TIME_MARKER}" || $(( $(date +%s) - $(date -r "${TIME_MARKER}" +%s) )) -gt 86400 ]]; then
-#         #echo -n "Updating k8s-helper repository… "
-#         # Check network connectivity, ignore all if computer is offline
-#         curl --silent --connect-timeout 0.5 https://github.com >/dev/null 2>&1
-#         if [[ $? -eq 0 ]]; then
-#             if [[ ! -d ${KAPTEN_SRC}/devops-scripts ]]; then
-#             git -C ${KAPTEN_SRC} clone git@github.com:transcovo/devops-scripts.git
-#             fi
-#             git -C ${KAPTEN_SRC}/devops-scripts pull --rebase >/dev/null 2>&1
-#             touch "${TIME_MARKER}"
-#         fi
-#         #echo "done."
-#     fi
-#
-#     # Source helper only if it exists, fail silently otherwise
-#     if [[ -f "${KAPTEN_SRC}/devops-scripts/kubernetes/k8s-helper.sh" ]]; then
-#         source "${KAPTEN_SRC}/devops-scripts/kubernetes/k8s-helper.sh"
-#     fi
-# else
-#     echo "Shell variable KAPTEN_SRC is not defined, cannot create shell functions." 2>&1
-# fi
 
 # Direnv activation
 eval "$(direnv hook zsh)"
 
+{| if integration.dfns |}
+# DFNS integration
+# ----------------
+
+export GPG_TTY="$(tty)"
+export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
+gpgconf --launch gpg-agent
+{| endif |}
+{| if integration.gitguardian |}
 # GitGuardian integration
 # -----------------------
 
@@ -377,3 +351,41 @@ ghlive-ban-user() {
         ssh -t $(aws ec2 --profile=$env-readonly describe-instances --filters 'Name=tag:Service,Values=ghlive' 'Name=tag:Role,Values=pullers' --region us-west-2 --query 'Reservations[].Instances[].{__PrivateIp:PrivateIpAddress}' --output text | head -n 1) docker run -ti --rm redis:6 redis-cli --insecure -u '$(sed -n -e "/REDIS_URI/ s#^.*//:#rediss://#p" /home/app/.env)' SADD commit_banlist:actor_login $*
     done
 }
+{| endif |}
+{| if integration.kapten |}
+# Disable temporarily as this messes up Kapten Playbook that call kubectl
+#alias ansible-playbook="no_proxy='*' command ansible-playbook" # See https://bugs.python.org/issue30385
+
+# Please define KAPTEN_SRC to the absolute path where you host your projects' sources.
+if [ -d "${HOME}/src/Kapten" ]; then
+    KAPTEN_SRC="${HOME}/src/Kapten"
+elif [ -d "${HOME}/src" ]; then
+    KAPTEN_SRC="${HOME}/src"
+fi
+export KAPTEN_SRC
+
+if [[ -n "${KAPTEN_SRC}" ]]; then
+    # Reload repository not more than once a day
+    TIME_MARKER=/tmp/kapten-src-last-update.txt
+    if [[ ! -f "${TIME_MARKER}" || $(( $(date +%s) - $(date -r "${TIME_MARKER}" +%s) )) -gt 86400 ]]; then
+        #echo -n "Updating k8s-helper repository… "
+        # Check network connectivity, ignore all if computer is offline
+        curl --silent --connect-timeout 0.5 https://github.com >/dev/null 2>&1
+        if [[ $? -eq 0 ]]; then
+            if [[ ! -d ${KAPTEN_SRC}/devops-scripts ]]; then
+            git -C ${KAPTEN_SRC} clone git@github.com:transcovo/devops-scripts.git
+            fi
+            git -C ${KAPTEN_SRC}/devops-scripts pull --rebase >/dev/null 2>&1
+            touch "${TIME_MARKER}"
+        fi
+        #echo "done."
+    fi
+
+    # Source helper only if it exists, fail silently otherwise
+    if [[ -f "${KAPTEN_SRC}/devops-scripts/kubernetes/k8s-helper.sh" ]]; then
+        source "${KAPTEN_SRC}/devops-scripts/kubernetes/k8s-helper.sh"
+    fi
+else
+    echo "Shell variable KAPTEN_SRC is not defined, cannot create shell functions." 2>&1
+fi
+{| endif |}
