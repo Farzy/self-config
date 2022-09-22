@@ -225,7 +225,11 @@ fi
 
 # Brew completion
 if type brew &>/dev/null; then
-    FPATH=$(brew --prefix)/share/zsh-completions:$FPATH
+    if [ -d $(brew --prefix)/share/zsh/site-functions ]; then
+        FPATH=$(brew --prefix)/share/zsh/site-functions:$FPATH
+    else
+        FPATH=$(brew --prefix)/share/zsh-completions:$FPATH
+    fi
 
     autoload -Uz compinit
     compinit
