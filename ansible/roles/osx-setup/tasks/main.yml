@@ -159,3 +159,37 @@
   tags:
     - configuration
     - iterm2
+
+# -----------------
+# SSH configuration
+# -----------------
+
+- name: Create .ssh directory
+  ansible.builtin.file:
+    path: ~/.ssh
+    state: directory
+    mode: '0755'
+  when: integration.dfns
+  tags:
+    - configuration
+    - ssh
+
+- name: Find GPG agent SSH socket
+  ansible.builtin.shell:
+    cmd: gpgconf --list-dirs agent-ssh-socket
+  register: agent_ssh_socket
+  ignore_errors: true
+  when: integration.dfns
+  tags:
+    - configuration
+    - ssh
+
+- name: Create .ssh/config
+  ansible.builtin.template:
+    src: ssh/config.j2
+    dest: ~/.ssh/config
+    mode: '0755'
+  when: integration.dfns and not agent_ssh_socket.failed
+  tags:
+    - configuration
+    - ssh
