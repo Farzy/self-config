@@ -85,7 +85,6 @@ homebrew_packages:
   - fzf
   - glab
   - gnu-sed
-  - gpg2
   - golang
   - graphicsmagick
   - htop
@@ -120,6 +119,7 @@ homebrew_packages:
   - yq
 homebrew_packages_removed:
   - python@3.8
+  - gpg2
 
 iterm2_library_path: ~/Library/Application Support/iTerm2
 iterm2_sessions:
