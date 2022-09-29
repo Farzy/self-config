@@ -1,0 +1,16 @@
+{
+    "Profiles": [
+{% for item in iterm2_sessions %}
+        {
+            "Name" : "{{ item.name }}",
+            "Guid" : "{{ item.name }}",
+            "Badge Text" : "{{ item.badge }}",
+            "Custom Command" : "Yes",
+            "Command" : "{{ item.command }}",
+            "Description" : "Default",
+            "Close Sessions On End" : false,
+            "Tags" : {{ item.tags | to_json }}
+        }{% if not loop.last %},{% endif +%}
+{% endfor %}
+    ]
+}

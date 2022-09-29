@@ -151,3 +151,11 @@
   tags:
     - configuration
     - zsh
+
+- name: Create iTerm2 DynamicProfiles
+  template:
+    src: "iTerm2/personal.json.j2"
+    dest: "{{ iterm2_library_path }}/DynamicProfiles/personal.json"
+  tags:
+    - configuration
+    - iterm2
