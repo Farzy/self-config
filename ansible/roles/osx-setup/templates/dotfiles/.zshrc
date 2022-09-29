@@ -242,6 +242,9 @@ fi
 # Direnv activation
 eval "$(direnv hook zsh)"
 
+# iTerm2 integration
+test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+
 {| if integration.dfns |}
 # DFNS integration
 # ----------------
