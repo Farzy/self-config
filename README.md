@@ -48,21 +48,20 @@ Terraform / Ansible configuration for my servers
 
         echo "THIS PASSWORD" > ~/.ansible-personal-key
 
-* Install `pipenv`
-* Run `pipenv sync` after each `Pipfile.lock` update
-* If `pipenv` fails when install `cryptography`, run the following commands then `pipenv sync` again:
-  
-        pipenv shell
-        pip install -U pip
 
+* Install `poetry`
+
+        brew install poetry
+
+* Run `poetry install` after each `pyproject.toml` update
 * Configure Git subtrees
 
         git remote add -f ansible-role-nginx https://github.com/nginxinc/ansible-role-nginx.git
         git subtree add --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
 
-### Using
+### Using Ansible
 
-    pipenv shell
+    poetry shell
     cd ansible
 
 Here are some sample ansible commands:
@@ -73,15 +72,21 @@ Here are some sample ansible commands:
     ansible-playbook playbooks/web.yml -v --diff --check
     ansible-playbook playbooks/web.yml --list-tasks
     ansible-playbook playbooks/web.yml --list-tags
+    ansible-playbook -v --diff playbooks/mac.yml
     ansible-playbook -v --diff --vault-id personal@~/.ansible-personal-key playbooks/mac.yml
     ansible-vault decrypt --output - vars/vault.yml
+    ansible-vault encrypt_string 'XXXX' --name github_token
     ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key --encrypt-vault-id personal 'XXXX' --name github_token
+
+**Note**: If [vault_identity_list](https://docs.ansible.com/ansible/latest/user_guide/vault.html#setting-a-default-vault-id) 
+is set in `ansible.cfg`, there is no need to use `--vault-id` or `--encrypt-vault-id` 
+on the command line.
 
 ### Updating
 
 * Update Python modules:
 
-        pipenv sync
+        poetry update
 
 * Update Git subtrees:
 
