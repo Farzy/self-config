@@ -252,6 +252,8 @@ test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell
 export GPG_TTY="$(tty)"
 export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
 gpgconf --launch gpg-agent
+
+export TG_TF_REGISTRY_TOKEN="{{ dfns.spacelift_ro_token }}"
 {| endif |}
 {| if integration.gitguardian |}
 # GitGuardian integration
