@@ -178,6 +178,7 @@
   ansible.builtin.shell:
     cmd: gpgconf --list-dirs agent-ssh-socket
   register: agent_ssh_socket
+  check_mode: false
   ignore_errors: true
   when: integration.dfns
   tags:
