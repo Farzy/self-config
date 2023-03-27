@@ -253,6 +253,7 @@ export GPG_TTY="$(tty)"
 export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
 gpgconf --launch gpg-agent
 
+alias tg=terragrunt
 export TG_TF_REGISTRY_TOKEN="{{ dfns.spacelift_ro_token }}"
 {| endif |}
 {| if integration.gitguardian |}
