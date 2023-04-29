@@ -1,53 +1,41 @@
 ---
 galaxy_info:
-  author: Alessandro Fael Garcia
-  description: Official Ansible role for NGINX
-  company: NGINX, Inc.
+  author: nginxinc
+  description: Official Ansible role for installing NGINX
+  role_name: nginx
+  company: F5, Inc.
 
   license: Apache License, Version 2.0
 
-  min_ansible_version: 2.9
+  min_ansible_version: '2.12'
 
   platforms:
     - name: Alpine
-      versions:
-        - any
-    - name: Amazon
-      versions:
-        - 2018.03
+      versions: [all]
     - name: Amazon Linux 2
-      versions:
-        - any
+      versions: [all]
     - name: Debian
-      versions:
-        - stretch
-        - buster
+      versions: [bullseye]
     - name: EL
-      versions:
-        - 6
-        - 7
+      versions: ['7', '8', '9']
     - name: FreeBSD
-      versions:
-        - 11.2
-        - 12.0
+      versions: ['12.1']
     - name: Ubuntu
-      versions:
-        - xenial
-        - bionic
-        - focal
+      versions: [bionic, focal, impish, jammy]
     - name: SLES
-      versions:
-        - 12
-        - 15
+      versions: ['12', '15']
 
   galaxy_tags:
     - nginx
     - oss
+    - opensource
     - plus
-    - amplify
-    - unit
     - web
     - server
     - development
+    - install
 
-dependencies: []
+collections:
+  - ansible.posix
+  - community.crypto
+  - community.general
