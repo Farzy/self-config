@@ -1,8 +1,19 @@
 ---
-- name: "(Install: OSS Linux)"
-  import_tasks: install-oss-linux.yml
-  when: ansible_os_family in nginx_linux_families
+- name: "{{ nginx_setup | capitalize }} NGINX in Linux systems"
+  when: ansible_facts['system'] | lower is not search('bsd')
+  block:
+    - name: "{{ nginx_setup | capitalize }} NGINX from the official package repository"
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/opensource/install-{{ ansible_facts['os_family'] | lower }}.yml"
+      when: nginx_install_from == 'nginx_repository'
 
-- name: "(Install: OSS BSD)"
-  import_tasks: install-oss-bsd.yml
-  when: ansible_system in nginx_bsd_systems
+    - name: "{{ nginx_setup | capitalize }} NGINX from the distribution's package repository"
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/opensource/install-distribution.yml"
+      when: nginx_install_from == 'os_repository'
+
+    - name: "{{ nginx_setup | capitalize }} NGINX from source"
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/opensource/install-source.yml"
+      when: nginx_install_from == 'source'
+
+- name: "{{ nginx_setup | capitalize }} NGINX in Unix systems"
+  ansible.builtin.include_tasks: "{{ role_path }}/tasks/opensource/install-bsd.yml"
+  when: ansible_facts['system'] | lower is search('bsd')
