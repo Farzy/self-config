@@ -69,9 +69,11 @@
 
 - hosts: localhost
   name: Install web content
+  vars_files:
+    - ../vars/web.yml
   tasks:
     - name: Install personal web site with Hugo
       shell:
         cmd: ./deploy
-        chdir: "~/src/farzy.org"
+        chdir: "{{ hugo_home }}"
       tags: www
