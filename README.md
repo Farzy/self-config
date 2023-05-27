@@ -103,6 +103,44 @@ on the command line.
         git fetch --all -v
         git subtree pull --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
 
+## KinD (Kubernetes in Docker)
+
+KinD is installed on a Scaleway server.
+
+### Merging the remote Kubeconfig with the local one
+
+This can be done using the trick from the website in the references. You have to be careful when the keys already 
+exist in the local Kubeconfig. It will be so if you recreate the KinD cluster multiple times with the same name.
+
+I found that inputting the configuration files in the following order works:
+
+```shell
+KUBECONFIG=/tmp/kubeconfig-multi.yaml:~/.kube/config kubectl config view --flatten > ~/.kube/config-new
+# Compare config and config-new to make sure that everything is ok
+mv ~/.kube/config-new ~/.kube/config
+chmod 600 ~/.kube/config
+```
+
+### Accessing the KinD cluster
+
+You need to open an SSH tunnel, for example like this:
+
+```shell
+ssh -L 46419:localhost:46419 -T root@kind.farzad.tech
+```
+
+The Kube API server cannot be directly exposed on the Internet because the domain name is not part of the X509 
+certificate and `kubectl` will refuse the connection.
+
+**Limitation**: 
+
+My goal is to be able to shut down the server in order to save money. But KinD in HA mode (multiple control planes) does
+not support restarts ! This is because Docker changes the nodes' IPs, and the control plane components cannot find
+each other anymore.
+
+Thee
+
 ## References
 
 * Git Subtree: https://www.atlassian.com/git/tutorials/git-subtree
+* How to merge Kubernetes config files: https://medium.com/@jacobtomlinson/how-to-merge-kubernetes-kubectl-config-files-737b61bd517d
