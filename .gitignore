@@ -306,3 +306,6 @@ log/*.log
 
 # GCP keys
 terraform/_auth/*.json
+
+# Terrafor bootstrap
+!/terraform/gcp-management/terraform.tfstate
