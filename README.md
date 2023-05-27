@@ -107,6 +107,20 @@ on the command line.
 
 KinD is installed on a Scaleway server.
 
+### Setup
+
+Set KinD configuration in [ansible/playbooks/kind-server.yml](ansible/playbooks/kind-server.yml):
+- `kind_cluster_name`
+- `kind_config`: Check https://kind.sigs.k8s.io/docs/user/configuration/
+
+Run Ansible:
+
+```shell
+ansible-playbook --diff playbooks/kind-server.yml
+```
+
+The Kubeconfig file is now available at `/tmp/kubeconfig-multi.yaml`.
+
 ### Merging the remote Kubeconfig with the local one
 
 This can be done using the trick from the website in the references. You have to be careful when the keys already 
@@ -116,7 +130,7 @@ I found that inputting the configuration files in the following order works:
 
 ```shell
 KUBECONFIG=/tmp/kubeconfig-multi.yaml:~/.kube/config kubectl config view --flatten > ~/.kube/config-new
-# Compare config and config-new to make sure that everything is ok
+# Compare config and config-new to make sure that everything is OK
 mv ~/.kube/config-new ~/.kube/config
 chmod 600 ~/.kube/config
 ```
@@ -129,16 +143,15 @@ You need to open an SSH tunnel, for example like this:
 ssh -L 46419:localhost:46419 -T root@kind.farzad.tech
 ```
 
-The Kube API server cannot be directly exposed on the Internet because the domain name is not part of the X509 
-certificate and `kubectl` will refuse the connection.
+And access the cluster with its context name which is `kind-<CLUSTER-NAME>`.
 
-**Limitation**: 
+**Limitations**: 
 
-My goal is to be able to shut down the server in order to save money. But KinD in HA mode (multiple control planes) does
+- The Kube API server cannot be directly exposed on the Internet because the domain name is not part of the X509
+  certificate and `kubectl` will refuse the connection.
+- My goal is to be able to shut down the server in order to save money. But KinD in HA mode (multiple control planes) does
 not support restarts ! This is because Docker changes the nodes' IPs, and the control plane components cannot find
-each other anymore.
-
-Thee
+each other anymore. You must therefore avoid creating HA clusters, unless you are sure to keep the server up and running.
 
 ## References
 
