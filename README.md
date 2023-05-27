@@ -157,3 +157,5 @@ each other anymore. You must therefore avoid creating HA clusters, unless you ar
 
 * Git Subtree: https://www.atlassian.com/git/tutorials/git-subtree
 * How to merge Kubernetes config files: https://medium.com/@jacobtomlinson/how-to-merge-kubernetes-kubectl-config-files-737b61bd517d
+* Fix multi-node cluster not working after restarting docker: https://github.com/kubernetes-sigs/kind/pull/2775
+* HA clusters don't reboot properly: https://github.com/kubernetes-sigs/kind/issues/1689
