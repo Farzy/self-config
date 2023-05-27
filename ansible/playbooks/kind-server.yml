@@ -1,0 +1,10 @@
+---
+
+- hosts: kind
+
+  name: "Install server"
+  roles:
+    - role: master-setup
+      tags: deploy
+    - role: docker
+      tags: docker

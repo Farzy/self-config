@@ -70,6 +70,10 @@ Terraform / Ansible configuration for my servers
     poetry shell
     cd ansible
 
+Install Galaxy modules:
+
+    ansible-galaxy collection install -r requirements.yml
+
 Here are some sample ansible commands:
 
     ansible-playbook playbooks/web.yml -v --diff
