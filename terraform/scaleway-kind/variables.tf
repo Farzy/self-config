@@ -1,14 +1,14 @@
 variable "project_id" {
-  type = string
+  type        = string
   description = "Scaleway project ID"
 }
 
 variable "region" {
-  type = string
+  type        = string
   description = "Scaleway region"
 }
 
 variable "zone" {
-  type = string
+  type        = string
   description = "Scaleway zone"
 }

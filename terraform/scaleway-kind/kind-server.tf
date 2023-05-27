@@ -2,7 +2,7 @@ resource "scaleway_instance_ip" "kind-ip" {
 }
 
 resource "scaleway_instance_security_group" "kind-sg" {
-  name = "kind"
+  name                    = "kind"
   inbound_default_policy  = "drop"
   outbound_default_policy = "accept"
 
@@ -13,22 +13,22 @@ resource "scaleway_instance_security_group" "kind-sg" {
   }
 
   inbound_rule {
-    action = "accept"
-    port   = "6443"
+    action   = "accept"
+    port     = "6443"
     ip_range = "0.0.0.0/0"
   }
 }
 
 resource "scaleway_instance_server" "kind-server" {
-  type       = "DEV1-L"
-  image      = "debian_bullseye"
-  name = "kind-server"
+  type  = "DEV1-L"
+  image = "debian_bullseye"
+  name  = "kind-server"
 
   tags = ["docker", "kubernetes"]
 
   ip_id = scaleway_instance_ip.kind-ip.id
 
-#  additional_volume_ids = [scaleway_instance_volume.data.id]
+  #  additional_volume_ids = [scaleway_instance_volume.data.id]
 
   root_volume {
     delete_on_termination = true
@@ -41,8 +41,8 @@ resource "scaleway_instance_server" "kind-server" {
 
 resource "scaleway_instance_user_data" "kind-user-data" {
   server_id = scaleway_instance_server.kind-server.id
-  key = "cloud-init"
-  value = <<-EOF
+  key       = "cloud-init"
+  value     = <<-EOF
 #!/bin/bash
 apt update
 apt upgrade -y

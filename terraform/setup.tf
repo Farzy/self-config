@@ -13,7 +13,7 @@ terraform {
       version = "~> 3.1"
     }
     scaleway = {
-      source = "scaleway/scaleway"
+      source  = "scaleway/scaleway"
       version = "~> 2.19"
     }
   }
@@ -40,7 +40,7 @@ provider "google-beta" {
 }
 
 provider "scaleway" {
-  zone = var.scaleway_zone
-  region = var.scaleway_region
+  zone       = var.scaleway_zone
+  region     = var.scaleway_region
   project_id = var.scaleway_project
 }
