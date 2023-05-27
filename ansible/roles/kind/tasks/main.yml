@@ -1,0 +1,55 @@
+---
+# Check https://kind.sigs.k8s.io/docs/user/quick-start/#installing-from-release-binaries
+- name: "Install KinD {{ kind_version }}"
+  ansible.builtin.get_url:
+    url: "https://kind.sigs.k8s.io/dl/v{{ kind_version }}/kind-linux-amd64"
+    dest: /usr/local/bin/kind
+    owner: root
+    group: root
+    mode: 0755
+
+- name: "Create KinD directory /srv/kind"
+  ansible.builtin.file:
+    state: directory
+    dest: /srv/kind
+    owner: root
+    group: root
+    mode: 0755
+
+- name: "Create KinD configuration"
+  ansible.builtin.template:
+    src: kind-config.yaml.j2
+    dest: "/srv/kind/{{ kind_cluster_name }}.yaml"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: "Check existence of cluster"
+  ansible.builtin.command:
+    cmd: kind get clusters --quiet
+  register: existing_clusters
+
+- name: Debug existing clusters
+  ansible.builtin.debug:
+    var: existing_clusters
+  tags:
+    - debug
+    - never
+
+- name: "Create cluster '{{ kind_cluster_name }}'"
+  ansible.builtin.command:
+    cmd: "kind create cluster --config /srv/kind/{{ kind_cluster_name }}.yaml --name {{ kind_cluster_name }}"
+  when:
+    kind_cluster_name not in existing_clusters.stdout_lines
+
+- name: "Download Kubeconfig"
+  ansible.builtin.fetch:
+    src: /root/.kube/config
+    dest: "/tmp/kubeconfig-{{ kind_cluster_name }}.yaml"
+    flat: true
+  register:
+    kubeconfig
+
+- name: "Display Kubeconfig name"
+  ansible.builtin.debug:
+    msg: "Kubeconfig has been downloaded to {{ kubeconfig.dest }}"
