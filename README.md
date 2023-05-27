@@ -26,6 +26,12 @@ Terraform / Ansible configuration for my servers
 * Delete default firewall rules
 * Add public SSH key to Compute Engine Metadata with the login `farzad_farid`
 
+## Scaleway configuration
+
+* Create a Scaleway account
+* Create a project, or use Default project
+* Create an API key on https://console.scaleway.com/iam/api-keys using the [documentation](https://github.com/scaleway/scaleway-sdk-go/blob/master/scw/README.md#scaleway-config)
+* Put the key in `$HOME/.config/scw/config.yaml` along with organization id, project id, default region, default zone
 
 ## Terraform
 

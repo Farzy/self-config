@@ -309,3 +309,4 @@ terraform/_auth/*.json
 
 # Terrafor bootstrap
 !/terraform/gcp-management/terraform.tfstate
+!/terraform/scaleway-management/terraform.tfstate
