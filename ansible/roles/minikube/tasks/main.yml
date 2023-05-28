@@ -1,0 +1,17 @@
+---
+# Check https://minikube.sigs.k8s.io/docs/start/
+- name: "Download Minikube"
+  ansible.builtin.get_url:
+    url: "https://storage.googleapis.com/minikube/releases/latest/minikube_latest_amd64.deb"
+    dest: /tmp/
+    owner: root
+    group: root
+    mode: 0644
+  register:
+    download_minikube
+
+- name: "Install Minikube"
+  ansible.builtin.command:
+    cmd: "dpkg -i /tmp/minikube_latest_amd64.deb"
+  when:
+    download_minikube.changed

@@ -10,6 +10,8 @@
       tags: docker
     - role: kind
       tags: kind
+    - role: minikube
+      tags: minikube
   vars:
     kind_cluster_name: multi
     # Check https://kind.sigs.k8s.io/docs/user/configuration/

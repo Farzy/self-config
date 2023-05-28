@@ -1,7 +1,7 @@
-resource "scaleway_instance_ip" "kind-ip" {
+resource "scaleway_instance_ip" "k8s-ip" {
 }
 
-resource "scaleway_instance_security_group" "kind-sg" {
+resource "scaleway_instance_security_group" "k8s-sg" {
   name                    = "kind"
   inbound_default_policy  = "drop"
   outbound_default_policy = "accept"
@@ -13,14 +13,14 @@ resource "scaleway_instance_security_group" "kind-sg" {
   }
 }
 
-resource "scaleway_instance_server" "kind-server" {
+resource "scaleway_instance_server" "k8s-server" {
   type  = "DEV1-L"
   image = "debian_bullseye"
-  name  = "kind-server"
+  name  = "k8s-server"
 
   tags = ["docker", "kubernetes"]
 
-  ip_id = scaleway_instance_ip.kind-ip.id
+  ip_id = scaleway_instance_ip.k8s-ip.id
 
   #  additional_volume_ids = [scaleway_instance_volume.data.id]
 
@@ -30,11 +30,11 @@ resource "scaleway_instance_server" "kind-server" {
     size_in_gb = 30
   }
 
-  security_group_id = scaleway_instance_security_group.kind-sg.id
+  security_group_id = scaleway_instance_security_group.k8s-sg.id
 }
 
-resource "scaleway_instance_user_data" "kind-user-data" {
-  server_id = scaleway_instance_server.kind-server.id
+resource "scaleway_instance_user_data" "k8S-user-data" {
+  server_id = scaleway_instance_server.k8s-server.id
   key       = "cloud-init"
   value     = <<-EOF
 #!/bin/bash

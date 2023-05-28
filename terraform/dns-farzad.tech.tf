@@ -5,10 +5,10 @@ resource "google_dns_managed_zone" "farzad-tech" {
   visibility  = "public"
 }
 
-resource "google_dns_record_set" "kind-server" {
+resource "google_dns_record_set" "k8s-server" {
   managed_zone = google_dns_managed_zone.farzad-tech.name
-  name         = "kind.${google_dns_managed_zone.farzad-tech.dns_name}"
-  rrdatas      = [module.scaleway-kind.kind-ip]
+  name         = "k8s.${google_dns_managed_zone.farzad-tech.dns_name}"
+  rrdatas      = [module.scaleway-k8s.k8s-ip]
   ttl          = 600
   type         = "A"
 }

@@ -107,9 +107,30 @@ on the command line.
 
 KinD is installed on a Scaleway server.
 
+### SSH Setup
+
+Sign the server host key using our SSH CA.
+- Copy the CA key and certificate to `/root.ssh`
+- Sign the host certificates:
+```shell
+cd /etc/ssh
+for cert in ssh_host_*_key.pub ; do ssh-keygen -s ~/.ssh/ca_host_key -h -I k8s.farzad.tech $cert ; done
+rm -f /root/.ssh/ca_host_key*
+```
+- Add the following lines to `/etc/ssh/sshd_config`:
+```text
+HostCertificate /etc/ssh/ssh_host_rsa_key-cert.pub
+HostCertificate /etc/ssh/ssh_host_ecdsa_key-cert.pub
+HostCertificate /etc/ssh/ssh_host_ed25519_key-cert.pub
+```
+- Restart SSH server
+```shell
+service sshd restart
+```
+
 ### Setup
 
-Set KinD configuration in [ansible/playbooks/kind-server.yml](ansible/playbooks/kind-server.yml):
+Set KinD configuration in [ansible/playbooks/kind-server.yml](ansible/playbooks/k8s-server.yml):
 - `kind_cluster_name`
 - `kind_config`: Check https://kind.sigs.k8s.io/docs/user/configuration/
 

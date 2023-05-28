@@ -1,4 +1,17 @@
 ---
+- name: Sysctl settings for Kubernetes
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_set: yes
+    state: present
+    reload: yes
+  loop:
+    - name: fs.inotify.max_user_watches
+      value: 524288
+    - name: fs.inotify.max_user_instances
+      value: 512
+
 - name: Install required system packages
   apt:
     pkg:
@@ -28,3 +41,10 @@
     name: docker-ce
     state: latest
     update_cache: true
+
+- name: Make "debian" user Docker admin
+  ansible.builtin.user:
+    append: true
+    name: debian
+    groups:
+      - docker
