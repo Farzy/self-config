@@ -1,0 +1,29 @@
+---
+
+- hosts: kind
+
+  name: "Install server"
+  roles:
+    - role: master-setup
+      tags: deploy
+    - role: docker
+      tags: docker
+    - role: kind
+      tags: kind
+  vars:
+    kind_cluster_name: multi
+    # Check https://kind.sigs.k8s.io/docs/user/configuration/
+    kind_config: |
+      # Multi-nodes cluster
+      kind: Cluster
+      apiVersion: kind.x-k8s.io/v1alpha4
+      nodes:
+        - role: control-plane
+          labels: 
+            role: cp
+        - role: worker
+          labels:
+            role: worker1
+        - role: worker
+          labels:
+            role: worker2

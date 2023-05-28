@@ -3,3 +3,6 @@ farzad-01.farzy.org ansible_user=farzad_farid ansible_python_interpreter=python3
 
 [mac]
 localhost ansible_connection=local ansible_become=false
+
+[kind]
+kind.farzad.tech ansible_user=root ansible_python_interpreter=python3

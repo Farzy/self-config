@@ -26,6 +26,12 @@ Terraform / Ansible configuration for my servers
 * Delete default firewall rules
 * Add public SSH key to Compute Engine Metadata with the login `farzad_farid`
 
+## Scaleway configuration
+
+* Create a Scaleway account
+* Create a project, or use Default project
+* Create an API key on https://console.scaleway.com/iam/api-keys using the [documentation](https://github.com/scaleway/scaleway-sdk-go/blob/master/scw/README.md#scaleway-config)
+* Put the key in `$HOME/.config/scw/config.yaml` along with organization id, project id, default region, default zone
 
 ## Terraform
 
@@ -64,6 +70,10 @@ Terraform / Ansible configuration for my servers
     poetry shell
     cd ansible
 
+Install Galaxy modules:
+
+    ansible-galaxy collection install -r requirements.yml
+
 Here are some sample ansible commands:
 
     ansible-playbook playbooks/web.yml -v --diff
@@ -93,6 +103,59 @@ on the command line.
         git fetch --all -v
         git subtree pull --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
 
+## KinD (Kubernetes in Docker)
+
+KinD is installed on a Scaleway server.
+
+### Setup
+
+Set KinD configuration in [ansible/playbooks/kind-server.yml](ansible/playbooks/kind-server.yml):
+- `kind_cluster_name`
+- `kind_config`: Check https://kind.sigs.k8s.io/docs/user/configuration/
+
+Run Ansible:
+
+```shell
+ansible-playbook --diff playbooks/kind-server.yml
+```
+
+The Kubeconfig file is now available at `/tmp/kubeconfig-multi.yaml`.
+
+### Merging the remote Kubeconfig with the local one
+
+This can be done using the trick from the website in the references. You have to be careful when the keys already 
+exist in the local Kubeconfig. It will be so if you recreate the KinD cluster multiple times with the same name.
+
+I found that inputting the configuration files in the following order works:
+
+```shell
+KUBECONFIG=/tmp/kubeconfig-multi.yaml:~/.kube/config kubectl config view --flatten > ~/.kube/config-new
+# Compare config and config-new to make sure that everything is OK
+mv ~/.kube/config-new ~/.kube/config
+chmod 600 ~/.kube/config
+```
+
+### Accessing the KinD cluster
+
+You need to open an SSH tunnel, for example like this:
+
+```shell
+ssh -L 46419:localhost:46419 -T root@kind.farzad.tech
+```
+
+And access the cluster with its context name which is `kind-<CLUSTER-NAME>`.
+
+**Limitations**: 
+
+- The Kube API server cannot be directly exposed on the Internet because the domain name is not part of the X509
+  certificate and `kubectl` will refuse the connection.
+- My goal is to be able to shut down the server in order to save money. But KinD in HA mode (multiple control planes) does
+not support restarts ! This is because Docker changes the nodes' IPs, and the control plane components cannot find
+each other anymore. You must therefore avoid creating HA clusters, unless you are sure to keep the server up and running.
+
 ## References
 
 * Git Subtree: https://www.atlassian.com/git/tutorials/git-subtree
+* How to merge Kubernetes config files: https://medium.com/@jacobtomlinson/how-to-merge-kubernetes-kubectl-config-files-737b61bd517d
+* Fix multi-node cluster not working after restarting docker: https://github.com/kubernetes-sigs/kind/pull/2775
+* HA clusters don't reboot properly: https://github.com/kubernetes-sigs/kind/issues/1689
