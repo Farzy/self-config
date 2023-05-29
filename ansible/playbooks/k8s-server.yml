@@ -29,3 +29,6 @@
         - role: worker
           labels:
             role: worker2
+      networking:
+        #apiServerAddress: "{{ ansible_default_ipv4.address }}"
+        apiServerPort: 1443

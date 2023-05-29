@@ -16,7 +16,15 @@
 
 - name: Setup Debian packages configuration (debconf)
   debconf: name="{{ item.name }}" question="{{ item.question }}" value="{{ item.value }}" vtype="{{ item.vtype }}"
-  loop: "{{ global.debconf }}"
+  loop: "{{ global.debconf.defaults }}"
+  tags: configuration
+
+- name: Force LANG to en_US
+  ansible.builtin.blockinfile:
+    path: /etc/environment
+    block: |
+      LANG=en_US.UTF-8
+      LC_ALL=en_US.UTF-8
   tags: configuration
 
 - name: Install packages

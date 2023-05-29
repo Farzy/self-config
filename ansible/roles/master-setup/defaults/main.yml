@@ -18,14 +18,27 @@ global:
     - keyserver: "hkp://keyserver.ubuntu.com:80"
       id: "0xcbcb082a1bb943db"
   debconf:
-    - name: debconf
-      question: "debconf/priority"
-      value: low
-      vtype: select
-    - name: postfix
-      question: "postfix/mailname"
-      value: "farzy.org"
-      vtype: string
+    defaults:
+      - name: debconf
+        question: "debconf/priority"
+        value: low
+        vtype: select
+      - name: debconf
+        question: debconf/frontend
+        value: Noninteractive
+        vtype: select
+      - name: postfix
+        question: "postfix/mailname"
+        value: "farzy.org"
+        vtype: string
+      - name: locales
+        question: locales/default_environment_locale
+        value: en_US.UTF-8
+        vtype: select
+      - name: locales
+        question: locales/locales_to_be_generated
+        value: "en_US.UTF-8 UTF-8"
+        vtype: multiselect
   packages:
 #    - aptitude
 #    - apt-listchanges
