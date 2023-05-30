@@ -40,53 +40,100 @@ global:
         value: "en_US.UTF-8 UTF-8"
         vtype: multiselect
   packages:
-#    - aptitude
-#    - apt-listchanges
-#    - apt-listbugs
-#    - apt-rdepends
-#    - apt-show-source
-#    - apt-show-versions
-#    - apt-utils
-    - bash-completion
-#    - build-essential
-    - bzip2
-#    - cronolog
-    - debconf
-    - deborphan
-#    - debsums
-#    - devscripts
-#    - dh-make
-    - dlocate
-#    - dmidecode
-    - dnsutils
-    - elinks
-#    - fakeroot
-    - git
-#    - gnupg
-    - htop
-#    - iftop
-    - less
-#    - lftp
-#    - logrotate
-    - lsof
-    - ltrace
-    - mlocate
-    - mmv
-    - mtr
-#    - mutt
-    - ncdu
-    - nmap
-    - rsync
-    - screen
-    - strace
-    - tcpdump
-    - tmux
-    - traceroute
-    - tshark
-    - unzip
-    - vim
-    - wdiff
-#    - wget
-    - whois
-    - zip
-    - zsh
+    apt:
+#      - aptitude
+#      - apt-listchanges
+#      - apt-listbugs
+#      - apt-rdepends
+#      - apt-show-source
+#      - apt-show-versions
+#      - apt-utils
+      - bash-completion
+#      - build-essential
+      - bzip2
+#      - cronolog
+      - debconf
+      - deborphan
+#      - debsums
+#      - devscripts
+#      - dh-make
+      - dlocate
+#      - dmidecode
+      - dnsutils
+      - elinks
+#      - fakeroot
+      - git
+#      - gnupg
+      - jq
+      - htop
+#      - iftop
+      - less
+#      - lftp
+#      - logrotate
+      - lsof
+      - ltrace
+      - mlocate
+      - mmv
+      - mtr
+#      - mutt
+      - ncdu
+      - nmap
+      - rsync
+      - screen
+      - strace
+      - tcpdump
+      - tmux
+      - traceroute
+      - tshark
+      - unzip
+      - vim
+      - wdiff
+#      - wget
+      - whois
+      - zip
+      - zsh
+    pip_system:
+      - yq
+
+user:
+  home: /home/debian
+  owner: debian
+  group: debian
+  dotfiles:
+    - name: .iterm2_shell_integration.zsh
+      mode: "0755"
+#    - name: .iterm2
+    - name: .bashrc
+    - name: .gitignore_global
+    - name: .profile
+    - name: .zshrc
+    - name: .iterm2/imgcat
+      mode: "0755"
+    - name: .iterm2/imgls
+      mode: "0755"
+    - name: .iterm2/it2api
+      mode: "0755"
+    - name: .iterm2/it2attention
+      mode: "0755"
+    - name: .iterm2/it2check
+      mode: "0755"
+    - name: .iterm2/it2copy
+      mode: "0755"
+    - name: .iterm2/it2dl
+      mode: "0755"
+    - name: .iterm2/it2getvar
+      mode: "0755"
+    - name: .iterm2/it2git
+      mode: "0755"
+    - name: .iterm2/it2profile
+      mode: "0755"
+    - name: .iterm2/it2setcolor
+      mode: "0755"
+    - name: .iterm2/it2setkeylabel
+      mode: "0755"
+    - name: .iterm2/it2tip
+      mode: "0755"
+    - name: .iterm2/it2ul
+      mode: "0755"
+    - name: .iterm2/it2universion
+      mode: "0755"

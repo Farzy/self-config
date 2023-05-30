@@ -42,9 +42,9 @@
     state: latest
     update_cache: true
 
-- name: Make "debian" user Docker admin
+- name: Make main user Docker admin
   ansible.builtin.user:
     append: true
-    name: debian
+    name: "{{ user.owner }}"
     groups:
       - docker
