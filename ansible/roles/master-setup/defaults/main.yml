@@ -102,7 +102,6 @@ user:
   dotfiles:
     - name: .iterm2_shell_integration.zsh
       mode: "0755"
-#    - name: .iterm2
     - name: .bashrc
     - name: .gitignore_global
     - name: .profile
