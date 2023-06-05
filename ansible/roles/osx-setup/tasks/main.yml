@@ -31,15 +31,6 @@
   tags:
     - packages
 
-- name: Remove Brew packages
-  homebrew:
-    name:
-      - terraform@0.12
-      - terraform@0.13
-    state: absent
-  tags:
-    - packages
-
 - name: List installed Helm plugins
   shell:
     cmd: "helm plugin list | tail -n +2 | cut -f 1"
@@ -146,8 +137,9 @@
     - .gitconfig-personal
     - .gitconfig-professional
     - .gitignore_global
-    - .zshrc
     - .p10k.zsh
+    - .tmux.conf
+    - .zshrc
   tags:
     - configuration
     - zsh

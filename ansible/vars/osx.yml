@@ -133,6 +133,8 @@ homebrew_packages:
 homebrew_packages_removed:
   - python@3.8
   - gpg2
+  - terraform@0.12
+  - terraform@0.13
 
 iterm2_library_path: ~/Library/Application Support/iTerm2
 iterm2_sessions:

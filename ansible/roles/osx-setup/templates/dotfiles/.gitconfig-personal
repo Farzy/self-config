@@ -1,3 +1,4 @@
+# {{ ansible_managed }}
 [user]
     name = {{ me.name }}
     email = {{ me.email.personal }}
