@@ -62,3 +62,5 @@
     template = ~/.stCommitMsg
 [pull]
     rebase = true
+[init]
+    defaultBranch = master
