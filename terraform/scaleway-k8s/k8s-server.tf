@@ -11,6 +11,12 @@ resource "scaleway_instance_security_group" "k8s-sg" {
     port     = "22"
     ip_range = "0.0.0.0/0"
   }
+
+  inbound_rule {
+    action   = "accept"
+    protocol = "ICMP"
+    ip_range = "0.0.0.0/0"
+  }
 }
 
 resource "scaleway_instance_server" "k8s-server" {
