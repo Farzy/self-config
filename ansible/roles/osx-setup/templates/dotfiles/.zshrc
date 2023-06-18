@@ -246,7 +246,7 @@ eval "$(direnv hook zsh)"
 # iTerm2 integration
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
-{| if integration.dfns |}
+{| if integration_dfns |}
 # DFNS integration
 # ----------------
 
@@ -255,9 +255,9 @@ export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
 gpgconf --launch gpg-agent
 
 alias tg=terragrunt
-export TG_TF_REGISTRY_TOKEN="{{ dfns.spacelift_ro_token }}"
+export TG_TF_REGISTRY_TOKEN="{{ dfns_spacelift_ro_token }}"
 {| endif |}
-{| if integration.gitguardian |}
+{| if integration_gitguardian |}
 # GitGuardian integration
 # -----------------------
 
@@ -363,7 +363,7 @@ ghlive-ban-user() {
     done
 }
 {| endif |}
-{| if integration.kapten |}
+{| if integration_kapten |}
 # Disable temporarily as this messes up Kapten Playbook that call kubectl
 #alias ansible-playbook="no_proxy='*' command ansible-playbook" # See https://bugs.python.org/issue30385
 

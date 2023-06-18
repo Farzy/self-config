@@ -17,55 +17,8 @@
         group: adm
         mode: 02775
       tags: www
-
-  vars:
-#    nginx_cleanup_config: true
-
-    nginx_http_template_enable: true
-    nginx_http_template:
-      default:
-        template_file: http/default.conf.j2
-        conf_file_name: default.conf
-        conf_file_location: /etc/nginx/conf.d/
-        servers:
-          default:
-            listen:
-              listen_ipv4:
-                # ip: 0.0.0.0
-                port: 80
-              listen_ipv6:
-                ip: "[::]"
-                port: 80
-            server_name: farzy.org www.farzy.org
-            access_log:
-              - location: /var/log/nginx/access_farzy.log
-                name: combined
-            error_log:
-              location: /var/log/nginx/error_farzy.log
-              level: warn
-            custom_options:
-              - |-
-                # Always redirect HTTP to HTTPS, keeping the same hostname
-                if ($http_x_forwarded_proto = "http") {
-                    return 308 https://$host$request_uri;
-                }
-              - |-
-                if ($request_method !~ ^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)$ ){
-                    return 403;
-                }
-              - error_page 404 /en/404.html;
-            web_server:
-              locations:
-                default:
-                  location: /
-                  add_headers:
-                    strict_transport_security:
-                      name: Strict-Transport-Security
-                      value: max-age=15768000; includeSubDomains
-                      always: true
-                  html_file_location: /srv/www/farzy.org
-                  html_file_name: index.html
-              http_demo_conf: false
+  vars_files:
+    - ../vars/web.yml
 
 - hosts: localhost
   name: Install web content

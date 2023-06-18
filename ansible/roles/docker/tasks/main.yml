@@ -45,6 +45,6 @@
 - name: Make main user Docker admin
   ansible.builtin.user:
     append: true
-    name: "{{ user.owner }}"
+    name: "{{ user_owner }}"
     groups:
       - docker

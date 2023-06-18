@@ -16,7 +16,7 @@
 
 - name: Setup Debian packages configuration (debconf)
   debconf: name="{{ item.name }}" question="{{ item.question }}" value="{{ item.value }}" vtype="{{ item.vtype }}"
-  loop: "{{ global.debconf.defaults }}"
+  loop: "{{ global_debconf_defaults }}"
   tags: configuration
 
 - name: Force LANG to en_US
@@ -28,19 +28,22 @@
   tags: configuration
 
 - name: Install packages
-  apt: name={{ global.packages.apt }} state=present
+  ansible.builtin.apt:
+    name: "{{ global_packages_apt }}"
+    state: present
   tags: packages
 
+-
 - name: Install system Pip packages
   ansible.builtin.pip:
-    name: "{{ global.packages.pip_system }}"
+    name: "{{ global_packages_pip_system }}"
     state: present
     extra_args: "--system"
   tags: packages
 
 - name: Install global /etc files
   copy: src="etcfiles/{{ item.name }}" dest="/etc/" mode={{ item.mode | default("0644") }} owner=root group=root
-  loop: "{{ global.etcfiles }}"
+  loop: "{{ global_etcfiles }}"
   tags: configuration
 
 #- name: Install Git config
@@ -49,7 +52,7 @@
 
 - name: Switch main user to Zsh
   ansible.builtin.user:
-    name: "{{ user.owner }}"
+    name: "{{ user_owner }}"
     shell: /usr/bin/zsh
   tags: configuration
 
@@ -79,20 +82,21 @@
 
 - name: Create iTerm2 directory
   ansible.builtin.file:
-    path: "{{ user.home }}/.iterm2"
-    owner: "{{ user.owner }}"
-    group: "{{ user.group }}"
+    path: "{{ user_home }}/.iterm2"
+    owner: "{{ user_owner }}"
+    group: "{{ user_group }}"
     mode: 0755
+    state: directory
   tags: configuration
 
 - name: Install personal config files
   ansible.builtin.template:
     src: "dotfiles/{{ item.name }}"
-    dest: "{{ user.home }}/{{ item.name }}"
+    dest: "{{ user_home }}/{{ item.name }}"
     mode: "{{ item.mode | default('0644') }}"
-    owner: "{{ user.owner }}"
-    group: "{{ user.group }}"
-  loop: "{{ user.dotfiles }}"
+    owner: "{{ user_owner }}"
+    group: "{{ user_group }}"
+  loop: "{{ user_dotfiles }}"
   tags: configuration
 
 #- name: Install Dropbox

@@ -1,7 +1,7 @@
 # {{ ansible_managed }}
 [user]
-    name = {{ me.name }}
-    email = {{ me.email.professional }}
-    signingkey = {{ me.gpg.professional }}
+    name = {{ me_name }}
+    email = {{ me_email_professional }}
+    signingkey = {{ me_gpg_professional }}
 [commit]
     gpgSign = true

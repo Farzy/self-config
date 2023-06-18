@@ -1,46 +1,43 @@
 ---
 
-global:
-  etcfiles:
-    - name: "profile.d"
-      mode: "0644"
-    - name: "vim"
-      mode: "0644"
-    - name: "screenrc"
-      mode: "0644"
-  apt_repositories:
-    - repo: 'deb http://ftp.debian.org/debian jessie-backports main contrib non-free'
-      state: present
-      filename: 'jessie-backports'
-    - repo: "deb [arch=amd64,i386] http://ftp.igh.cnrs.fr/pub/mariadb/repo/10.1/debian jessie main"
-      filename: "mariadb"
-  apt_keys:
-    - keyserver: "hkp://keyserver.ubuntu.com:80"
-      id: "0xcbcb082a1bb943db"
-  debconf:
-    defaults:
-      - name: debconf
-        question: "debconf/priority"
-        value: low
-        vtype: select
-      - name: debconf
-        question: debconf/frontend
-        value: Noninteractive
-        vtype: select
-      - name: postfix
-        question: "postfix/mailname"
-        value: "farzy.org"
-        vtype: string
-      - name: locales
-        question: locales/default_environment_locale
-        value: en_US.UTF-8
-        vtype: select
-      - name: locales
-        question: locales/locales_to_be_generated
-        value: "en_US.UTF-8 UTF-8"
-        vtype: multiselect
-  packages:
-    apt:
+global_etcfiles:
+  - name: "profile.d"
+    mode: "0644"
+  - name: "vim"
+    mode: "0644"
+  - name: "screenrc"
+    mode: "0644"
+global_apt_repositories:
+  - repo: 'deb http://ftp.debian.org/debian jessie-backports main contrib non-free'
+    state: present
+    filename: 'jessie-backports'
+  - repo: "deb [arch=amd64,i386] http://ftp.igh.cnrs.fr/pub/mariadb/repo/10.1/debian jessie main"
+    filename: "mariadb"
+global_apt_keys:
+  - keyserver: "hkp://keyserver.ubuntu.com:80"
+    id: "0xcbcb082a1bb943db"
+global_debconf_defaults:
+  - name: debconf
+    question: "debconf/priority"
+    value: low
+    vtype: select
+  - name: debconf
+    question: debconf/frontend
+    value: Noninteractive
+    vtype: select
+  - name: postfix
+    question: "postfix/mailname"
+    value: "farzy.org"
+    vtype: string
+  - name: locales
+    question: locales/default_environment_locale
+    value: en_US.UTF-8
+    vtype: select
+  - name: locales
+    question: locales/locales_to_be_generated
+    value: "en_US.UTF-8 UTF-8"
+    vtype: multiselect
+global_packages_apt:
 #      - aptitude
 #      - apt-listchanges
 #      - apt-listbugs
@@ -48,91 +45,92 @@ global:
 #      - apt-show-source
 #      - apt-show-versions
 #      - apt-utils
-      - bash-completion
+  - bash-completion
 #      - build-essential
-      - bzip2
+  - bzip2
 #      - cronolog
-      - debconf
-      - deborphan
+  - debconf
+  - deborphan
 #      - debsums
 #      - devscripts
 #      - dh-make
-      - dlocate
+  - dlocate
 #      - dmidecode
-      - dnsutils
-      - elinks
+  - dnsutils
+  - elinks
 #      - fakeroot
-      - git
+  - git
 #      - gnupg
-      - jq
-      - htop
+  - jq
+  - htop
 #      - iftop
-      - less
+  - less
 #      - lftp
+  - locales
 #      - logrotate
-      - lsof
-      - ltrace
-      - mlocate
-      - mmv
-      - mtr
+  - lsof
+  - ltrace
+  - mlocate
+  - mmv
+  - mtr
 #      - mutt
-      - ncdu
-      - nmap
-      - rsync
-      - screen
-      - strace
-      - tcpdump
-      - tmux
-      - traceroute
-      - tshark
-      - unzip
-      - vim
-      - wdiff
+  - ncdu
+  - nmap
+  - python3-pip
+  - rsync
+  - screen
+  - strace
+  - tcpdump
+  - tmux
+  - traceroute
+  - tshark
+  - unzip
+  - vim
+  - wdiff
 #      - wget
-      - whois
-      - zip
-      - zsh
-    pip_system:
-      - yq
+  - whois
+  - zip
+  - zsh
+global_packages_pip_system:
+  - yq
 
-user:
-  home: /home/debian
-  owner: debian
-  group: debian
-  dotfiles:
-    - name: .iterm2_shell_integration.zsh
-      mode: "0755"
-    - name: .bashrc
-    - name: .gitignore_global
-    - name: .profile
-    - name: .zshrc
-    - name: .iterm2/imgcat
-      mode: "0755"
-    - name: .iterm2/imgls
-      mode: "0755"
-    - name: .iterm2/it2api
-      mode: "0755"
-    - name: .iterm2/it2attention
-      mode: "0755"
-    - name: .iterm2/it2check
-      mode: "0755"
-    - name: .iterm2/it2copy
-      mode: "0755"
-    - name: .iterm2/it2dl
-      mode: "0755"
-    - name: .iterm2/it2getvar
-      mode: "0755"
-    - name: .iterm2/it2git
-      mode: "0755"
-    - name: .iterm2/it2profile
-      mode: "0755"
-    - name: .iterm2/it2setcolor
-      mode: "0755"
-    - name: .iterm2/it2setkeylabel
-      mode: "0755"
-    - name: .iterm2/it2tip
-      mode: "0755"
-    - name: .iterm2/it2ul
-      mode: "0755"
-    - name: .iterm2/it2universion
-      mode: "0755"
+user_home: /home/debian
+user_owner: debian
+user_group: debian
+user_dotfiles:
+  - name: .iterm2_shell_integration.zsh
+    mode: "0755"
+  - name: .bashrc
+  - name: .gitignore_global
+  - name: .profile
+  - name: .zshrc
+  - name: .iterm2/imgcat
+    mode: "0755"
+  - name: .iterm2/imgls
+    mode: "0755"
+  - name: .iterm2/it2api
+    mode: "0755"
+  - name: .iterm2/it2attention
+    mode: "0755"
+  - name: .iterm2/it2check
+    mode: "0755"
+  - name: .iterm2/it2copy
+    mode: "0755"
+  - name: .iterm2/it2dl
+    mode: "0755"
+  - name: .iterm2/it2getvar
+    mode: "0755"
+  - name: .iterm2/it2git
+    mode: "0755"
+  - name: .iterm2/it2profile
+    mode: "0755"
+  - name: .iterm2/it2setcolor
+    mode: "0755"
+  - name: .iterm2/it2setkeylabel
+    mode: "0755"
+  - name: .iterm2/it2tip
+    mode: "0755"
+  - name: .iterm2/it2ul
+    mode: "0755"
+  - name: .iterm2/it2universion
+    mode: "0755"

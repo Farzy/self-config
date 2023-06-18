@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart={{ me.home }}/.dropbox-dist/dropboxd
+ExecStart={{ user_home }}/.dropbox-dist/dropboxd
 Restart=on-failure
-User=farzy
+User={{ user_owner }}
 
 [Install]
 WantedBy=multi-user.target

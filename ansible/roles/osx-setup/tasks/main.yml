@@ -161,7 +161,7 @@
     path: ~/.ssh
     state: directory
     mode: '0755'
-  when: integration.dfns
+  when: integration_dfns
   tags:
     - configuration
     - ssh
@@ -172,7 +172,7 @@
   register: agent_ssh_socket
   check_mode: false
   ignore_errors: true
-  when: integration.dfns
+  when: integration_dfns
   tags:
     - configuration
     - ssh
@@ -182,7 +182,7 @@
     src: ssh/config.j2
     dest: ~/.ssh/config
     mode: '0755'
-  when: integration.dfns and not agent_ssh_socket.failed
+  when: integration_dfns and not agent_ssh_socket.failed
   tags:
     - configuration
     - ssh

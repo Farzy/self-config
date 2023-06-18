@@ -1,4 +1,4 @@
 # {{ ansible_managed }}
 [user]
-    name = {{ me.name }}
-    email = {{ me.email.personal }}
+    name = {{ me_name }}
+    email = {{ me_email_personal }}
