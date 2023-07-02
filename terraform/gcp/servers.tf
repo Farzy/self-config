@@ -28,7 +28,7 @@ resource "google_compute_disk" "farzad-01-system" {
 resource "google_compute_instance" "farzad-01" {
   name         = "farzad-01"
   zone         = var.zone
-  machine_type = "e2-small"
+  machine_type = "e2-micro"
 
   tags = ["env-prod"]
 
