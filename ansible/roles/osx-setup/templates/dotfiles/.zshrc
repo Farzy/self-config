@@ -17,7 +17,11 @@ fi
 
 # Go
 if [[ -d "$HOME/go" ]]; then
-    export PATH=$PATH:${HOME}/go/bin
+    # g-install: do NOT edit, see https://github.com/stefanmaric/g
+    export GOPATH="$HOME/go"
+    export GOROOT="$HOME/.go"
+    export PATH="$GOPATH/bin:$PATH"
+    alias ggovm="$GOPATH/bin/g"
 fi
 
 # rbenv

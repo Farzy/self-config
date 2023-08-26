@@ -93,8 +93,8 @@ homebrew_packages:
   - fzf
   - glab
   - gnu-sed
-  - golang
   - graphicsmagick
+  - helm
   - htop
   - htop-osx
   - hugo
@@ -103,7 +103,6 @@ homebrew_packages:
   - kube-ps1
   - kubectx
   - kubernetes-cli
-  - kubernetes-helm
   - kubie
   - mmv
   - ncdu
