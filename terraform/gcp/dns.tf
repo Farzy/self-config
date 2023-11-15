@@ -102,3 +102,11 @@ resource "google_dns_record_set" "www" {
   type         = "A"
 }
 
+# Blue Sky personal domain
+resource "google_dns_record_set" "atproto" {
+  managed_zone = google_dns_managed_zone.farzy-org.name
+  name         = "_atproto.${google_dns_managed_zone.farzy-org.dns_name}"
+  rrdatas      = ["did=did:plc:oxhsfprto57gcnynywgbi5c6"]
+  ttl          = 3600
+  type         = "TXT"
+}
