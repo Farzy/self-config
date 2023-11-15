@@ -37,6 +37,10 @@ resource "scaleway_instance_server" "k8s-server" {
   }
 
   security_group_id = scaleway_instance_security_group.k8s-sg.id
+
+  lifecycle {
+    ignore_changes = [state]
+  }
 }
 
 resource "scaleway_instance_user_data" "k8S-user-data" {
