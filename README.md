@@ -103,6 +103,13 @@ on the command line.
         git fetch --all -v
         git subtree pull --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
 
+## Configuring Powerline fonts for Powerlevel10k
+
+* Run `p10k configure` to at least download and install the fonts.
+* When instructed, quit and relaunch iTerm2.
+
+You should not need to further configure P10K because Ansible already did so.
+
 ## KinD (Kubernetes in Docker)
 
 KinD is installed on a Scaleway server.

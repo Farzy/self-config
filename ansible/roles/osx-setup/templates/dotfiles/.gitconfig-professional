@@ -2,6 +2,8 @@
 [user]
     name = {{ me_name }}
     email = {{ me_email_professional }}
+{| if integration_dfns |}
     signingkey = {{ me_gpg_professional }}
+{| endif |}
 [commit]
     gpgSign = true
