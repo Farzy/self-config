@@ -133,6 +133,7 @@ homebrew_packages:
   - ripgrep
   - rustup
   - tfenv
+  - tldr
   - vault
   - watch
   - yarn
