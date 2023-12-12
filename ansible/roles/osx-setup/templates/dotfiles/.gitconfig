@@ -3,7 +3,7 @@
   	path = .gitconfig-personal
 [includeIf "gitdir:~/go/src/"]
   	path = .gitconfig-personal
-[includeIf "gitdir:~/src/dfns/"]
+[includeIf "gitdir:~/src/algolia/"]
   	path = .gitconfig-professional
 [color]
     pager = true

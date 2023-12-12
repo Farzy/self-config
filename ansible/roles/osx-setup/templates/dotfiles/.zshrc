@@ -404,3 +404,9 @@ else
     echo "Shell variable KAPTEN_SRC is not defined, cannot create shell functions." 2>&1
 fi
 {| endif |}
+{| if integration_algolia |}
+# Algolia integration
+# -----------------------
+export VAULT_ADDR={{ algolia_vault_addr }}
+
+{| endif |}
