@@ -129,6 +129,7 @@ homebrew_packages:
   - pwgen
   - python@3.9
   - python@3.10
+  - qpdf
   - ripgrep
   - rustup
   - tfenv
