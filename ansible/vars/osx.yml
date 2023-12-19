@@ -24,7 +24,7 @@ me_gpg_professional: !vault |
   6163666236376633350a306332356266373565316639396335666365396436653539366438633263
   64343462373161633632633131373566356663626437313138383565386561653738
 
-integration_algolia: true
+integration_algolia: "{{ ansible_hostname == 'par-m1p-ffarid' }}"
 integration_dfns: false
 integration_gitguardian: false
 integration_kapten: false
@@ -126,6 +126,8 @@ homebrew_packages:
   - pinentry-mac
   - pipenv
   - poetry
+  - pyenv
+  - pyenv-virtualenv
   - pwgen
   - python@3.11
   - python@3.12
