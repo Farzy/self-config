@@ -7,12 +7,9 @@ if [[ -d "$HOME/.cargo" ]]; then
     export PATH="$HOME/.cargo/bin:$PATH"
 fi
 
-# Pour Brew
-export PATH=/usr/local/bin:/usr/local/sbin:$HOME/bin:$PATH
-
-# Python 3.10
-if [[ -d "/usr/local/opt/python@3.10" ]]; then
-    export PATH="/usr/local/opt/python@3.10/bin:$PATH"
+# Homebrew
+if [[ -d /opt/homebrew && ! -v HOMEBREW_PREFIX ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
 # Go

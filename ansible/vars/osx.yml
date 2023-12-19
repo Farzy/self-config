@@ -127,8 +127,8 @@ homebrew_packages:
   - pipenv
   - poetry
   - pwgen
-  - python@3.9
-  - python@3.10
+  - python@3.11
+  - python@3.12
   - qpdf
   - ripgrep
   - rustup
@@ -140,6 +140,8 @@ homebrew_packages:
   - yq
 homebrew_packages_removed:
   - python@3.8
+  - python@3.9
+  - python@3.10
   - gpg2
   - terraform@0.12
   - terraform@0.13
