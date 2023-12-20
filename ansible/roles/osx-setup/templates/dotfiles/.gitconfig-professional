@@ -6,4 +6,4 @@
     signingkey = {{ me_gpg_professional }}
 {| endif |}
 [commit]
-    gpgSign = true
+    gpgSign = false
