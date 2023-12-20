@@ -413,5 +413,5 @@ fi
 # Algolia integration
 # -----------------------
 export VAULT_ADDR={{ algolia_vault_addr }}
-
+export AUSER=ffarid
 {| endif |}
