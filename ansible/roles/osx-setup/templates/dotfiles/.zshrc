@@ -42,14 +42,6 @@ if [[ -d "/usr/local/opt/terraform@0.13" ]]; then
     export PATH="/usr/local/opt/terraform@0.13/bin:$PATH"
 fi
 
-{| if integration_algolia |}
-# Pyenv
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
-eval "$(pyenv virtualenv-init -)"
-{| endif |}
-
 # Automatic Poetry shell activation/deactivation
 _togglePoetryShell() {
   # deactivate shell if pyproject.toml doesn't exist and not in a subdir
@@ -412,6 +404,17 @@ fi
 {| if integration_algolia |}
 # Algolia integration
 # -----------------------
+# Pyenv
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+
+# Vault
 export VAULT_ADDR={{ algolia_vault_addr }}
+
+# infra-cli
 export AUSER=ffarid
+# End Algolia integration
+# -----------------------
 {| endif |}
