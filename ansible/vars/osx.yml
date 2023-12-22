@@ -96,6 +96,7 @@ gitguardian_gitlab_token: !vault |
   61323066653730376366313865376534313936353335313837336436373461363230
 homebrew_packages:
   - awscli
+  - azure-cli
   - bat
   - colordiff
   - coreutils
