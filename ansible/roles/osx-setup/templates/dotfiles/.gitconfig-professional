@@ -4,6 +4,13 @@
     email = {{ me_email_professional }}
 {| if integration_dfns |}
     signingkey = {{ me_gpg_professional }}
-{| endif |}
+[commit]
+    gpgSign = true
+{| else |}
 [commit]
     gpgSign = false
+{| endif |}
+{| if integration_algolia |}
+[url "ssh://git@github.com/algolia"]
+    insteadOf = https://github.com/algolia
+{| endif |}
