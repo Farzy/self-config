@@ -11,6 +11,6 @@
     gpgSign = false
 {| endif |}
 {| if integration_algolia |}
-[url "ssh://git@github.com/algolia"]
-    insteadOf = https://github.com/algolia
+[url "ssh://git@github.com/"]
+    insteadOf = https://github.com/
 {| endif |}
