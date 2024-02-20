@@ -95,6 +95,7 @@ gitguardian_gitlab_token: !vault |
   6533353863623866630a393937663766623461373333316663633032303432626530633839653232
   61323066653730376366313865376534313936353335313837336436373461363230
 homebrew_packages:
+  - "{{ 'algolia/algolia-cli/algolia' if integration_algolia else omit}}"
   - awscli
   - azure-cli
   - bat

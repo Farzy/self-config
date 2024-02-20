@@ -9,7 +9,7 @@
 
 - name: Install Brew packages
   homebrew:
-    name: "{{ homebrew_packages }}"
+    name: "{{ homebrew_packages | reject('equalto', omit) | list }}"
     state: present
   tags:
     - packages
