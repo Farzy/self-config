@@ -15,10 +15,11 @@ fi
 # Go
 if [[ -d "$HOME/go" ]]; then
     # g-install: do NOT edit, see https://github.com/stefanmaric/g
+    # Only use these two settings if the Go Version Manager is installed
+#     export GOROOT="$HOME/.go"
+#     alias ggovm="$GOPATH/bin/g"
     export GOPATH="$HOME/go"
-    export GOROOT="$HOME/.go"
     export PATH="$GOPATH/bin:$PATH"
-    alias ggovm="$GOPATH/bin/g"
 fi
 
 # rbenv
