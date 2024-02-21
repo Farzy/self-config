@@ -1,8 +1,12 @@
 # {{ ansible_managed }}
 [includeIf "gitdir:~/src/personal/"]
   	path = .gitconfig-personal
-[includeIf "gitdir:~/go/src/"]
+[includeIf "gitdir:~/go/"]
+{| if integration_algolia |}
+  	path = .gitconfig-professional
+{| else |}
   	path = .gitconfig-personal
+{| endif |}
 [includeIf "gitdir:~/src/algolia/"]
   	path = .gitconfig-professional
 [color]
