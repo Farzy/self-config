@@ -1,3 +1,5 @@
+---
+
 - name: Install Snap
   ansible.builtin.apt:
     name: snapd
@@ -17,6 +19,7 @@
   ansible.builtin.snap:
     name: microk8s
     classic: true
+    channel: "{{ microk8s_version }}"
   tags:
     - packages
 
@@ -25,3 +28,16 @@
     name: "{{ default_user }}"
     append: true
     groups: microk8s
+
+- name: Wait to Microk8s to be ready and check addons
+  ansible.builtin.shell: /snap/bin/microk8s status --wait-ready --format yaml
+  register: microk8s_output
+
+- name: Set Microk8s status variable in YAML format
+  ansible.builtin.set_fact:
+    microk8s_status: "{{ microk8s_output.stdout | from_yaml }}"
+
+- name: Enable Nginx Ingress Controller
+  ansible.builtin.shell: /snap/bin/microk8s enable ingress
+  register: result
+  changed_when: "'already enabled' not in result.stdout"
