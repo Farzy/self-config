@@ -55,31 +55,69 @@
     shell: /usr/bin/zsh
   tags: configuration
 
-- name: Test existence of Oh My Zsh
+- name: Test existence of Oh My Zsh for main user
   ansible.builtin.stat:
     path: .oh-my-zsh
-  register: omz
+  register: omz_user
   become: false
   tags:
     - configuration
     - zsh
 
-- name: Install Oh My Zsh
-  block:
-    - name: Download OMZ installation script
-      ansible.builtin.get_url:
-        url: https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
-        dest: /tmp/omz-install.sh
-        mode: '0755'
-    - name: Run OMZ installation script
-      ansible.builtin.shell: /tmp/omz-install.sh --unattended --keep-zshrc
-  when: not omz.stat.exists
+- name: Test existence of Oh My Zsh for root user
+  ansible.builtin.stat:
+    path: /root/.oh-my-zsh
+  register: omz_root
+  tags:
+    - configuration
+    - zsh
+
+- name: Download OMZ installation script
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
+    dest: /tmp/omz-install.sh
+    mode: '0755'
+  when: not (omz_user.stat.exists and omz_root.stat.exists)
+  tags:
+    - configuration
+    - zsh
+
+- name: Run OMZ installation script for main user
+  ansible.builtin.shell: /tmp/omz-install.sh --unattended --keep-zshrc
+  when: not omz_user.stat.exists
   become: false
   tags:
     - configuration
     - zsh
 
-- name: Create iTerm2 directory
+- name: Run OMZ installation script for root user
+  ansible.builtin.shell: /tmp/omz-install.sh --unattended --keep-zshrc
+  when: not omz_root.stat.exists
+  become: true
+  tags:
+    - configuration
+    - zsh
+
+- name: Create iTerm2 directory for root
+  ansible.builtin.file:
+    path: "/root/.iterm2"
+    owner: root
+    group: root
+    mode: 0755
+    state: directory
+  tags: configuration
+
+- name: Install personal config files for root
+  ansible.builtin.template:
+    src: "dotfiles/{{ item.name }}"
+    dest: "/root/{{ item.name }}"
+    mode: "{{ item.mode | default('0644') }}"
+    owner: root
+    group: root
+  loop: "{{ user_dotfiles }}"
+  tags: configuration
+
+- name: Create iTerm2 directory for main user
   ansible.builtin.file:
     path: "{{ user_home }}/.iterm2"
     owner: "{{ user_owner }}"
@@ -88,7 +126,7 @@
     state: directory
   tags: configuration
 
-- name: Install personal config files
+- name: Install personal config files for main user
   ansible.builtin.template:
     src: "dotfiles/{{ item.name }}"
     dest: "{{ user_home }}/{{ item.name }}"
@@ -97,6 +135,13 @@
     group: "{{ user_group }}"
   loop: "{{ user_dotfiles }}"
   tags: configuration
+
+- name: Switch roo user to Zsh
+  ansible.builtin.user:
+    name: root
+    shell: /bin/zsh
+  tags: configuration
+
 
 #- name: Install Dropbox
 #  become: yes
