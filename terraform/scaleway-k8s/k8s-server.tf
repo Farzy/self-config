@@ -2,13 +2,19 @@ resource "scaleway_instance_ip" "k8s-ip" {
 }
 
 resource "scaleway_instance_security_group" "k8s-sg" {
-  name                    = "kind"
+  name                    = "k8s"
   inbound_default_policy  = "drop"
   outbound_default_policy = "accept"
 
   inbound_rule {
     action   = "accept"
     port     = "22"
+    ip_range = "0.0.0.0/0"
+  }
+
+  inbound_rule {
+    action   = "accept"
+    port     = "80"
     ip_range = "0.0.0.0/0"
   }
 
