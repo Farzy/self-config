@@ -20,6 +20,12 @@ resource "scaleway_instance_security_group" "k8s-sg" {
 
   inbound_rule {
     action   = "accept"
+    port     = "443"
+    ip_range = "0.0.0.0/0"
+  }
+
+  inbound_rule {
+    action   = "accept"
     protocol = "ICMP"
     ip_range = "0.0.0.0/0"
   }
