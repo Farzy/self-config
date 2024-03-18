@@ -33,7 +33,6 @@
     state: present
   tags: packages
 
--
 - name: Install system Pip packages
   ansible.builtin.pip:
     name: "{{ global_packages_pip_system }}"

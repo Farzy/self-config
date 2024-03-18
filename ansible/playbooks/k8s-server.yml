@@ -12,7 +12,12 @@
       tags: kind
     - role: minikube
       tags: minikube
+    - role: microk8s
+      tags: microk8s
+      when: install_microk8s
   vars:
+    default_user: debian
+    install_microk8s: true
     kind_cluster_name: multi
     # Check https://kind.sigs.k8s.io/docs/user/configuration/
     kind_config: |

@@ -1,0 +1,27 @@
+- name: Install Snap
+  ansible.builtin.apt:
+    name: snapd
+    state: present
+  tags:
+    - packages
+    - snap
+
+- name: Update Snapd
+  ansible.builtin.snap:
+    name: snapd
+  tags:
+    - packages
+    - snap
+
+- name: Install Microk8s
+  ansible.builtin.snap:
+    name: microk8s
+    classic: true
+  tags:
+    - packages
+
+- name: Give default Debian user access to Microk8s
+  ansible.builtin.user:
+    name: "{{ default_user }}"
+    append: true
+    groups: microk8s
