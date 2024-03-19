@@ -11,10 +11,16 @@
 
 - ansible.builtin.include_tasks:
     file: microk8s.yml
+    apply:
+      tags:
+        microk8s
   tags: microk8s
 
 - ansible.builtin.include_tasks:
     file: helm.yml
+    apply:
+      tags:
+        helm
   tags: helm
 
 - ansible.builtin.include_tasks:
