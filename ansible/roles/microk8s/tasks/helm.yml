@@ -1,0 +1,38 @@
+---
+- name: Check Helm version
+  ansible.builtin.shell:
+    cmd: "helm version --template='{% raw %}{{{% endraw %}.Version}}'"
+  register: helm
+  ignore_errors: true
+
+- name: Check if Helm (re)installation is needed
+  ansible.builtin.set_fact:
+    helm_upgrade: "{{ helm.rc !=0 or helm.stdout != helm_version }}"
+
+- name: "Install newer Helm version"
+  when: helm_upgrade
+  block:
+    - name: Create temporary download directory
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: helm
+      register: dl_path
+
+    - name: "Download Helm release for Linux AMD64"
+      ansible.builtin.unarchive:
+        src: "https://get.helm.sh/helm-{{ helm_version }}-linux-amd64.tar.gz"
+        dest: "{{ dl_path.path }}"
+        remote_src: true
+
+    - name: Copy Helm binary to /usr/local/bin
+      ansible.builtin.copy:
+        src: "{{ dl_path.path }}/linux-amd64/helm"
+        dest: /usr/local/bin/helm
+        remote_src: true
+        force: true
+        mode: preserve
+
+    - name: Remove temporary directory
+      ansible.builtin.file:
+        path: "{{ dl_path.path }}"
+        state: absent

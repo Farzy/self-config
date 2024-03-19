@@ -1,0 +1,25 @@
+---
+
+- name: Install Python dependencies
+  ansible.builtin.pip:
+    name:
+      - kubernetes>=29.0.0
+      - jsonpatch
+    state: present
+    extra_args: "--system"
+  tags: packages
+
+- ansible.builtin.include_tasks:
+    file: microk8s.yml
+  tags: microk8s
+
+- ansible.builtin.include_tasks:
+    file: helm.yml
+  tags: helm
+
+- ansible.builtin.include_tasks:
+    file: cert-manager.yml
+    apply:
+      tags:
+        cert-manager
+  tags: cert-manager

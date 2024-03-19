@@ -1,5 +1,4 @@
 ---
-
 - name: Install Snap
   ansible.builtin.apt:
     name: snapd
@@ -37,16 +36,17 @@
   ansible.builtin.set_fact:
     microk8s_status: "{{ microk8s_output.stdout | from_yaml }}"
 
+- name: Create .kube directory
+  ansible.builtin.file:
+    name: .kube
+    state: directory
+
+- name: Create Microk8s Kubeconfig
+  ansible.builtin.shell:
+    cmd: "/snap/bin/microk8s config > {{ microk8s_kubeconfig }}"
+    creates: "{{ microk8s_kubeconfig }}"
+
 - name: Enable Nginx Ingress Controller
   ansible.builtin.shell: /snap/bin/microk8s enable ingress
   register: result
   changed_when: "'already enabled' not in result.stdout"
-
-- name: Add Jetstack Helm repository
-  ansible.builtin.shell: /snap/bin/microk8s helm repo add jetstack https://charts.jetstack.io
-  register: result
-  changed_when: "'has been added to your repositories' in result.stdout"
-
-- name: Update Helm repos
-  ansible.builtin.shell: /snap/bin/microk8s helm repo update
-  changed_when: False
