@@ -27,3 +27,15 @@ variable "scaleway_zone" {
   description = "Scaleway zone"
   default     = "fr-par-1"
 }
+
+variable "dns_ttl_long" {
+  type        = number
+  description = "DNS TTL of long duration"
+  default     = 3600
+}
+
+variable "dns_ttl_medium" {
+  type        = number
+  description = "DNS TTL of medium duration"
+  default     = 600
+}
