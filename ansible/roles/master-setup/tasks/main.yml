@@ -136,7 +136,7 @@
   loop: "{{ user_dotfiles }}"
   tags: configuration
 
-- name: Switch roo user to Zsh
+- name: Switch root user to Zsh
   ansible.builtin.user:
     name: root
     shell: /bin/zsh
