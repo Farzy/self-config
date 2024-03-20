@@ -29,3 +29,10 @@
       tags:
         cert-manager
   tags: cert-manager
+
+- ansible.builtin.include_tasks:
+    file: argocd.yml
+    apply:
+      tags:
+        argocd
+  tags: argocd

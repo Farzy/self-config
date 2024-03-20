@@ -1,0 +1,34 @@
+global:
+  domain: fargo.farzad.tech
+
+crds:
+  install: true
+  keep: true
+
+configs:
+  params:
+    server.insecure: true
+
+server:
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    extraTls:
+      - hosts:
+        - fargo.farzad.tech
+        secretName: argocd-server-tls
+
+  ingressGrpc:
+      enabled: true
+      hostname: fargo-grpc.farzad.tech
+      ingressClassName: nginx
+      annotations:
+        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+        nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      extraTls:
+        - hosts:
+          - fargo-grpc.farzad.tech
+          secretName: argocd-server-grpc-tls

@@ -1,0 +1,18 @@
+---
+- name: Add ArgoCD Helm repository
+  kubernetes.core.helm_repository:
+    kubeconfig: "{{ microk8s_kubeconfig }}"
+    repo_name: argo
+    repo_url: https://argoproj.github.io/argo-helm
+
+- name: Install ArgoCD
+  kubernetes.core.helm:
+    kubeconfig: "{{ microk8s_kubeconfig }}"
+    chart_ref: argo/argo-cd
+    chart_version: "{{ argocd_version }}"
+    release_name: argocd
+    release_namespace: argocd
+    create_namespace: true
+    update_repo_cache: true
+    wait: true
+    values: "{{ lookup('file', 'files/argocd-helm-values.yml') | from_yaml }}"
