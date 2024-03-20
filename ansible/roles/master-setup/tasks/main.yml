@@ -40,6 +40,7 @@
     extra_args: "--system"
   tags: packages
 
+
 - name: Install global /etc files
   copy: src="etcfiles/{{ item.name }}" dest="/etc/" mode={{ item.mode | default("0644") }} owner=root group=root
   loop: "{{ global_etcfiles }}"

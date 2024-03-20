@@ -1,0 +1,17 @@
+---
+- name: "Add Kubernetes {{ kubectl_version }} Apt key"
+  ansible.builtin.apt_key:
+    url: "https://pkgs.k8s.io/core:/stable:/{{ kubectl_version }}/deb/Release.key"
+    state: present
+
+- name: "Add Kubernetes {{ kubectl_version }} Apt repository"
+  ansible.builtin.apt_repository:
+    repo: "deb https://pkgs.k8s.io/core:/stable:/{{ kubectl_version }}/deb/ /"
+    filename: kubernetes
+    update_cache: true
+    state: present
+
+- name: "Add kubectl {{ kubectl_version }}"
+  ansible.builtin.apt:
+    name: kubectl
+    state: present

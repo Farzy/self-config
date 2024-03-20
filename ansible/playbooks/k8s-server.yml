@@ -8,10 +8,12 @@
       tags: deploy
     - role: docker
       tags: docker
+    - role: kubectl
+      tags: kubectl
     - role: kind
       tags: kind
-    - role: minikube
-      tags: minikube
+#    - role: minikube
+#      tags: minikube
     - role: microk8s
       tags: microk8s
       when: install_microk8s
