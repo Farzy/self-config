@@ -52,10 +52,10 @@
   set_fact:
     container_ids: "{{ containers.containers | map(attribute='Id') | list }}"
 
-- name: Set containerd restart policy to "always"
+- name: Set containerd restart policy to "unless-stopped"
   community.docker.docker_container:
     name: "{{ item }}"
-    restart_policy: always
+    restart_policy: "unless-stopped"
   loop: "{{ container_ids }}"
 
 - name: "Download Kubeconfig"

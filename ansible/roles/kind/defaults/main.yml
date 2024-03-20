@@ -1,6 +1,6 @@
 ---
 # Check https://kind.sigs.k8s.io/
-kind_version: 0.19.0
+kind_version: 0.22.0
 kind_cluster_name: simple
 # Check https://kind.sigs.k8s.io/docs/user/configuration/
 kind_config: |
