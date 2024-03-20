@@ -45,7 +45,7 @@
 - name: Fetch Docker containers list
   community.docker.docker_host_info:
     containers: true
-    containers_all: true
+    containers_all: false
   register: containers
 
 - name: Extract Docker containers ids
