@@ -143,6 +143,8 @@ alias mv='mv -i'
 alias rm='rm -i'
 # Git alias "gm" conflicts with GraphicsMagick
 # unalias gm
+# For Bat package
+alias bat=batcat
 
 # Kubernetes
 alias kctx=kubectx

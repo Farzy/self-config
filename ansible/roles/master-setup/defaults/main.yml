@@ -46,6 +46,7 @@ global_packages_apt:
 #      - apt-show-versions
 #      - apt-utils
   - bash-completion
+  - bat
 #      - build-essential
   - bzip2
 #      - cronolog
