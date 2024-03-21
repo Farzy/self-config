@@ -16,3 +16,15 @@
     update_repo_cache: true
     wait: true
     values: "{{ lookup('file', 'files/argocd-helm-values.yml') | from_yaml }}"
+
+- name: Create HTTPS Certificate
+  kubernetes.core.k8s:
+    kubeconfig: "{{ microk8s_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('file', 'files/argocd-server-https-cert.yml') | from_yaml_all }}"
+
+- name: Create GRPC Certificate
+  kubernetes.core.k8s:
+    kubeconfig: "{{ microk8s_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('file', 'files/argocd-server-grpc-cert.yml') | from_yaml_all }}"
