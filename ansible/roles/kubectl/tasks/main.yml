@@ -15,3 +15,25 @@
   ansible.builtin.apt:
     name: kubectl
     state: present
+
+- name: Install Snap
+  ansible.builtin.apt:
+    name: snapd
+    state: present
+  tags:
+    - packages
+    - snap
+
+- name: Update Snapd
+  ansible.builtin.snap:
+    name: snapd
+  tags:
+    - packages
+    - snap
+
+- name: Install kubectx
+  ansible.builtin.snap:
+    name: kubectx
+    classic: true
+  tags:
+    - packages
