@@ -1,6 +1,6 @@
 ---
 
-- hosts: kind
+- hosts: k8S
 
   name: "Install server"
   roles:
