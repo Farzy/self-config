@@ -1,6 +1,6 @@
 ---
 
-- hosts: k8S
+- hosts: k8s
 
   name: "Install server"
   roles:
