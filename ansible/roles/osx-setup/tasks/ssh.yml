@@ -1,0 +1,14 @@
+---
+- name: Install SSH config files and certificates
+  ansible.builtin.copy:
+    src: "ssh/{{ item }}"
+    dest: "~/.ssh/{{ item }}"
+  loop:
+    - azure-farzad.pem
+    - ca_host_key
+    - ca_host_key.pub
+    - ca_user_key
+    - ca_user_key.pub
+    - config
+    - id_ed25519
+    - id_ed25519.pub

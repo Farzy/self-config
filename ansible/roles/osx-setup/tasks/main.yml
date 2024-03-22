@@ -1,35 +1,19 @@
 ---
+- name: Install packages
+  ansible.builtin.include_tasks:
+    file: packages.yml
+    apply:
+      tags:
+        packages
+  tags: packages
 
-- name: Remove Brew packages
-  homebrew:
-    name: "{{ homebrew_packages_removed }}"
-    state: absent
-  tags:
-    - packages
-
-- name: Install Brew packages
-  homebrew:
-    name: "{{ homebrew_packages | reject('equalto', omit) | list }}"
-    state: present
-  tags:
-    - packages
-
-- name: Detect Cask google-cloud-sdk
-  shell:
-    cmd: "brew info google-cloud-sdk | grep 'Not installed' ; exit 0"
-  register: brew_gcloud_installed
-  check_mode: false
-  changed_when: false
-  tags:
-    - packages
-
-- name: Install google-cloud-sdk
-  homebrew:
-    name: homebrew/cask/google-cloud-sdk
-    state: present
-  when: '"Not installed" in brew_gcloud_installed.stdout'
-  tags:
-    - packages
+- name: Configure SSH
+  ansible.builtin.include_tasks:
+    file: ssh.yml
+    apply:
+      tags:
+        ssh
+  tags: ssh
 
 - name: List installed Helm plugins
   shell:
@@ -52,77 +36,13 @@
     - packages
     - helm
 
-- name: Test the installation of Oh My Zsh
-  stat:
-    path: "{{ oh_my_zsh_home }}"
-  register: stat_omz
-  check_mode: false
-  tags:
-    - configuration
-    - zsh
-
-- name: Download the Oh My Zsh installer
-  get_url:
-    url: https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh
-    dest: /tmp/omz-installer.sh
-    mode: '0755'
-  when: stat_omz.stat.exists == False
-  tags:
-    - configuration
-    - zsh
-
-- name: Install Oh My Zsh
-  shell:
-    cmd: "/tmp/omz-installer.sh"
-    chdir: /tmp
-  when: stat_omz.stat.exists == False
-  tags:
-    - configuration
-    - zsh
-
-- name: Install OMZ theme Powerlevel10k
-  git:
-    repo: "https://github.com/romkatv/powerlevel10k.git"
-    version: "master"
-    dest: "{{ oh_my_zsh_home }}/custom/themes/powerlevel10k"
-    accept_hostkey: yes
-  tags:
-    - configuration
-    - zsh
-
-- name: Install ZSH Autosuggestions plugin
-  git:
-    repo: "https://github.com/zsh-users/zsh-autosuggestions.git"
-    version: "master"
-    dest: "{{ oh_my_zsh_home }}/custom/plugins/zsh-autosuggestions"
-    accept_hostkey: yes
-  tags:
-    - configuration
-    - zsh
-
-- name: Find Brew prefix directory
-  shell:
-    cmd: "brew --prefix"
-  register: brew_prefix
-  check_mode: false
-  changed_when: false
-  tags:
-    - configuration
-    - zsh
-
-- name: Fix some permissions
-  file:
-    path: '{{ brew_prefix.stdout_lines[0] }}/{{ item }}'
-    mode: '755'
-    state: directory
-    recurse: false
-  loop:
-    - share
-    - share/zsh
-    - share/zsh/site-functions
-  tags:
-    - configuration
-    - zsh
+- name: Install Oh My Zsh and configure ZSH
+  ansible.builtin.include_tasks:
+    file: zsh.yml
+    apply:
+      tags:
+        zsh
+  tags: zsh
 
 # Change Ansible/Jinja block delimiters in order to avoid issues with shell
 # syntax '${%…}'.
@@ -151,38 +71,3 @@
   tags:
     - configuration
     - iterm2
-
-# -----------------
-# SSH configuration
-# -----------------
-
-- name: Create .ssh directory
-  ansible.builtin.file:
-    path: ~/.ssh
-    state: directory
-    mode: '0755'
-  when: integration_dfns
-  tags:
-    - configuration
-    - ssh
-
-- name: Find GPG agent SSH socket
-  ansible.builtin.shell:
-    cmd: gpgconf --list-dirs agent-ssh-socket
-  register: agent_ssh_socket
-  check_mode: false
-  ignore_errors: true
-  when: integration_dfns
-  tags:
-    - configuration
-    - ssh
-
-- name: Create .ssh/config
-  ansible.builtin.template:
-    src: ssh/config.j2
-    dest: ~/.ssh/config
-    mode: '0755'
-  when: integration_dfns and not agent_ssh_socket.failed
-  tags:
-    - configuration
-    - ssh

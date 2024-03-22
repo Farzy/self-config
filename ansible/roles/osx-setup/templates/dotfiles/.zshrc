@@ -10,6 +10,8 @@ fi
 # Homebrew
 if [[ -d /opt/homebrew && ! -v HOMEBREW_PREFIX ]]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -d /usr/local/Homebrew && ! -v HOMEBREW_PREFIX ]]; then
+  eval "$(/usr/local/Homebrew/bin/brew shellenv)"
 fi
 
 # Go
@@ -28,19 +30,9 @@ if type rbenv &>/dev/null; then
     eval "$(rbenv init -)"
 fi
 
-# Kubernetes
-if [[ -d "/usr/local/opt/kubernetes-cli@1.22/bin" ]]; then
-    export PATH="/usr/local/opt/kubernetes-cli@1.22/bin:$PATH"
-fi
-
 # Krew https://github.com/kubernetes-sigs/krew
 if [[ -d "${KREW_ROOT:-$HOME/.krew}/bin" ]]; then
     export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
-fi
-
-# Terraform 0.13
-if [[ -d "/usr/local/opt/terraform@0.13" ]]; then
-    export PATH="/usr/local/opt/terraform@0.13/bin:$PATH"
 fi
 
 # Automatic Poetry shell activation/deactivation
@@ -221,17 +213,17 @@ alias kns=kubens
 # Google Cloud
 alias gctx=gcloudctx
 
-if [ -d /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk ]; then
-    source /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc
-    source /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc
+if [ -d ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk ]; then
+    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc
+    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc
 fi
 
 # Brew completion
 if type brew &>/dev/null; then
-    if [ -d $(brew --prefix)/share/zsh/site-functions ]; then
-        FPATH=$(brew --prefix)/share/zsh/site-functions:$FPATH
+    if [ -d ${HOMEBREW_PREFIX}/share/zsh/site-functions ]; then
+        FPATH=${HOMEBREW_PREFIX}/share/zsh/site-functions:$FPATH
     else
-        FPATH=$(brew --prefix)/share/zsh-completions:$FPATH
+        FPATH=${HOMEBREW_PREFIX}/share/zsh-completions:$FPATH
     fi
 
     autoload -Uz compinit

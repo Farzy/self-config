@@ -1,0 +1,65 @@
+---
+- name: Test the installation of Oh My Zsh
+  stat:
+    path: "{{ oh_my_zsh_home }}"
+  register: stat_omz
+  check_mode: false
+  tags:
+    - configuration
+
+- name: Download the Oh My Zsh installer
+  get_url:
+    url: https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh
+    dest: /tmp/omz-installer.sh
+    mode: '0755'
+  when: stat_omz.stat.exists == False
+  tags:
+    - configuration
+
+- name: Install Oh My Zsh
+  shell:
+    cmd: "/tmp/omz-installer.sh"
+    chdir: /tmp
+  when: stat_omz.stat.exists == False
+  tags:
+    - configuration
+
+- name: Install OMZ theme Powerlevel10k
+  git:
+    repo: "https://github.com/romkatv/powerlevel10k.git"
+    version: "master"
+    dest: "{{ oh_my_zsh_home }}/custom/themes/powerlevel10k"
+    accept_hostkey: yes
+  tags:
+    - configuration
+
+- name: Install ZSH Autosuggestions plugin
+  git:
+    repo: "https://github.com/zsh-users/zsh-autosuggestions.git"
+    version: "master"
+    dest: "{{ oh_my_zsh_home }}/custom/plugins/zsh-autosuggestions"
+    accept_hostkey: yes
+  tags:
+    - configuration
+
+- name: Find Brew prefix directory
+  shell:
+    cmd: "brew --prefix"
+  register: brew_prefix
+  check_mode: false
+  changed_when: false
+  tags:
+    - configuration
+
+- name: Fix some permissions
+  file:
+    path: '{{ brew_prefix.stdout_lines[0] }}/{{ item }}'
+    mode: '755'
+    state: directory
+    recurse: false
+  loop:
+    - share
+    - share/zsh
+    - share/zsh/site-functions
+  tags:
+    - configuration

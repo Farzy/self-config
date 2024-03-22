@@ -1,0 +1,14 @@
+---
+- name: Remove Brew packages
+  homebrew:
+    name: "{{ homebrew_packages_removed }}"
+    state: absent
+  tags:
+    - packages
+
+- name: Install Brew packages
+  homebrew:
+    name: "{{ homebrew_packages | reject('equalto', omit) | list }}"
+    state: present
+  tags:
+    - packages

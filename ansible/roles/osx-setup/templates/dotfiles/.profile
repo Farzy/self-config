@@ -75,6 +75,14 @@ alias ll='command ls $LS_OPTIONS -laF'
 # https://gist.github.com/tdd/473838
 # http://www.git-attitude.fr/2013/05/22/prompt-git-qui-dechire/
 
+# Homebrew
+# shellcheck disable=SC3010
+if [[ -d /opt/homebrew && ! -v HOMEBREW_PREFIX ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -d /usr/local/Homebrew && ! -v HOMEBREW_PREFIX ]]; then
+  eval "$(/usr/local/Homebrew/bin/brew shellenv)"
+fi
+
 BASH_COMPL_DIR="$(brew --prefix)/etc/bash_completion.d"
 if [ -d "$BASH_COMPL_DIR" ]; then
   for f in "$BASH_COMPL_DIR"/*; do
@@ -82,6 +90,7 @@ if [ -d "$BASH_COMPL_DIR" ]; then
   done
 fi
 # AWS completion
+# shellcheck disable=SC3044
 complete -C aws_completer aws
 
 export GIT_PS1_SHOWDIRTYSTATE=1 GIT_PS1_SHOWSTASHSTATE=1 GIT_PS1_SHOWUNTRACKEDFILES=1
@@ -100,8 +109,10 @@ powerline-daemon -q
 POWERLINE_BASH_CONTINUATION=1
 POWERLINE_BASH_SELECT=1
 powerline_path=$(python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null)
+# shellcheck disable=SC3010
 if [[ "$powerline_path" != "" ]]; then
-    source ${powerline_path}/bindings/bash/powerline.sh
+  # shellcheck disable=SC3046
+    source "${powerline_path}/bindings/bash/powerline.sh"
 else
     # Setup your normal PS1 here.
     export PS1='\[\e[0;36m\][\A] \u@\h:\[\e[0m\e[0;32m\]\W\[\e[1;33m\]$(__git_ps1 " (%s)")\[\e[0;37m\] \$\[\e[0m\] '
@@ -111,7 +122,8 @@ fi
 if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -)"; fi
 . /usr/local/bin/virtualenvwrapper.sh
 
-# The next line updates PATH for the Google Cloud SDK.
-if [ -f '/Users/ffarid/google-cloud-sdk/path.bash.inc' ]; then source '/Users/ffarid/google-cloud-sdk/path.bash.inc'; fi
-# The next line enables shell command completion for gcloud.
-if [ -f '/Users/ffarid/google-cloud-sdk/completion.bash.inc' ]; then source '/Users/ffarid/google-cloud-sdk/completion.bash.inc'; fi
+# shellcheck disable=SC3046
+if [ -d ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk ]; then
+    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc
+    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc
+fi
