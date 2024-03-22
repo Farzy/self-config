@@ -1,14 +1,17 @@
 ---
+# XXX Fix this for Ansible 9.3
 - name: Remove Brew packages
-  homebrew:
+  community.general.homebrew:
     name: "{{ homebrew_packages_removed }}"
     state: absent
   tags:
     - packages
+  ignore_errors: true
 
 - name: Install Brew packages
-  homebrew:
+  community.general.homebrew:
     name: "{{ homebrew_packages | reject('equalto', omit) | list }}"
+    update_homebrew: true
     state: present
   tags:
     - packages
