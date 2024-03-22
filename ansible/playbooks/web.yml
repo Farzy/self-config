@@ -3,12 +3,19 @@
 - hosts: web
 
   name: "Install server"
+  collections:
+    - nginxinc.nginx_core
   roles:
     - role: master-setup
       tags: deploy
-    - role: nginxinc.nginx
-      tags: nginx
   tasks:
+    - name: Install NGINX
+      ansible.builtin.include_role:
+        name: nginx
+        apply:
+          tags:
+            nginx
+      tags: nginx
     - name: Prepare web directory
       file:
         path: /srv/www/farzy.org
