@@ -17,12 +17,14 @@
         state: directory
         suffix: helm
       register: dl_path
+      check_mode: false
 
     - name: "Download Helm release for Linux AMD64"
       ansible.builtin.unarchive:
         src: "https://get.helm.sh/helm-{{ helm_version }}-linux-amd64.tar.gz"
         dest: "{{ dl_path.path }}"
         remote_src: true
+      when: not ansible_check_mode
 
     - name: Copy Helm binary to /usr/local/bin
       ansible.builtin.copy:
@@ -31,8 +33,10 @@
         remote_src: true
         force: true
         mode: preserve
+      when: not ansible_check_mode
 
     - name: Remove temporary directory
       ansible.builtin.file:
         path: "{{ dl_path.path }}"
         state: absent
+      check_mode: false

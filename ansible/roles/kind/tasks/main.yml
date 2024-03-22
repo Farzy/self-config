@@ -69,3 +69,4 @@
 - name: "Display Kubeconfig name"
   ansible.builtin.debug:
     msg: "Kubeconfig has been downloaded to {{ kubeconfig.dest }}"
+  when: not ansible_check_mode

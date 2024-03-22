@@ -135,3 +135,5 @@ user_dotfiles:
     mode: "0755"
   - name: .iterm2/it2universion
     mode: "0755"
+
+install_microk8s: false
