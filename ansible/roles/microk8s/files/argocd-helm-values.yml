@@ -26,8 +26,7 @@ server:
       hostname: fargo-grpc.farzad.tech
       ingressClassName: nginx
       annotations:
-        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-        nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+        nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
       extraTls:
         - hosts:
           - fargo-grpc.farzad.tech
