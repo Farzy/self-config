@@ -6,3 +6,6 @@ localhost ansible_connection=local ansible_become=false
 
 [k8s]
 k8S.farzad.tech ansible_user=debian ansible_python_interpreter=python3
+
+[silence]
+quassel.farzy.org ansible_user=debian ansible_python_interpreter=python3
