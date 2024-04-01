@@ -16,13 +16,14 @@
     group: root
     mode: 0755
 
-- name: "Create KinD configuration"
+- name: "Create KinD configurations"
   ansible.builtin.template:
     src: kind-config.yaml.j2
-    dest: "/srv/kind/{{ kind_cluster_name }}.yaml"
+    dest: "/srv/kind/{{ item.key }}.yaml"
     owner: root
     group: root
     mode: 0644
+  loop: "{{ kind_configs | dict2items }}"
 
 - name: "Check existence of cluster"
   ansible.builtin.command:
@@ -36,11 +37,12 @@
     - debug
     - never
 
-- name: "Create cluster '{{ kind_cluster_name }}'"
+- name: "Create clusters"
   ansible.builtin.command:
-    cmd: "kind create cluster --config /srv/kind/{{ kind_cluster_name }}.yaml --name {{ kind_cluster_name }}"
+    cmd: "kind create cluster --config /srv/kind/{{ item.key }}.yaml --name {{ item.key }}"
   when:
-    kind_cluster_name not in existing_clusters.stdout_lines
+    item.key not in existing_clusters.stdout_lines
+  loop: "{{ kind_configs | dict2items }}"
 
 - name: Fetch Docker containers list
   community.docker.docker_host_info:
@@ -61,7 +63,7 @@
 - name: "Download Kubeconfig"
   ansible.builtin.fetch:
     src: /root/.kube/config
-    dest: "/tmp/kubeconfig-{{ kind_cluster_name }}.yaml"
+    dest: "/tmp/kubeconfig-kind.yaml"
     flat: true
   register:
     kubeconfig

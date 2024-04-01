@@ -24,6 +24,13 @@ resource "scaleway_instance_security_group" "k8s-sg" {
     ip_range = "0.0.0.0/0"
   }
 
+  # Training K8S cluster
+  inbound_rule {
+    action   = "accept"
+    port     = "10443"
+    ip_range = "0.0.0.0/0"
+  }
+
   inbound_rule {
     action   = "accept"
     protocol = "ICMP"

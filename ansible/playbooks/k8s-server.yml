@@ -20,22 +20,31 @@
   vars:
     default_user: debian
     install_microk8s: true
-    kind_cluster_name: multi
     # Check https://kind.sigs.k8s.io/docs/user/configuration/
-    kind_config: |
-      # Multi-nodes cluster
-      kind: Cluster
-      apiVersion: kind.x-k8s.io/v1alpha4
-      nodes:
-        - role: control-plane
-          labels: 
-            role: cp
-        - role: worker
-          labels:
-            role: worker1
-        - role: worker
-          labels:
-            role: worker2
-      networking:
-        #apiServerAddress: "{{ ansible_default_ipv4.address }}"
-        apiServerPort: 1443
+    kind_configs:
+      multi: |
+        # Multi-nodes cluster
+        kind: Cluster
+        apiVersion: kind.x-k8s.io/v1alpha4
+        nodes:
+          - role: control-plane
+            labels: 
+              role: cp
+          - role: worker
+            labels:
+              role: worker1
+          - role: worker
+            labels:
+              role: worker2
+        networking:
+          #apiServerAddress: "{{ ansible_default_ipv4.address }}"
+          apiServerPort: 1443
+      training: |
+        # Training cluster
+        kind: Cluster
+        apiVersion: kind.x-k8s.io/v1alpha4
+        nodes:
+          - role: control-plane
+        networking:
+          apiServerAddress: "{{ ansible_default_ipv4.address }}"
+          apiServerPort: 10443

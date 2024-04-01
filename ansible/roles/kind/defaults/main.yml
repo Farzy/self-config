@@ -1,13 +1,13 @@
 ---
 # Check https://kind.sigs.k8s.io/
 kind_version: 0.22.0
-kind_cluster_name: simple
 # Check https://kind.sigs.k8s.io/docs/user/configuration/
-kind_config: |
-  # Simple one node cluster
-  kind: Cluster
-  apiVersion: kind.x-k8s.io/v1alpha4
-  nodes:
-    - role: control-plane
-  apiServerAddress: "{{ ansible_default_ipv4.address }}"
-  apiServerPort: 6443
+kind_configs:
+  simple: |
+      # Simple one node cluster
+      kind: Cluster
+      apiVersion: kind.x-k8s.io/v1alpha4
+      nodes:
+        - role: control-plane
+      apiServerAddress: "{{ ansible_default_ipv4.address }}"
+      apiServerPort: 6443
