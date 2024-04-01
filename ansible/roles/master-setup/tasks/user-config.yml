@@ -1,0 +1,39 @@
+---
+
+- name: Create iTerm2 directory for root
+  ansible.builtin.file:
+    path: "/root/.iterm2"
+    owner: root
+    group: root
+    mode: 0755
+    state: directory
+  tags: configuration
+
+- name: Install personal config files for root
+  ansible.builtin.template:
+    src: "dotfiles/{{ item.name }}"
+    dest: "/root/{{ item.name }}"
+    mode: "{{ item.mode | default('0644') }}"
+    owner: root
+    group: root
+  loop: "{{ user_dotfiles }}"
+  tags: configuration
+
+- name: Create iTerm2 directory for main user
+  ansible.builtin.file:
+    path: "{{ user_home }}/.iterm2"
+    owner: "{{ user_owner }}"
+    group: "{{ user_group }}"
+    mode: 0755
+    state: directory
+  tags: configuration
+
+- name: Install personal config files for main user
+  ansible.builtin.template:
+    src: "dotfiles/{{ item.name }}"
+    dest: "{{ user_home }}/{{ item.name }}"
+    mode: "{{ item.mode | default('0644') }}"
+    owner: "{{ user_owner }}"
+    group: "{{ user_group }}"
+  loop: "{{ user_dotfiles }}"
+  tags: configuration

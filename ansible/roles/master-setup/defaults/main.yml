@@ -1,11 +1,13 @@
 ---
 
 global_etcfiles:
-  - name: "profile.d"
+  - name: "profile.d/pragmatic.sh"
     mode: "0644"
-  - name: "vim"
+  - name: "vim/vimrc"
     mode: "0644"
   - name: "screenrc"
+    mode: "0644"
+  - name: "apt/apt.conf.d/50unattended-upgrades"
     mode: "0644"
 global_apt_repositories:
   - repo: 'deb http://ftp.debian.org/debian jessie-backports main contrib non-free'
@@ -85,6 +87,7 @@ global_packages_apt:
   - tmux
   - traceroute
   - tshark
+  - unattended-upgrades
   - unzip
   - vim
   - wdiff

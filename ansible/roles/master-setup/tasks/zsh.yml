@@ -1,0 +1,50 @@
+---
+- name: Switch main user to Zsh
+  ansible.builtin.user:
+    name: "{{ user_owner }}"
+    shell: /usr/bin/zsh
+  tags: configuration
+
+- name: Test existence of Oh My Zsh for main user
+  ansible.builtin.stat:
+    path: .oh-my-zsh
+  register: omz_user
+  become: false
+  tags:
+    - configuration
+
+- name: Test existence of Oh My Zsh for root user
+  ansible.builtin.stat:
+    path: /root/.oh-my-zsh
+  register: omz_root
+  tags:
+    - configuration
+
+- name: Download OMZ installation script
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
+    dest: /tmp/omz-install.sh
+    mode: '0755'
+  when: not (omz_user.stat.exists and omz_root.stat.exists)
+  tags:
+    - configuration
+
+- name: Run OMZ installation script for main user
+  ansible.builtin.shell: /tmp/omz-install.sh --unattended --keep-zshrc
+  when: not omz_user.stat.exists
+  become: false
+  tags:
+    - configuration
+
+- name: Run OMZ installation script for root user
+  ansible.builtin.shell: /tmp/omz-install.sh --unattended --keep-zshrc
+  when: not omz_root.stat.exists
+  become: true
+  tags:
+    - configuration
+
+- name: Switch root user to Zsh
+  ansible.builtin.user:
+    name: root
+    shell: /bin/zsh
+  tags: configuration

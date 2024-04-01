@@ -1,0 +1,38 @@
+---
+
+- name: Setup Debian packages configuration (debconf)
+  debconf: name="{{ item.name }}" question="{{ item.question }}" value="{{ item.value }}" vtype="{{ item.vtype }}"
+  loop: "{{ global_debconf_defaults }}"
+  tags: configuration
+
+- name: Force LANG to en_US
+  ansible.builtin.blockinfile:
+    path: /etc/environment
+    block: |
+      LANG=en_US.UTF-8
+      LC_ALL=en_US.UTF-8
+  tags: configuration
+
+- name: Install packages
+  ansible.builtin.apt:
+    name: "{{ global_packages_apt }}"
+    state: present
+  tags: packages
+
+- name: Install system Pip packages
+  ansible.builtin.pip:
+    name: "{{ global_packages_pip_system }}"
+    state: present
+    extra_args: "--system"
+  tags: packages
+
+
+- name: Install global /etc files
+  ansible.builtin.copy:
+    src: "etcfiles/{{ item.name }}"
+    dest: "/etc/{{ item.name }}"
+    mode: "{{ item.mode | default('0644') }}"
+    owner: root
+    group: root
+  loop: "{{ global_etcfiles }}"
+  tags: configuration
