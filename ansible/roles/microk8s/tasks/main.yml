@@ -13,8 +13,8 @@
     file: microk8s.yml
     apply:
       tags:
-        microk8s
-  tags: microk8s
+        microk8s-server
+  tags: microk8s-server
 
 - ansible.builtin.include_tasks:
     file: helm.yml
@@ -29,6 +29,13 @@
       tags:
         cert-manager
   tags: cert-manager
+
+- ansible.builtin.include_tasks:
+    file: csi-driver-nfs.yml
+    apply:
+      tags:
+        nfs
+  tags: nfs
 
 - ansible.builtin.include_tasks:
     file: argocd.yml

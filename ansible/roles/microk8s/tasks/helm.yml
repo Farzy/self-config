@@ -4,6 +4,8 @@
     cmd: "helm version --template='{% raw %}{{{% endraw %}.Version}}'"
   register: helm
   ignore_errors: true
+  changed_when: false
+  check_mode: false
 
 - name: Check if Helm (re)installation is needed
   ansible.builtin.set_fact:

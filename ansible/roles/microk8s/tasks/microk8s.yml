@@ -1,11 +1,14 @@
 ---
-- name: Install Snap
+- name: Install Snap and NFS Server
   ansible.builtin.apt:
-    name: snapd
+    name:
+      - nfs-kernel-server
+      - snapd
     state: present
   tags:
     - packages
     - snap
+    - nfs
 
 - name: Update Snapd
   ansible.builtin.snap:
@@ -50,3 +53,24 @@
   ansible.builtin.shell: /snap/bin/microk8s enable ingress
   register: result
   changed_when: "'already enabled' not in result.stdout"
+
+- name: Create NFS directory
+  ansible.builtin.file:
+    path: /srv/nfs
+    state: directory
+    owner: nobody
+    group: nogroup
+    mode: '0777'
+  tags:
+    - nfs
+
+- name: Create NFS exports file
+  ansible.builtin.template:
+    src: exports.j2
+    dest: "/etc/exports"
+    owner: root
+    group: root
+    mode: 0644
+  notify: Restart NFS server
+  tags:
+    - nfs

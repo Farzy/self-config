@@ -1,0 +1,41 @@
+---
+- name: Check Kubeconfig file
+  ansible.builtin.stat:
+    path: "{{ microk8s_kubeconfig }}"
+
+- name: Add CSI Driver NFS Helm repository
+  kubernetes.core.helm_repository:
+    kubeconfig: "{{ microk8s_kubeconfig }}"
+    repo_name: csi-driver-nfs
+    repo_url: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
+
+- name: Install csi-driver-nfs
+  kubernetes.core.helm:
+    kubeconfig: "{{ microk8s_kubeconfig }}"
+    chart_ref: csi-driver-nfs/csi-driver-nfs
+    chart_version: "{{ csi_driver_nfs_version }}"
+    release_name: csi-driver-nfs
+    release_namespace: kube-system
+    update_repo_cache: true
+    wait: true
+    values:
+      kubeletDir: /var/snap/microk8s/common/var/lib/kubelet
+
+- name: Wait for CSI controller and pods to come up
+  kubernetes.core.k8s:
+    kubeconfig: "{{ microk8s_kubeconfig }}"
+    namespace: kube-system
+    kind: Pod
+    label_selectors:
+      - app.kubernetes.io/name = csi-driver-nfs
+    wait: true
+    wait_condition:
+      reason: condition
+      type: ready
+      status: True
+
+- name: Create StorageClass for NFS
+  kubernetes.core.k8s:
+    kubeconfig: "{{ microk8s_kubeconfig }}"
+    state: present
+    template: storage-class-nfs.yml.j2
