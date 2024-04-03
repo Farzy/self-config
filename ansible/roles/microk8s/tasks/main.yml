@@ -43,3 +43,10 @@
       tags:
         argocd
   tags: argocd
+
+- ansible.builtin.include_tasks:
+    file: vault.yml
+    apply:
+      tags:
+        vault
+  tags: vault

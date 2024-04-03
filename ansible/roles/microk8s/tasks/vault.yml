@@ -1,0 +1,8 @@
+---
+- name: Download ArgoCD Vault Plugin CLI
+  ansible.builtin.get_url:
+    url: "https://github.com/argoproj-labs/argocd-vault-plugin/releases/download/v{{ argocd_vault_plugin_version }}/argocd-vault-plugin_{{ argocd_vault_plugin_version }}_linux_amd64"
+    dest: /usr/local/bin/argocd-vault-plugin
+    owner: root
+    group: root
+    mode: '0755'
