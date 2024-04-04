@@ -8,6 +8,20 @@ crds:
 configs:
   params:
     server.insecure: true
+  cm:
+    exec.enabled: true
+  rbac:
+    create: true
+    policy.default: role:readonly
+    policy.csv: |-
+      p, role:create-cluster, clusters, create, *, allow
+      p, role:executor, exec, create, default/*, allow
+      p, role:special-project, applications, *, special-project/*, allow
+      g, farzad, role:create-cluster
+      g, farzad, role:executor
+      g, farzad, role:special-project
+  secret:
+    githubSecret: "{{ githubSecret }}"
 
 server:
   ingress:
