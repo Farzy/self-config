@@ -42,3 +42,9 @@
         path: "{{ dl_path.path }}"
         state: absent
       check_mode: false
+
+- name: Install Helm diff plugin
+  kubernetes.core.helm_plugin:
+    plugin_path: https://github.com/databus23/helm-diff
+    plugin_version: "{{ helm_diff_version }}"
+    state: present
