@@ -209,6 +209,12 @@ unalias gm
 # Kubernetes
 alias kctx=kubectx
 alias kns=kubens
+# Display all namespaced resource kinds
+function kgetall {
+    kubectl api-resources --verbs=list --namespaced -o name \
+	    | xargs -n1 kubectl get --show-kind --ignore-not-found "$@"
+}
+compdef kgetall=kubectl
 
 # Google Cloud
 alias gctx=gcloudctx
