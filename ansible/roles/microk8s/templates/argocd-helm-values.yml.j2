@@ -23,6 +23,25 @@ configs:
   secret:
     githubSecret: "{{ githubSecret }}"
 
+  # Define the ArgoCD Vault Plugin: https://argocd-vault-plugin.readthedocs.io/en/stable/installation/
+  cmp:
+    create: true
+    plugins:
+      argocd-vault-plugin:
+        allowConcurrency: true
+        discover:
+          find:
+            command:
+              - sh
+              - "-c"
+              - "find . -name '*.yaml' | xargs -I {} grep \"<path\\|avp\\.kubernetes\\.io\" {} | grep ."
+        generate:
+          command:
+            - argocd-vault-plugin
+            - generate
+            - "."
+        lockRepo: false
+
 server:
   ingress:
     enabled: true
@@ -45,3 +64,58 @@ server:
         - hosts:
           - fargo-grpc.farzad.tech
           secretName: argocd-server-grpc-tls
+
+# Add ArgoCD Vault Plugin: https://argocd-vault-plugin.readthedocs.io/en/stable/installation/
+repoServer:
+  # Note: AVP config (for the secret manager, etc) can be passed in several ways. This is just one example
+  # https://argocd-vault-plugin.readthedocs.io/en/stable/config/
+  #envFrom:
+  #  - secretRef:
+  #      name: argocd-vault-plugin-credentials
+  extraContainers:
+    - name: avp
+      command: [ /var/run/argocd/argocd-cmp-server ]
+      image: alpine:3.8
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+      volumeMounts:
+        - mountPath: /var/run/argocd
+          name: var-files
+        - mountPath: /home/argocd/cmp-server/plugins
+          name: plugins
+        - mountPath: /tmp
+          name: tmp
+        # Register plugins into sidecar
+        - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+          subPath: argocd-vault-plugin.yaml
+          name: cmp-plugin
+        # Important: Mount tools into $PATH
+        - name: custom-tools
+          subPath: argocd-vault-plugin
+          mountPath: /usr/local/bin/argocd-vault-plugin
+  initContainers:
+    - name: download-tools
+      image: alpine:3.8
+      command: [ sh, -c ]
+      env:
+        - name: AVP_VERSION
+          value: "{{ argocd_vault_plugin_version }}"
+      args:
+        - >-
+          wget -O argocd-vault-plugin
+          https://github.com/argoproj-labs/argocd-vault-plugin/releases/download/v${AVP_VERSION}/argocd-vault-plugin_${AVP_VERSION}_linux_amd64 &&
+          chmod +x argocd-vault-plugin &&
+          mv argocd-vault-plugin /custom-tools/
+      volumeMounts:
+        - mountPath: /custom-tools
+          name: custom-tools
+  volumes:
+    - configMap:
+        name: argocd-cmp-cm
+      name: cmp-plugin
+    - name: custom-tools
+      emptyDir: { }
+  serviceAccount:
+    # -- Automount API credentials for the Service Account
+    automountServiceAccountToken: true
