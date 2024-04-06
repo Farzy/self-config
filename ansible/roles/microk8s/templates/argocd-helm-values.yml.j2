@@ -42,6 +42,24 @@ configs:
             - "."
         lockRepo: false
 
+controller:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+dex:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+redis:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
 server:
   ingress:
     enabled: true
@@ -64,6 +82,11 @@ server:
         - hosts:
           - fargo-grpc.farzad.tech
           secretName: argocd-server-grpc-tls
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
 
 # Add ArgoCD Vault Plugin: https://argocd-vault-plugin.readthedocs.io/en/stable/installation/
 repoServer:
@@ -119,3 +142,20 @@ repoServer:
   serviceAccount:
     # -- Automount API credentials for the Service Account
     automountServiceAccountToken: true
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+applicationSet:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+notifications:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
