@@ -1,0 +1,15 @@
+---
+prometheus:
+  service:
+    type: NodePort
+
+grafana:
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - fargo-grafana.farzad.tech
+    tls:
+      - secretName: grafana-server-tls
+        hosts:
+          - fargo-grafana.farzad.tech

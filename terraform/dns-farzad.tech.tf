@@ -28,3 +28,11 @@ resource "google_dns_record_set" "argocdgrpc" {
   ttl          = var.dns_ttl_medium
   type         = "CNAME"
 }
+
+resource "google_dns_record_set" "grafana" {
+  managed_zone = google_dns_managed_zone.farzad-tech.name
+  name         = "fargo-grafana.${google_dns_managed_zone.farzad-tech.dns_name}"
+  rrdatas      = [google_dns_record_set.k8s-server.name]
+  ttl          = var.dns_ttl_medium
+  type         = "CNAME"
+}

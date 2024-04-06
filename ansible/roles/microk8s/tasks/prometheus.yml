@@ -19,3 +19,10 @@
     create_namespace: true
     update_repo_cache: true
     wait: true
+    values: "{{ lookup('file', 'files/prometheus-helm-values.yml') | from_yaml }}"
+
+- name: Create Grafana HTTPS Certificate
+  kubernetes.core.k8s:
+    kubeconfig: "{{ microk8s_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('file', 'files/grafana-server-https-cert.yml') | from_yaml_all }}"
