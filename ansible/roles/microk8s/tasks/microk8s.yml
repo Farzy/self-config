@@ -54,6 +54,25 @@
   register: result
   changed_when: "'already enabled' not in result.stdout"
 
+- name: Enable Hostpath Storage
+  ansible.builtin.shell: /snap/bin/microk8s enable hostpath-storage
+  register: result
+  changed_when: "'already enabled' not in result.stdout"
+
+- name: Create custom Hostpath directory
+  ansible.builtin.file:
+    path: /srv/hostpath
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create custom Hostpath StorageClass
+  kubernetes.core.k8s:
+    kubeconfig: "{{ microk8s_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('file', 'files/custom-hostpath-sc.yml') | from_yaml_all }}"
+
 - name: Create NFS directory
   ansible.builtin.file:
     path: /srv/nfs
