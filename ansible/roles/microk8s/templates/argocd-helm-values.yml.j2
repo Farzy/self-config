@@ -47,18 +47,24 @@ controller:
     enabled: true
     serviceMonitor:
       enabled: true
+      additionalLabels:
+        release: {{ prometheus_release_name }}
 
 dex:
   metrics:
     enabled: true
     serviceMonitor:
       enabled: true
+      additionalLabels:
+        release: {{ prometheus_release_name }}
 
 redis:
   metrics:
     enabled: true
     serviceMonitor:
       enabled: true
+      additionalLabels:
+        release: {{ prometheus_release_name }}
 
 server:
   ingress:
@@ -87,6 +93,8 @@ server:
     enabled: true
     serviceMonitor:
       enabled: true
+      additionalLabels:
+        release: {{ prometheus_release_name }}
 
 # Add ArgoCD Vault Plugin: https://argocd-vault-plugin.readthedocs.io/en/stable/installation/
 repoServer:
@@ -147,15 +155,21 @@ repoServer:
     enabled: true
     serviceMonitor:
       enabled: true
+      additionalLabels:
+        release: {{ prometheus_release_name }}
 
 applicationSet:
   metrics:
     enabled: true
     serviceMonitor:
       enabled: true
+      additionalLabels:
+        release: {{ prometheus_release_name }}
 
 notifications:
   metrics:
     enabled: true
     serviceMonitor:
       enabled: true
+      additionalLabels:
+        release: {{ prometheus_release_name }}

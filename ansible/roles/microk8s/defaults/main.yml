@@ -9,6 +9,7 @@ argocd_version: 6.7.8
 csi_driver_nfs_version: v4.6.0
 argocd_vault_plugin_version: 1.17.0
 kube_prometheus_stack_version: 57.2.1
+prometheus_release_name: prom
 
 githubSecret: !vault |
   $ANSIBLE_VAULT;1.2;AES256;personal

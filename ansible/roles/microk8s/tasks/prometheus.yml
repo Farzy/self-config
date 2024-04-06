@@ -14,7 +14,7 @@
     kubeconfig: "{{ microk8s_kubeconfig }}"
     chart_ref: prometheus-community/kube-prometheus-stack
     chart_version: "{{ kube_prometheus_stack_version }}"
-    release_name: prom
+    release_name: {{ prometheus_release_name }}
     release_namespace: monitoring
     create_namespace: true
     update_repo_cache: true
