@@ -38,6 +38,13 @@
   tags: nfs
 
 - ansible.builtin.include_tasks:
+    file: prometheus.yml
+    apply:
+      tags:
+        prometheus
+  tags: prometheus
+
+- ansible.builtin.include_tasks:
     file: argocd.yml
     apply:
       tags:
