@@ -1,8 +1,20 @@
 ---
+alertmanager:
+  service:
+    type: NodePort
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: "hostpath"
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 1Gi
+
 prometheus:
   service:
     type: NodePort
-
   prometheusSpec:
     storageSpec:
       volumeClaimTemplate:
