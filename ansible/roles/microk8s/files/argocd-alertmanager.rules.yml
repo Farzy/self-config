@@ -1,0 +1,22 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    release: prom
+  name: argocd-alertmanager.rules
+  namespace: monitoring
+spec:
+  groups:
+  - name: argocd-alertmanager.rules
+    rules:
+    - alert: ArgoApplicationOutOfSync
+      annotations:
+        description: Application '{{ $labels.name }}' in namespace '{{ $labels.dest_namespace }}' is out 
+          of sync on ArgoCD. Check the resources.
+        summary: "'{{ $labels.name }}' Application has synchronization issue"
+        runbook_url: https://fargo.farzad.tech/applications/argocd/{{ $labels.name }}?view=tree&resource=
+      expr: |-
+        argocd_app_info{sync_status="OutOfSync"} == 1
+      for: 2m
+      labels:
+        severity: critical

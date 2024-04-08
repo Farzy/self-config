@@ -28,3 +28,11 @@
     kubeconfig: "{{ microk8s_kubeconfig }}"
     state: present
     definition: "{{ lookup('file', 'files/argocd-server-grpc-cert.yml') | from_yaml_all }}"
+
+- name: Create ArgoCD monitoring in Prometheus
+  kubernetes.core.k8s:
+    kubeconfig: "{{ microk8s_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('file', 'files/argocd-alertmanager.rules.yml') | from_yaml_all }}"
+  tags:
+    - prometheus
