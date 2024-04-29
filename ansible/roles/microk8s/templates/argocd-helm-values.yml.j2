@@ -21,7 +21,7 @@ configs:
       g, farzad, role:executor
       g, farzad, role:special-project
   secret:
-    githubSecret: "{{ githubSecret }}"
+    githubSecret: "{! githubSecret !}"
 
   # Define the ArgoCD Vault Plugin: https://argocd-vault-plugin.readthedocs.io/en/stable/installation/
   cmp:
@@ -48,7 +48,7 @@ controller:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {{ prometheus_release_name }}
+        release: {! prometheus_release_name !}
 
 dex:
   metrics:
@@ -56,7 +56,7 @@ dex:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {{ prometheus_release_name }}
+        release: {! prometheus_release_name !}
 
 redis:
   metrics:
@@ -64,7 +64,7 @@ redis:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {{ prometheus_release_name }}
+        release: {! prometheus_release_name !}
 
 server:
   ingress:
@@ -94,7 +94,7 @@ server:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {{ prometheus_release_name }}
+        release: {! prometheus_release_name !}
 
 # Add ArgoCD Vault Plugin: https://argocd-vault-plugin.readthedocs.io/en/stable/installation/
 repoServer:
@@ -131,7 +131,7 @@ repoServer:
       command: [ sh, -c ]
       env:
         - name: AVP_VERSION
-          value: "{{ argocd_vault_plugin_version }}"
+          value: "{! argocd_vault_plugin_version !}"
       args:
         - >-
           wget -O argocd-vault-plugin
@@ -156,7 +156,7 @@ repoServer:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {{ prometheus_release_name }}
+        release: {! prometheus_release_name !}
 
 applicationSet:
   metrics:
@@ -164,7 +164,7 @@ applicationSet:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {{ prometheus_release_name }}
+        release: {! prometheus_release_name !}
 
 notifications:
   metrics:
@@ -172,4 +172,76 @@ notifications:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {{ prometheus_release_name }}
+        release: {! prometheus_release_name !}
+  secret:
+    items:
+      slack-token: {! slack_token !}
+  notifiers:
+    service.slack: |
+      token: $slack-token
+      username: argocd-bot
+      icon: ":rocket:"
+  subscriptions:
+    - recipients:
+      - slack:farzad-test-notifications
+      triggers:
+      - on-sync-succeeded
+  triggers:
+    trigger.on-sync-succeeded: |
+      - description: Application syncing has succeeded
+        send:
+        - app-sync-succeeded-slack
+        when: app.status.operationState.phase in ['Succeeded']
+  templates:
+    template.app-sync-succeeded-slack: |
+      message: |
+        {{if eq .serviceType "slack"}}:white_check_mark:{{end}} Application {{.app.metadata.name}} has been successfully synced at {{.app.status.operationState.finishedAt}}.
+        Sync operation details are available at: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true .
+      slack:
+        attachments: |-
+          [{
+            "title": "{{ .app.metadata.name}}",
+            "title_link":"{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+            "color": "#18be52",
+            "fields": [
+            {
+              "title": "Sync Status",
+              "value": "{{.app.status.sync.status}}",
+              "short": true
+            },
+            {
+              "title": "Repository",
+              "value": "{{.app.spec.source.repoURL}}",
+              "short": true
+            },
+            {
+              "title": "Revision",
+              "value": "{{.app.status.sync.revision}}",
+              "short": true
+            },
+            {
+              "title": "Commit Author",
+              "value": "{{ (call .repo.GetCommitMetadata .app.status.sync.revision).Author }}",
+              "short": true
+            },
+            {
+              "title": "Commit Message",
+              "value": "{{ (call .repo.GetCommitMetadata .app.status.sync.revision).Message }}",
+              "short": true
+            },
+            {
+              "title": "Commit Date Time",
+              "value": "{{ (call .repo.GetCommitMetadata .app.status.sync.revision).Date }}",
+              "short": true
+            }
+            {{range $index, $c := .app.status.conditions}}
+            {{if not $index}},{{end}}
+            {{if $index}},{{end}}
+            {
+              "title": "{{$c.type}}",
+              "value": "{{$c.message}}",
+              "short": true
+            }
+            {{end}}
+            ]
+          }]

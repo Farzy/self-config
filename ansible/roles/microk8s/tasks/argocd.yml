@@ -15,7 +15,7 @@
     create_namespace: true
     update_repo_cache: true
     wait: true
-    values: "{{ lookup('template', 'templates/argocd-helm-values.yml.j2') | from_yaml }}"
+    values: "{{ lookup('template', 'templates/argocd-helm-values.yml.j2', variable_start_string='{!', variable_end_string='!}') | from_yaml }}"
 
 - name: Create HTTPS Certificate
   kubernetes.core.k8s:
