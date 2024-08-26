@@ -3,6 +3,7 @@
   ansible.builtin.copy:
     src: "ssh/{{ item }}"
     dest: "~/.ssh/{{ item }}"
+    mode: "0600"
   loop:
     - azure-farzad.pem
     - ca_host_key

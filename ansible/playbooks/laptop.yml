@@ -2,7 +2,7 @@
 
 - hosts: localhost
 
-  name: "Deploy Mac"
+  name: "Deploy Laptop"
   vars_files:
     - ../vars/laptop.yml
   roles:
