@@ -4,7 +4,7 @@
 
   name: "Deploy Mac"
   vars_files:
-    - ../vars/osx.yml
+    - ../vars/laptop.yml
   roles:
     - role: laptop-setup
       tags: deploy
