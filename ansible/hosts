@@ -4,6 +4,9 @@ farzad-01.farzy.org ansible_user=farzad_farid ansible_python_interpreter=python3
 [mac]
 localhost ansible_connection=local ansible_become=false
 
+[wsl2]
+localhost ansible_connection=local ansible_become=false
+
 [k8s]
 k8S.farzad.tech ansible_user=debian ansible_python_interpreter=python3
 

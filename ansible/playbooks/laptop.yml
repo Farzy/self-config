@@ -6,5 +6,5 @@
   vars_files:
     - ../vars/osx.yml
   roles:
-    - role: osx-setup
+    - role: laptop-setup
       tags: deploy
