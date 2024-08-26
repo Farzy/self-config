@@ -241,7 +241,8 @@ fi
 
 
 # Direnv activation
-eval "$(direnv hook zsh)"
+command -v direnv > /dev/null && eval "$(direnv hook zsh)"
+
 {| if is_macos |}
 
 # iTerm2 integration
