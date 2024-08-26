@@ -1,6 +1,8 @@
 # {{ ansible_managed }}
 [includeIf "gitdir:~/src/personal/"]
   	path = .gitconfig-personal
+[includeIf "gitdir:~/personal/"]
+  	path = .gitconfig-personal
 [includeIf "gitdir:~/go/"]
 {| if integration_algolia |}
   	path = .gitconfig-professional
@@ -10,6 +12,8 @@
 [includeIf "gitdir:~/src/GO/src/"]
   	path = .gitconfig-personal
 [includeIf "gitdir:~/src/algolia/"]
+  	path = .gitconfig-professional
+[includeIf "gitdir:~/repos/"]
   	path = .gitconfig-professional
 [color]
     pager = true
@@ -53,17 +57,19 @@
     sslVerify = false
 [gist]
     browse = no
+[push]
+    default = upstream
+    autoSetupRemote = true
+{| if is_macos |}
+[credential]
+    helper = osxkeychain
 [difftool "sourcetree"]
     cmd = opendiff \"$LOCAL\" \"$REMOTE\"
     path =
 [mergetool "sourcetree"]
     cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
     trustExitCode = true
-[push]
-    default = upstream
-    autoSetupRemote = true
-[credential]
-    helper = osxkeychain
+{| endif |}
 [commit]
     template = ~/.stCommitMsg
 [pull]

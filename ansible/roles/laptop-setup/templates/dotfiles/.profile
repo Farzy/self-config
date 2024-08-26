@@ -5,15 +5,6 @@
 # see /usr/share/doc/bash/examples/startup-files for examples.
 # the files are located in the bash-doc package.
 
-# Encodage
-export LANG="fr_FR.UTF-8"
-export LC_COLLATE="fr_FR.UTF-8"
-export LC_CTYPE="fr_FR.UTF-8"
-export LC_MESSAGES="fr_FR.UTF-8"
-export LC_MONETARY="fr_FR.UTF-8"
-export LC_NUMERIC="en_US.UTF-8"
-export LC_TIME="en_US.UTF-8"
-
 # don't put duplicate lines in the history. See bash(1) for more options
 # don't overwrite GNU Midnight Commander's setting of `ignorespace'.
 #HISTCONTROL=$HISTCONTROL${HISTCONTROL+:}ignoredups
@@ -27,21 +18,6 @@ shopt -s histappend
 export HISTTIMEFORMAT='%F %T '
 
 # for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
-
-# Pour Brew
-export PATH=/usr/local/bin:/usr/local/sbin:$HOME/bin:$PATH
-# Go
-export GOPATH=$HOME/Dropbox/src/gowork
-export PATH=$PATH:/usr/local/opt/go/libexec/bin:$GOPATH/bin
-
-# rbenv
-export RBENV_ROOT=/usr/local/var/rbenv
-eval "$(rbenv init -)"
-
-# Stack / Haskell
-# https://docs.haskellstack.org/en/stable/install_and_upgrade/#path
-export PATH="$HOME/.local/bin:$PATH"
-eval "$(stack --bash-completion-script stack)"
 
 LS_OPTIONS="-G"
 export PAGER=less
@@ -75,6 +51,31 @@ alias ll='command ls $LS_OPTIONS -laF'
 # https://gist.github.com/tdd/473838
 # http://www.git-attitude.fr/2013/05/22/prompt-git-qui-dechire/
 
+{| if is_macos |}
+# Encodage
+export LANG="fr_FR.UTF-8"
+export LC_COLLATE="fr_FR.UTF-8"
+export LC_CTYPE="fr_FR.UTF-8"
+export LC_MESSAGES="fr_FR.UTF-8"
+export LC_MONETARY="fr_FR.UTF-8"
+export LC_NUMERIC="en_US.UTF-8"
+export LC_TIME="en_US.UTF-8"
+
+# Pour Brew
+export PATH=/usr/local/bin:/usr/local/sbin:$HOME/bin:$PATH
+# Go
+export GOPATH=$HOME/Dropbox/src/gowork
+export PATH=$PATH:/usr/local/opt/go/libexec/bin:$GOPATH/bin
+
+# rbenv
+export RBENV_ROOT=/usr/local/var/rbenv
+eval "$(rbenv init -)"
+
+# Stack / Haskell
+# https://docs.haskellstack.org/en/stable/install_and_upgrade/#path
+export PATH="$HOME/.local/bin:$PATH"
+eval "$(stack --bash-completion-script stack)"
+
 # Homebrew
 # shellcheck disable=SC3010
 if [[ -d /opt/homebrew && ! -v HOMEBREW_PREFIX ]]; then
@@ -93,6 +94,37 @@ fi
 # shellcheck disable=SC3044
 complete -C aws_completer aws
 
+# shellcheck disable=SC3046
+if [ -d ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk ]; then
+    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc
+    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc
+fi
+
+# pyenv-virtual
+if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -)"; fi
+. /usr/local/bin/virtualenvwrapper.sh
+{| endif |}
+
+{| if is_debian_family |}
+# if running bash
+if [ -n "$BASH_VERSION" ]; then
+    # include .bashrc if it exists
+    if [ -f "$HOME/.bashrc" ]; then
+        . "$HOME/.bashrc"
+    fi
+fi
+
+# set PATH so it includes user's private bin if it exists
+if [ -d "$HOME/bin" ] ; then
+    PATH="$HOME/bin:$PATH"
+fi
+
+# set PATH so it includes user's private bin if it exists
+if [ -d "$HOME/.local/bin" ] ; then
+    PATH="$HOME/.local/bin:$PATH"
+fi
+{| endif |}
+
 export GIT_PS1_SHOWDIRTYSTATE=1 GIT_PS1_SHOWSTASHSTATE=1 GIT_PS1_SHOWUNTRACKEDFILES=1
 export GIT_PS1_SHOWUPSTREAM=verbose GIT_PS1_DESCRIBE_STYLE=branch GIT_PS1_SHOWCOLORHINTS=1
 #export PS1='\[\e[0;36m\][\A] \u@\h:\[\e[0m\e[0;32m\]\W\[\e[1;33m\]$(__git_ps1 " (%s)")\[\e[0;37m\] \$\[\e[0m\] '
@@ -102,28 +134,40 @@ export GIT_PS1_SHOWUPSTREAM=verbose GIT_PS1_DESCRIBE_STYLE=branch GIT_PS1_SHOWCO
 #export PS1='\u@\h:\w$(__git_ps1) \$ '
 
 # Powerline
-# https://powerline.readthedocs.io/en/latest/usage/shell-prompts.html#bash-prompt
-# http://agperson.com/entry/4081
-# https://github.com/jaspernbrouwer/powerline-gitstatus
-powerline-daemon -q
-POWERLINE_BASH_CONTINUATION=1
-POWERLINE_BASH_SELECT=1
-powerline_path=$(python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null)
-# shellcheck disable=SC3010
-if [[ "$powerline_path" != "" ]]; then
-  # shellcheck disable=SC3046
-    source "${powerline_path}/bindings/bash/powerline.sh"
-else
-    # Setup your normal PS1 here.
-    export PS1='\[\e[0;36m\][\A] \u@\h:\[\e[0m\e[0;32m\]\W\[\e[1;33m\]$(__git_ps1 " (%s)")\[\e[0;37m\] \$\[\e[0m\] '
+if command -v powerline-daemon >/dev/null; then
+  # https://powerline.readthedocs.io/en/latest/usage/shell-prompts.html#bash-prompt
+  # http://agperson.com/entry/4081
+  # https://github.com/jaspernbrouwer/powerline-gitstatus
+  powerline-daemon -q
+  POWERLINE_BASH_CONTINUATION=1
+  POWERLINE_BASH_SELECT=1
+  powerline_path=$(python -c 'import pkgutil; print pkgutil.get_loader("powerline").filename' 2>/dev/null)
+  # shellcheck disable=SC3010
+  if [[ "$powerline_path" != "" ]]; then
+    # shellcheck disable=SC3046
+      source "${powerline_path}/bindings/bash/powerline.sh"
+  else
+      # Setup your normal PS1 here.
+      export PS1='\[\e[0;36m\][\A] \u@\h:\[\e[0m\e[0;32m\]\W\[\e[1;33m\]$(__git_ps1 " (%s)")\[\e[0;37m\] \$\[\e[0m\] '
+  fi
 fi
 
-# pyenv-virtual
-if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -)"; fi
-. /usr/local/bin/virtualenvwrapper.sh
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
-# shellcheck disable=SC3046
-if [ -d ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk ]; then
-    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc
-    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc
+
+{| if is_wsl2 |}
+ssh_pid=$(pidof ssh-agent)
+
+# If the agent is not running, start it, and save the environment to a file
+if [ "$ssh_pid" = "" ]; then
+        ssh_env="$(ssh-agent -s)"
+        echo "$ssh_env" | head -n 2 | tee ~/.ssh_agent_env > /dev/null
 fi
+
+# Load the environment from the file
+if [ -f ~/.ssh_agent_env ]; then
+        eval "$(cat ~/.ssh_agent_env)"
+fi
+{| endif |}

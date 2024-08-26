@@ -242,10 +242,11 @@ fi
 
 # Direnv activation
 eval "$(direnv hook zsh)"
+{| if is_macos |}
 
 # iTerm2 integration
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
-
+{| endif |}
 {| if integration_dfns |}
 # DFNS integration
 # ----------------

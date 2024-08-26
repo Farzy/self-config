@@ -50,7 +50,7 @@
   changed_when: false
   tags:
     - configuration
-  when: ansible_facts['os_family'] == 'Darwin'
+  when: is_macos
 
 - name: Fix some permissions in Brew Zsh package
   file:
@@ -64,4 +64,4 @@
     - share/zsh/site-functions
   tags:
     - configuration
-  when: ansible_facts['os_family'] == 'Darwin'
+  when: is_macos
