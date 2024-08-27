@@ -42,6 +42,17 @@
   tags:
     - configuration
 
+# Change Ansible/Jinja block delimiters in order to avoid issues with shell
+# syntax '${%…}'.
+- name: Install Powerlevel10k config file
+  template:
+    src: "zsh/.p10k-{{ 'wsl2' if is_wsl2 else 'full' }}.zsh"
+    dest: "~/.p10k.zsh"
+    block_start_string: "{|"
+    block_end_string: "|}"
+  tags:
+    - configuration
+
 - name: Find Brew prefix directory
   shell:
     cmd: "brew --prefix"

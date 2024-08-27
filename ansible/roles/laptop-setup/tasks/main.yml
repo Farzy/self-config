@@ -57,7 +57,6 @@
     - .gitconfig-personal
     - .gitconfig-professional
     - .gitignore_global
-    - .p10k.zsh
     - "{{ '.profile' if integration_descartes else omit}}"
     - .tmux.conf
     - .zshrc

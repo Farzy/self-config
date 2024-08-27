@@ -156,18 +156,27 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
+{| if is_wsl2 -|}
+# Manually load SSH Agent on WSL2
+# Reference: https://docs.github.com/en/authentication/connecting-to-github-with-ssh/working-with-ssh-key-passphrases#auto-launching-ssh-agent-on-git-for-windows
+env=~/.ssh/agent.env
 
-{| if is_wsl2 |}
-ssh_pid=$(pidof ssh-agent)
+agent_load_env () { test -f "$env" && . "$env" >| /dev/null ; }
 
-# If the agent is not running, start it, and save the environment to a file
-if [ "$ssh_pid" = "" ]; then
-        ssh_env="$(ssh-agent -s)"
-        echo "$ssh_env" | head -n 2 | tee ~/.ssh_agent_env > /dev/null
+agent_start () {
+    (umask 077; ssh-agent >| "$env")
+    . "$env" >| /dev/null ; }
+
+agent_load_env
+
+# agent_run_state: 0=agent running w/ key; 1=agent w/o key; 2=agent not running
+agent_run_state=$(ssh-add -l >| /dev/null 2>&1; echo $?)
+
+if [ ! "$SSH_AUTH_SOCK" ] || [ $agent_run_state = 2 ]; then
+    agent_start
+    ssh-add
+elif [ "$SSH_AUTH_SOCK" ] && [ $agent_run_state = 1 ]; then
+    ssh-add
 fi
-
-# Load the environment from the file
-if [ -f ~/.ssh_agent_env ]; then
-        eval "$(cat ~/.ssh_agent_env)"
-fi
-{| endif |}
+unset env
+{|- endif |}
