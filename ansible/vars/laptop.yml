@@ -114,6 +114,7 @@ homebrew_packages:
   - dog
   - fd
   - fzf
+  - git-lfs
   - glab
   - gnu-sed
   - graphicsmagick
@@ -157,8 +158,6 @@ homebrew_packages_removed:
   - python@3.10
   - python-tk@3.10
   - gpg2
-  - terraform@0.12
-  - terraform@0.13
 
 iterm2_library_path: ~/Library/Application Support/iTerm2
 iterm2_sessions:
