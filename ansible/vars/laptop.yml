@@ -5,6 +5,14 @@ is_debian_family: "{{ ansible_facts['os_family'] == 'Debian' }}"
 is_debian: "{{ ansible_facts['distribution'] == 'Debian' }}"
 is_ubuntu: "{{ ansible_facts['distribution'] == 'Ubuntu' }}"
 is_wsl2: "{{ ansible_facts['virtualization_type'] == 'wsl' }}"
+# For WSL2
+ansible_become_password: !vault |
+          $ANSIBLE_VAULT;1.2;AES256;personal
+          37363331303962313534376137663036366161313136636663326662623137663161616531666236
+          3636616163346135363039303432336436306534396334360a343562393765356530386237383264
+          37353931646266373636383766613639363634383833356132656666666337656236613131306166
+          6135326133326366650a633663336134616363353838393539353232616231316166303363613262
+          6464
 
 me_name: "Farzad FARID"
 me_email_personal: !vault |
@@ -158,6 +166,46 @@ homebrew_packages_removed:
   - python@3.10
   - python-tk@3.10
   - gpg2
+
+global_packages_apt:
+  - bash-completion
+  - bat
+  - bzip2
+  - "{{ 'debconf' if not is_wsl2 else omit}}"
+  - "{{ 'deborphan' if not is_wsl2 else omit}}"
+  - "{{ 'dlocate' if not is_wsl2 else omit}}"
+  - dnsutils
+  - git
+#      - gnupg
+  - jq
+  - htop
+#      - iftop
+  - less
+  - locales
+  - "{{ 'lsof' if not is_wsl2 else omit}}"
+  - "{{ 'ltrace' if not is_wsl2 else omit}}"
+  - "{{ 'mlocate' if not is_wsl2 else omit}}"
+  - mmv
+  - "{{ 'mtr' if not is_wsl2 else omit}}"
+  - ncdu
+  - "{{ 'nmap' if not is_wsl2 else omit}}"
+  - "{{ 'python3-pip' if not is_wsl2 else omit}}"
+  - ripgrep
+  - "{{ 'rsync' if not is_wsl2 else omit}}"
+  - screen
+  - socat
+  - "{{ 'strace' if not is_wsl2 else omit}}"
+  - "{{ 'tcpdump' if not is_wsl2 else omit}}"
+  - tmux
+  - "{{ 'traceroute' if not is_wsl2 else omit}}"
+  - "{{ 'tshark' if not is_wsl2 else omit}}"
+  - "{{ 'unattended-upgrades' if not is_wsl2 else omit}}"
+  - unzip
+  - vim
+  - wdiff
+  - whois
+  - zip
+  - zsh
 
 iterm2_library_path: ~/Library/Application Support/iTerm2
 iterm2_sessions:

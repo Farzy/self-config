@@ -1,6 +1,6 @@
 ---
 
-- hosts: localhost
+- hosts: laptops
 
   name: "Deploy Laptop"
   vars_files:
@@ -8,3 +8,4 @@
   roles:
     - role: laptop-setup
       tags: deploy
+  become: false
