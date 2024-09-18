@@ -3,3 +3,4 @@
 oh_my_zsh_home: "~/.oh-my-zsh"
 homebrew_packages: {}
 homebrew_packages_removed: {}
+global_apt_packages: {}

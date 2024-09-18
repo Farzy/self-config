@@ -46,7 +46,7 @@
 
 # Change Ansible/Jinja block delimiters in order to avoid issues with shell
 # syntax '${%…}'.
-- name: Install personal config files
+- name: "Install personal config files"
   template:
     src: "dotfiles/{{ item }}"
     dest: "~/{{ item }}"
@@ -57,9 +57,21 @@
     - .gitconfig-personal
     - .gitconfig-professional
     - .gitignore_global
-    - .p10k.zsh
     - .tmux.conf
     - .zshrc
+  tags:
+    - configuration
+    - zsh
+- name: "Install personal config files (Descartes)"
+  template:
+    src: "dotfiles/{{ item }}"
+    dest: "~/{{ item }}"
+    block_start_string: "{|"
+    block_end_string: "|}"
+  loop:
+    - .profile
+  when:
+    integration_descartes
   tags:
     - configuration
     - zsh
@@ -71,3 +83,4 @@
   tags:
     - configuration
     - iterm2
+  when: is_macos

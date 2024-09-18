@@ -7,6 +7,7 @@
   tags:
     - packages
   ignore_errors: true
+  when: is_macos
 
 - name: Install Brew packages
   community.general.homebrew:
@@ -15,3 +16,13 @@
     state: present
   tags:
     - packages
+  when: is_macos
+
+- name: Install Debian / Ubuntu packages
+  ansible.builtin.apt:
+    name: "{{ global_packages_apt | reject('equalto', omit) | list }}"
+    state: present
+  become: true
+  become_user: root
+  tags: packages
+  when: is_debian_family

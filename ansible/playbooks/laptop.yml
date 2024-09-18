@@ -1,0 +1,11 @@
+---
+
+- hosts: laptops
+
+  name: "Deploy Laptop"
+  vars_files:
+    - ../vars/laptop.yml
+  roles:
+    - role: laptop-setup
+      tags: deploy
+  become: false
