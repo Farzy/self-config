@@ -176,6 +176,7 @@ global_packages_apt:
   - "{{ 'dlocate' if not is_wsl2 else omit}}"
   - dnsutils
   - git
+  - git-lfs
 #      - gnupg
   - jq
   - htop
