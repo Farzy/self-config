@@ -282,19 +282,20 @@ test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell
 # ---------------------
 
 # Where you should clone git repos
-export repo="$HOME/repos"
+export repo="${HOME}/repos"
 # Your default python environment
-export default_venv=$HOME"/.venvs/devops"
+export default_venv="${HOME}/.venvs/devops"
 
 # Authentication tokens should all be stored under the "$AUTH_PATH" folder
-export AUTH_PATH="$HOME/.auth"
+export AUTH_PATH="${HOME}/.auth"
+#export GOOGLE_APPLICATION_CREDENTIALS="${HOME}/.config/gcloud/application_default_credentials.json"
 export GITLAB_API_TOKEN=$(cat "$AUTH_PATH/gitlab_api_token")
 
 # Automagically activate the venv, if it exists
 function act() {
   pattern="$repo/(.*/)*([a-zA-Z0-9_-]+)$"
   [[ $(pwd) =~ $pattern ]]
-  venv="$HOME/.venvs/${match[2]}"
+  venv="${HOME}/.venvs/${match[2]}"
   activate_script="$venv/bin/activate"
   if [[ -f "$activate_script" ]]
     then source "$activate_script"
@@ -304,7 +305,7 @@ function act() {
 {| if is_wsl2 |}
 # The path to your Windows home (If you're using WSL)
 export WINDOWS="/mnt/c/Users/farzad.farid"
-export desk="$WINDOWS/Desktop"
+export desk="${WINDOWS}/Desktop"
 
 # Manually load SSH Agent on WSL2
 # Reference: https://docs.github.com/en/authentication/connecting-to-github-with-ssh/working-with-ssh-key-passphrases#auto-launching-ssh-agent-on-git-for-windows
