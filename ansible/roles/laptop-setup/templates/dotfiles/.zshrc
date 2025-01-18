@@ -75,7 +75,7 @@ _togglePoetryShell() {
   if [[ ! -f "$PWD/pyproject.toml" ]]; then
     if [[ "$POETRY_ACTIVE" == 1 ]]; then
       if [[ "$PWD" != "$pyproject_dir"* ]]; then
-        exit
+        deactivate
       fi
     fi
   fi
@@ -84,7 +84,7 @@ _togglePoetryShell() {
   if [[ "$POETRY_ACTIVE" != 1 ]]; then
     if [[ -f "$PWD/pyproject.toml" ]]; then
       export pyproject_dir="$PWD"
-      poetry shell
+      $(poetry env activate)
     fi
   fi
 }
@@ -197,7 +197,14 @@ source $ZSH/oh-my-zsh.sh
 # fi
 
 # Compilation flags
-# export ARCHFLAGS="-arch x86_64"
+# export ARCHFLAGS="-arch $(uname -m)"
+
+# Set personal aliases, overriding those provided by Oh My Zsh libs,
+# plugins, and themes. Aliases can be placed here, though Oh My Zsh
+# users are encouraged to define aliases within a top-level file in
+# the $ZSH_CUSTOM folder, with .zsh extension. Examples:
+# - $ZSH_CUSTOM/aliases.zsh
+# - $ZSH_CUSTOM/macos.zsh
 
 export PAGER=less
 export EDITOR=vim

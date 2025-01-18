@@ -19,8 +19,6 @@ scaleway-sdk = "^1.15.0"
 kubernetes = "^29.0.0"
 jsonpatch = "^1.33"
 
-[tool.poetry.dev-dependencies]
-
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"

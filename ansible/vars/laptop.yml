@@ -119,7 +119,6 @@ homebrew_packages:
   - colordiff
   - coreutils
   - direnv
-  - dog
   - fd
   - fzf
   - git-lfs
@@ -142,7 +141,7 @@ homebrew_packages:
   - node
   - nvm
   - p7zip
-  - packer
+  - hashicorp/tap/packer
   - pinentry-mac
   - pipenv
   - poetry
