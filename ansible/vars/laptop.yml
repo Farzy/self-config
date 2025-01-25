@@ -153,6 +153,7 @@ homebrew_packages:
   - qpdf
   - ripgrep
   - rustup
+  - scw
   - tfenv
   - tldr
   - hashicorp/tap/vault
