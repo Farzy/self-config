@@ -52,15 +52,15 @@ resource "google_dns_record_set" "domainkey-fm3" {
   type         = "CNAME"
 }
 
-resource "google_dns_record_set" "txt-keybase" {
-  managed_zone = google_dns_managed_zone.farzy-org.name
-  name         = "_keybase.${google_dns_managed_zone.farzy-org.dns_name}"
-  rrdatas = [
-    "\"keybase-site-verification=O0WZdKzTjk5kCNutB7oJCsusrPH1ousPZ7UBOJN6UIc\"",
-  ]
-  ttl  = 10800
-  type = "TXT"
-}
+# resource "google_dns_record_set" "txt-keybase" {
+#   managed_zone = google_dns_managed_zone.farzy-org.name
+#   name         = "_keybase.${google_dns_managed_zone.farzy-org.dns_name}"
+#   rrdatas = [
+#     "\"keybase-site-verification=O0WZdKzTjk5kCNutB7oJCsusrPH1ousPZ7UBOJN6UIc\"",
+#   ]
+#   ttl  = 10800
+#   type = "TXT"
+# }
 
 resource "google_dns_record_set" "comodoca" {
   managed_zone = google_dns_managed_zone.farzy-org.name
@@ -109,4 +109,22 @@ resource "google_dns_record_set" "atproto" {
   rrdatas      = ["did=did:plc:oxhsfprto57gcnynywgbi5c6"]
   ttl          = 3600
   type         = "TXT"
+}
+
+##########################################
+# DNS zone farz.ad
+
+resource "google_dns_managed_zone" "farz-ad" {
+  dns_name    = "farz.ad."
+  name        = "farz-ad"
+  description = "DNS Zone for farz.ad"
+  visibility  = "public"
+}
+
+resource "google_dns_record_set" "farz-ad-root-a" {
+  managed_zone = google_dns_managed_zone.farz-ad.name
+  name         = google_dns_managed_zone.farz-ad.dns_name
+  rrdatas      = [google_compute_global_address.farzy-org.address]
+  ttl          = 3600
+  type         = "A"
 }

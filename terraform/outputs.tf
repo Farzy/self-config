@@ -5,3 +5,7 @@ output "nameservers-farzad-tech" {
 output "nameservers-farzy-org" {
   value = module.gcp.nameservers-farzy-org
 }
+
+output "nameservers-farz-ad" {
+  value = module.gcp.nameservers-farz-ad
+}
