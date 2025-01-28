@@ -4,14 +4,10 @@
 [includeIf "gitdir:~/personal/"]
   	path = .gitconfig-personal
 [includeIf "gitdir:~/go/"]
-{| if integration_algolia |}
-  	path = .gitconfig-professional
-{| else |}
   	path = .gitconfig-personal
-{| endif |}
 [includeIf "gitdir:~/src/GO/src/"]
   	path = .gitconfig-personal
-[includeIf "gitdir:~/src/algolia/"]
+[includeIf "gitdir:~/src/market-pay/"]
   	path = .gitconfig-professional
 [includeIf "gitdir:~/repos/"]
   	path = .gitconfig-professional

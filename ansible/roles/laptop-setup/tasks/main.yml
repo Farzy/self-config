@@ -62,19 +62,6 @@
   tags:
     - configuration
     - zsh
-- name: "Install personal config files (Descartes)"
-  template:
-    src: "dotfiles/{{ item }}"
-    dest: "~/{{ item }}"
-    block_start_string: "{|"
-    block_end_string: "|}"
-  loop:
-    - .profile
-  when:
-    integration_descartes
-  tags:
-    - configuration
-    - zsh
 
 - name: Create iTerm2 DynamicProfiles
   template:

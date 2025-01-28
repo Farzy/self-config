@@ -2,15 +2,11 @@
 [user]
     name = {{ me_name }}
     email = {{ me_email_professional }}
-{| if integration_dfns |}
+{| if false |}
     signingkey = {{ me_gpg_professional }}
 [commit]
     gpgSign = true
 {| else |}
 [commit]
     gpgSign = false
-{| endif |}
-{| if integration_algolia |}
-[url "ssh://git@github.com/"]
-    insteadOf = https://github.com/
 {| endif |}
