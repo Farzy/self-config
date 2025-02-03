@@ -70,6 +70,7 @@ homebrew_packages:
   - git-lfs
   - glab
   - gnu-sed
+  - google-cloud-sdk
   - graphicsmagick
   - helm
   - htop
