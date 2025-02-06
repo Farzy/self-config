@@ -101,8 +101,11 @@ homebrew_packages:
   - ripgrep
   - rustup
   - scw
+  - "{{ 'terragrunt' if integration_market_pay else omit}}"
+  - "{{ 'terrascan' if integration_market_pay else omit}}"
   - tfenv
   - tldr
+  - uv
   - hashicorp/tap/vault
   - watch
   - yarn

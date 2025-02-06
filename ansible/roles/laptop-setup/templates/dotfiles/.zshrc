@@ -76,15 +76,17 @@ _togglePoetryShell() {
     if [[ "$POETRY_ACTIVE" == 1 ]]; then
       if [[ "$PWD" != "$pyproject_dir"* ]]; then
         deactivate
+        unset POETRY_ACTIVE
       fi
     fi
   fi
 
-  # activate the shell if pyproject.toml exists
+  # activate the shell if pyproject.toml exists and is managed by Poetry
   if [[ "$POETRY_ACTIVE" != 1 ]]; then
-    if [[ -f "$PWD/pyproject.toml" ]]; then
+    if [[ -f "$PWD/pyproject.toml" ]] && grep -q "tool\.poetry" "$PWD/pyproject.toml"; then
       export pyproject_dir="$PWD"
       $(poetry env activate)
+      POETRY_ACTIVE=1
     fi
   fi
 }
@@ -178,7 +180,7 @@ eval `gdircolors`
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(ansible aws gcloud git gnu-utils history kube-ps1 kubectl nvm poetry rust zsh-autosuggestions)
+plugins=(ansible aws gcloud git gnu-utils history kube-ps1 kubectl nvm poetry rust uv zsh-autosuggestions)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -278,6 +280,11 @@ if type brew &>/dev/null; then
 
     autoload -Uz compinit
     compinit
+fi
+
+# UV
+if type uv &>/dev/null; then
+    eval "$(uv generate-shell-completion zsh)"
 fi
 
 # iTerm2 integration
