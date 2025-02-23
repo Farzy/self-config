@@ -36,3 +36,19 @@ resource "google_dns_record_set" "grafana" {
   ttl          = var.dns_ttl_medium
   type         = "CNAME"
 }
+
+resource "google_dns_record_set" "minecraft-01" {
+  managed_zone = google_dns_managed_zone.farzad-tech.name
+  name         = "minecraft-01.${google_dns_managed_zone.farzad-tech.dns_name}"
+  rrdatas      = ["51.15.200.177"]
+  ttl          = var.dns_ttl_medium
+  type         = "A"
+}
+
+resource "google_dns_record_set" "minecraft-01-srv" {
+  managed_zone = google_dns_managed_zone.farzad-tech.name
+  name         = "_minecraft._tcp.minecraft-01.${google_dns_managed_zone.farzad-tech.dns_name}"
+  rrdatas      = ["0 5 25565 ${google_dns_record_set.minecraft-01.name}"]
+  ttl          = var.dns_ttl_medium
+  type         = "SRV"
+}
