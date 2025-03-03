@@ -88,6 +88,7 @@ homebrew_packages:
   - kubectx
   - kubernetes-cli
   - kubie
+  - "{{ 'lens' if integration_market_pay else omit}}"
   - "{{ 'molecule' if integration_market_pay else omit}}"
   - mmv
   - ncdu
