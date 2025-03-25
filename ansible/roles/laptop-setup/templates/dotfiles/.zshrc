@@ -90,8 +90,32 @@ _togglePoetryShell() {
     fi
   fi
 }
+
+# Automatic UV shell activation/deactivation
+_toggleUvShell() {
+  # deactivate shell if uv.lock doesn't exist and not in a subdir
+  if [[ ! -f "$PWD/uv.lock" ]]; then
+    if [[ "$UV_ACTIVE" == 1 ]]; then
+      if [[ "$PWD" != "$pyproject_dir"* ]]; then
+        deactivate
+        unset UV_ACTIVE
+      fi
+    fi
+  fi
+
+  # activate the shell if uv.lock exists
+  if [[ "$UV_ACTIVE" != 1 ]]; then
+    if [[ -f "$PWD/uv.lock" ]]; then
+      export pyproject_dir="$PWD"
+      source .venv/bin/activate
+      UV_ACTIVE=1
+    fi
+  fi
+}
 autoload -U add-zsh-hook
+add-zsh-hook chpwd _toggleUvShell
 add-zsh-hook chpwd _togglePoetryShell
+_toggleUvShell
 _togglePoetryShell
 
 # Path to your oh-my-zsh installation.

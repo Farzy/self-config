@@ -1,24 +1,25 @@
-[tool.poetry]
+[project]
 name = "self-config"
 version = "1.0.0"
 description = "Infrastructure as Code for Farzad's computers"
-authors = ["Farzad FARID <farzy@farzy.org>"]
+authors = [
+    {name = "Farzad FARID", email = "farzy@farzy.org"},
+]
 package-mode = false
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "ansible >=9.0.0, <10.0.0",
+    "apache-libcloud >=3.4.1, <4.0.0",
+    "boto >=2.49.0, <3.0.0",
+    "boto3 >=1.20.45, <2.0.0",
+    "cryptography >=44.0.1, <45.0.0",
+    "jmespath >=1.0.1, <2.0.0",
+    "passlib >=1.7.4, <2.0.0,",
+    "openshift >=0.13, <1.0",
+    "scaleway-sdk >=1.15.0, <2.0.0",
+    "kubernetes >=29.0.0, <30.0.0",
+    "jsonpatch >=1.33, <2.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-ansible = "^9.0.0"
-apache-libcloud = "^3.4.1"
-boto = "^2.49.0"
-boto3 = "^1.20.45"
-cryptography = "^44.0.1"
-jmespath = "^1.0.1"
-passlib = "^1.7.4"
-openshift = "^0.13"
-scaleway-sdk = "^1.15.0"
-kubernetes = "^29.0.0"
-jsonpatch = "^1.33"
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.uv]
+default-groups = []
