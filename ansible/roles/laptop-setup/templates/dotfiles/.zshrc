@@ -317,7 +317,7 @@ test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell
 
 # Docker completion
 if command -v docker &> /dev/null; then
-    if [[ -d "${HOME}/.docker" ]]; then
+    if [[ -d "${HOME}/.docker/completions" ]]; then
         # The following lines have been added by Docker Desktop to enable Docker CLI completions.
         fpath=(${HOME}/.docker/completions $fpath)
         autoload -Uz compinit
