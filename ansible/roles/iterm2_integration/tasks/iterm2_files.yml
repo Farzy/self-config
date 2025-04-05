@@ -2,7 +2,7 @@
 
 - name: Create iTerm2 directory
   ansible.builtin.file:
-    path: "{{ user.home_path }}//.iterm2"
+    path: "{{ user.home_path }}/.iterm2"
     owner: "{{ user.owner }}"
     group: "{{ user.group }}"
     mode: 0755
