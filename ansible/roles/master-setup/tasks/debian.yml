@@ -15,7 +15,7 @@
 
 - name: Install packages
   ansible.builtin.apt:
-    name: "{{ global_packages_apt }}"
+    name: "{{ global_packages_apt | reject('equalto', omit) | list }}"
     state: present
   tags: packages
 
