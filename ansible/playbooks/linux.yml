@@ -1,6 +1,6 @@
 ---
 
-- hosts: linux-servers
+- hosts: linux_servers
 
   name: "Install Linux server"
   roles:

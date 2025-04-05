@@ -19,13 +19,14 @@
     state: present
   tags: packages
 
+# TODO Option "--system" does not work on Debian 12 Bookworm, and "yq" is available as APT package
 - name: Install system Pip packages
   ansible.builtin.pip:
     name: "{{ global_packages_pip_system }}"
     state: present
     extra_args: "--system"
   tags: packages
-
+  when: is_debian_lower_12
 
 - name: Install global /etc files
   ansible.builtin.copy:

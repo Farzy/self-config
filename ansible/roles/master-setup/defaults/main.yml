@@ -1,5 +1,7 @@
 ---
 
+is_debian_lower_12: "{{ ansible_facts['distribution'] == 'Debian' and ansible_facts['distribution_major_version'] | int < 12 }}"
+
 global_etcfiles:
   - name: "profile.d/pragmatic.sh"
     mode: "0644"
@@ -93,8 +95,10 @@ global_packages_apt:
   - wdiff
 #      - wget
   - whois
+  - "{{ 'yq' if not is_debian_lower_12 else omit}}"
   - zip
   - zsh
+# Only for Debian < 12
 global_packages_pip_system:
   - yq
 

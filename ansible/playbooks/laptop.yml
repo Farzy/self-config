@@ -5,7 +5,12 @@
   name: "Deploy Laptop"
   vars_files:
     - ../vars/laptop.yml
+  vars:
+    iterm2_users:
+      - { name: "Main account", home_path: "{{ ansible_user_dir }}", owner: "{{ ansible_user_id }}", group: "{{ ansible_user_gid }}" }
   roles:
     - role: laptop-setup
       tags: deploy
+    - role: iterm2_integration
+      tags: iterm2
   become: false
