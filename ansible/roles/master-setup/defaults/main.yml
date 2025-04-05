@@ -102,41 +102,9 @@ user_home: /home/debian
 user_owner: debian
 user_group: debian
 user_dotfiles:
-  - name: .iterm2_shell_integration.zsh
-    mode: "0755"
   - name: .bashrc
   - name: .gitignore_global
   - name: .profile
   - name: .zshrc
-  - name: .iterm2/imgcat
-    mode: "0755"
-  - name: .iterm2/imgls
-    mode: "0755"
-  - name: .iterm2/it2api
-    mode: "0755"
-  - name: .iterm2/it2attention
-    mode: "0755"
-  - name: .iterm2/it2check
-    mode: "0755"
-  - name: .iterm2/it2copy
-    mode: "0755"
-  - name: .iterm2/it2dl
-    mode: "0755"
-  - name: .iterm2/it2getvar
-    mode: "0755"
-  - name: .iterm2/it2git
-    mode: "0755"
-  - name: .iterm2/it2profile
-    mode: "0755"
-  - name: .iterm2/it2setcolor
-    mode: "0755"
-  - name: .iterm2/it2setkeylabel
-    mode: "0755"
-  - name: .iterm2/it2tip
-    mode: "0755"
-  - name: .iterm2/it2ul
-    mode: "0755"
-  - name: .iterm2/it2universion
-    mode: "0755"
 
 install_microk8s: false

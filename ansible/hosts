@@ -8,5 +8,6 @@ FRMPTMACFH396 ansible_connection=local ansible_become=false
 [k8s]
 k8S.farzad.tech ansible_user=debian ansible_python_interpreter=python3
 
-[silence]
+[linux-servers]
 quassel.farzy.org ansible_user=debian ansible_python_interpreter=python3
+minecraft-01.farzad.tech ansible_user=debian ansible_python_interpreter=python3

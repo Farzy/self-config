@@ -1,0 +1,23 @@
+---
+
+iterm2_users:
+  - { name: "debian", home_path: "/home/debian", owner: "debian", group: "debian" }
+
+iterm2_dotfiles:
+  - .iterm2_shell_integration.zsh
+  - .iterm2_shell_integration.bash
+  - .iterm2/imgcat
+  - .iterm2/imgls
+  - .iterm2/it2api
+  - .iterm2/it2attention
+  - .iterm2/it2check
+  - .iterm2/it2copy
+  - .iterm2/it2dl
+  - .iterm2/it2getvar
+  - .iterm2/it2git
+  - .iterm2/it2profile
+  - .iterm2/it2setcolor
+  - .iterm2/it2setkeylabel
+  - .iterm2/it2tip
+  - .iterm2/it2ul
+  - .iterm2/it2universion

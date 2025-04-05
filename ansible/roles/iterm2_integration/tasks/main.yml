@@ -1,0 +1,8 @@
+---
+
+- name: Configure iTerm2 for user"
+  include_tasks: iterm2_files.yml
+  loop: "{{ iterm2_users }}"
+  loop_control:
+    loop_var: user
+  tags: configuration iterm2

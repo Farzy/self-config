@@ -226,6 +226,7 @@ __bp_precmd_invoke_cmd() {
     # prompt command" by another precmd execution loop. This avoids infinite
     # recursion.
     if (( __bp_inside_precmd > 0 )); then
+      (exit $__bp_last_ret_value)
       return
     fi
     local __bp_inside_precmd=1
@@ -242,6 +243,7 @@ __bp_precmd_invoke_cmd() {
             "$precmd_function"
         fi
     done
+    (exit $__bp_last_ret_value)
 }
 
 # Sets a return value in $?. We may want to get access to the $? variable in our
@@ -564,6 +566,7 @@ function __iterm2_prompt_command () {
     then
         # This code path is taken when you press ^C while entering a command.
         # I observed this behavior in CentOS 7.2 and macOS "GNU bash, version 5.0.18(1)-release".
+        ( exit $__iterm2_last_ret_value )
         __iterm2_preexec ""
         __bp_set_ret_value "$__iterm2_last_ret_value" "$__bp_last_argument_prev_command"
     fi
@@ -649,4 +652,4 @@ fi
 # -- END ITERM2 CUSTOMIZATIONS --
 
 
-alias imgcat=~/.iterm2/imgcat;alias imgls=~/.iterm2/imgls;alias it2api=~/.iterm2/it2api;alias it2attention=~/.iterm2/it2attention;alias it2check=~/.iterm2/it2check;alias it2copy=~/.iterm2/it2copy;alias it2dl=~/.iterm2/it2dl;alias it2getvar=~/.iterm2/it2getvar;alias it2git=~/.iterm2/it2git;alias it2setcolor=~/.iterm2/it2setcolor;alias it2setkeylabel=~/.iterm2/it2setkeylabel;alias it2tip=~/.iterm2/it2tip;alias it2ul=~/.iterm2/it2ul;alias it2universion=~/.iterm2/it2universion;alias it2profile=~/.iterm2/it2profile
+alias imgcat=~/.iterm2/imgcat;alias imgls=~/.iterm2/imgls;alias it2api=~/.iterm2/it2api;alias it2attention=~/.iterm2/it2attention;alias it2check=~/.iterm2/it2check;alias it2copy=~/.iterm2/it2copy;alias it2dl=~/.iterm2/it2dl;alias it2getvar=~/.iterm2/it2getvar;alias it2git=~/.iterm2/it2git;alias it2setcolor=~/.iterm2/it2setcolor;alias it2setkeylabel=~/.iterm2/it2setkeylabel;alias it2tip=~/.iterm2/it2tip;alias it2ul=~/.iterm2/it2ul;alias it2universion=~/.iterm2/it2universion;alias it2profile=~/.iterm2/it2profile;alias it2cat=~/.iterm2/it2cat

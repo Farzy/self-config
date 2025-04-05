@@ -1,0 +1,14 @@
+---
+
+- hosts: linux-servers
+
+  name: "Install Linux server"
+  roles:
+    - role: master-setup
+      tags: deploy
+    - role: iterm2_integration
+      tags: iterm2
+  vars:
+    iterm2_users:
+      - { name: "root", home_path: "/root", owner: "root", group: "root" }
+      - { name: "debian", home_path: "/home/debian", owner: "debian", group: "debian" }

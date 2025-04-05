@@ -1,0 +1,32 @@
+---
+
+- name: Create iTerm2 directory
+  ansible.builtin.file:
+    path: "{{ user.home_path }}//.iterm2"
+    owner: "{{ user.owner }}"
+    group: "{{ user.group }}"
+    mode: 0755
+    state: directory
+- name: Install iTerm2 config files
+  ansible.builtin.copy:
+    src: "{{ dotfile }}"
+    dest: "{{ user.home_path }}/{{ dotfile }}"
+    mode: 0755
+    owner: "{{ user.owner }}"
+    group: "{{ user.group }}"
+  loop: "{{ iterm2_dotfiles }}"
+  loop_control:
+    loop_var: dotfile
+#- name: Add iTerm2 activation to .profile
+#  ansible.builtin.blockinfile:
+#    path: "{{ user.home_path }}/.profile"
+#    block: |
+#      # iTerm2 integration
+#      test -e "${HOME}/.iterm2_shell_integration.bash" && source "${HOME}/.iterm2_shell_integration.bash"
+#- name: Add iTerm2 activation to .zshrc
+#  ansible.builtin.blockinfile:
+#    path: "{{ user.home_path }}/.zshrc"
+#    block: |
+#      # iTerm2 integration
+#      test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+#  ignore_errors: true # Ignore error if Zsh is not installed
