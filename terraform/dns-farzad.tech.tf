@@ -52,3 +52,11 @@ resource "google_dns_record_set" "minecraft-01-srv" {
   ttl          = var.dns_ttl_medium
   type         = "SRV"
 }
+
+resource "google_dns_record_set" "minecraft-02-srv" {
+  managed_zone = google_dns_managed_zone.farzad-tech.name
+  name         = "_minecraft._tcp.minecraft-02.${google_dns_managed_zone.farzad-tech.dns_name}"
+  rrdatas      = ["0 5 25566 ${google_dns_record_set.minecraft-01.name}"]
+  ttl          = var.dns_ttl_medium
+  type         = "SRV"
+}
