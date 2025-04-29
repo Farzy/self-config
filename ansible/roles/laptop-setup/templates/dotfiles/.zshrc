@@ -36,7 +36,7 @@ eval "$(pyenv init -)"
 
 # Cargo / Rust
 if [[ -d "$HOME/.cargo" ]]; then
-    export PATH="$HOME/.cargo/bin:$PATH"
+    . "$HOME/.cargo/env"
 fi
 
 {| if is_macos |}
