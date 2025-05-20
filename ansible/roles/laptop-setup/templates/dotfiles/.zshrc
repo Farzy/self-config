@@ -338,7 +338,7 @@ export GITHUB_ACCESS_TOKEN="${GITHUB_TOKEN}"
 export GH_TOKEN="${GITHUB_TOKEN}"
 export GITHUB_OWNER=market-pay-tech
 export GITHUB_ORG_OWNER="${GITHUB_OWNER}"
-export GOOGLE_CREDENTIALS=/Users/ffarid/src/market-pay/.secrets/sa-key.json
+export GOOGLE_CREDENTIALS=/Users/ffarid/src/market-pay/.secrets/mp-sa-key.json
 export GOOGLE_APPLICATION_CREDENTIALS=""${GOOGLE_CREDENTIALS}""
 {| endif |}
 {| if is_wsl2 |}
