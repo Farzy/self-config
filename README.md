@@ -5,9 +5,8 @@ Terraform / Ansible configuration for my servers
 ## GCP configuration
 
 * Create a GCP project
-* Create a Service Account and give it **Project Owner** role
-* Create JSON Key
-* Save key under name `terraform/_auth/gcp-admin.json` and in a safe place (**1Password**)
+* Create a Service Account and give it the **Project Owner** role
+* If you are using terraform on your workstation, you will need to install the Google Cloud SDK and authenticate using [User Application Default Credentials](https://cloud.google.com/sdk/gcloud/reference/auth/application-default).
 * Create a GCS bucket:
   * This first step uses a local `terraform.state` to create the Terraform backend
     for the rest of terraform playbooks.

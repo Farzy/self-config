@@ -23,18 +23,15 @@ terraform {
   backend "gcs" {
     bucket      = "farzad-infrastructure"
     prefix      = "terraform"
-    credentials = "_auth/gcp-admin.json"
   }
 }
 
 provider "google" {
-  credentials = file("_auth/gcp-admin.json")
   project     = var.google_project
   region      = var.google_region
 }
 
 provider "google-beta" {
-  credentials = file("_auth/gcp-admin.json")
   project     = var.google_project
   region      = var.google_region
 }
