@@ -89,7 +89,7 @@ resource "google_dns_record_set" "farzad-01" {
 resource "google_dns_record_set" "root-a" {
   managed_zone = google_dns_managed_zone.farzy-org.name
   name         = google_dns_managed_zone.farzy-org.dns_name
-  rrdatas      = [google_compute_global_address.farzy-org.address]
+  rrdatas      = ["192.0.78.24", "192.0.78.25"]
   ttl          = 3600
   type         = "A"
 }
@@ -97,9 +97,9 @@ resource "google_dns_record_set" "root-a" {
 resource "google_dns_record_set" "www" {
   managed_zone = google_dns_managed_zone.farzy-org.name
   name         = "www.${google_dns_managed_zone.farzy-org.dns_name}"
-  rrdatas      = [google_compute_global_address.farzy-org.address]
+  rrdatas      = [google_dns_record_set.root-a.name]
   ttl          = 3600
-  type         = "A"
+  type         = "CNAME"
 }
 
 # Blue Sky personal domain
