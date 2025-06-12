@@ -340,6 +340,8 @@ export GITHUB_OWNER=market-pay-tech
 export GITHUB_ORG_OWNER="${GITHUB_OWNER}"
 export GOOGLE_CREDENTIALS=/Users/ffarid/src/market-pay/.secrets/mp-sa-key.json
 export GOOGLE_APPLICATION_CREDENTIALS=""${GOOGLE_CREDENTIALS}""
+
+alias gam="${HOME}/bin/gam7/gam"
 {| endif |}
 {| if is_wsl2 |}
 # The path to your Windows home (If you're using WSL)
