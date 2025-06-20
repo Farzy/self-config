@@ -311,6 +311,11 @@ if type uv &>/dev/null; then
     eval "$(uv generate-shell-completion zsh)"
 fi
 
+# ChatGPT CLI (https://github.com/kardolus/chatgpt-cli)
+if command -v chatgpt &>/dev/null; then
+    eval "$(chatgpt --set-completions zsh)"
+fi
+
 # iTerm2 integration
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 {|- endif |}
