@@ -1,5 +1,5 @@
 ---
-- name: Install SSH config files and certificates
+- name: Install SSH certificates
   ansible.builtin.copy:
     src: "ssh/{{ item }}"
     dest: "~/.ssh/{{ item }}"
@@ -10,6 +10,11 @@
     - ca_host_key.pub
     - ca_user_key
     - ca_user_key.pub
-    - config
     - id_ed25519
     - id_ed25519.pub
+
+- name: "Install SSH config files"
+  ansible.builtin.template:
+    src: "ssh/config"
+    dest: "~/.ssh/config"
+    mode: "0600"
