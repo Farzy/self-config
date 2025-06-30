@@ -282,6 +282,15 @@ compdef kgetall=kubectl
 # Google Cloud
 alias gctx=gcloudctx
 
+# Terraform / Terragrunt
+alias tf=terraform
+alias tg=terragrunt
+autoload -U +X bashcompinit && bashcompinit
+complete -o nospace -C /opt/homebrew/bin/terraform terraform
+complete -o nospace -C /opt/homebrew/bin/terragrunt terragrunt
+compdef tf=terraform
+compdef tg=terragrunt
+
 # FZF
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
