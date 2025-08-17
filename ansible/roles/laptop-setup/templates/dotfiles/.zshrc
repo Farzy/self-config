@@ -286,8 +286,8 @@ alias gctx=gcloudctx
 alias tf=terraform
 alias tg=terragrunt
 autoload -U +X bashcompinit && bashcompinit
-complete -o nospace -C /opt/homebrew/bin/terraform terraform
-complete -o nospace -C /opt/homebrew/bin/terragrunt terragrunt
+complete -o nospace -C ${HOMEBREW_PREFIX}/bin/terraform terraform
+complete -o nospace -C ${HOMEBREW_PREFIX}/bin/terragrunt terragrunt
 compdef tf=terraform
 compdef tg=terragrunt
 
