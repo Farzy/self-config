@@ -119,6 +119,10 @@ resource "google_dns_managed_zone" "farz-ad" {
   name        = "farz-ad"
   description = "DNS Zone for farz.ad"
   visibility  = "public"
+
+  dnssec_config {
+    state = "on"
+  }
 }
 
 resource "google_dns_record_set" "farz-ad-root-a" {
