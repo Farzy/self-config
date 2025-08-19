@@ -4,4 +4,4 @@
 .idea
 !.idea/runConfigurations/
 .fleet
-.iml
+*.iml
