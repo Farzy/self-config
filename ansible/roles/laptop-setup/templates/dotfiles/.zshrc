@@ -352,8 +352,9 @@ export GITHUB_ACCESS_TOKEN="${GITHUB_TOKEN}"
 export GH_TOKEN="${GITHUB_TOKEN}"
 export GITHUB_OWNER=market-pay-tech
 export GITHUB_ORG_OWNER="${GITHUB_OWNER}"
-export GOOGLE_CREDENTIALS=/Users/ffarid/src/market-pay/.secrets/mp-sa-key.json
-export GOOGLE_APPLICATION_CREDENTIALS=""${GOOGLE_CREDENTIALS}""
+#export GOOGLE_CREDENTIALS=/Users/ffarid/src/market-pay/.secrets/mp-sa-key.json
+#export GOOGLE_APPLICATION_CREDENTIALS=""${GOOGLE_CREDENTIALS}""
+export GEMINI_API_KEY="{{ gemini_api_key }}"
 
 alias gam="${HOME}/bin/gam7/gam"
 {| endif |}
