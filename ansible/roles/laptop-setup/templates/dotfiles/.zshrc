@@ -355,6 +355,7 @@ export GITHUB_ORG_OWNER="${GITHUB_OWNER}"
 #export GOOGLE_CREDENTIALS=/Users/ffarid/src/market-pay/.secrets/mp-sa-key.json
 #export GOOGLE_APPLICATION_CREDENTIALS=""${GOOGLE_CREDENTIALS}""
 export GEMINI_API_KEY="{{ gemini_api_key }}"
+export TG_PROVIDER_CACHE=1
 
 alias gam="${HOME}/bin/gam7/gam"
 {| endif |}
