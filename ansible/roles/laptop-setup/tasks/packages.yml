@@ -26,6 +26,14 @@
     - packages
   when: is_macos
 
+- name: Install Brew Cask packages
+  community.general.homebrew:
+    name: "{{ homebrew_cask_packages | reject('equalto', omit) | list }}"
+    state: present
+  tags:
+    - packages
+  when: is_macos
+
 - name: Install Debian / Ubuntu packages
   ansible.builtin.apt:
     name: "{{ global_packages_apt | reject('equalto', omit) | list }}"

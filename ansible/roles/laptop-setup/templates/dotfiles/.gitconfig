@@ -59,13 +59,8 @@
     autoSetupRemote = true
 {| if is_macos |}
 [credential]
-    helper = osxkeychain
-[difftool "sourcetree"]
-    cmd = opendiff \"$LOCAL\" \"$REMOTE\"
-    path =
-[mergetool "sourcetree"]
-    cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
-    trustExitCode = true
+#    helper = osxkeychain
+	helper = /usr/local/share/gcm-core/git-credential-manager
 {| endif |}
 [commit]
     template = ~/.stCommitMsg
@@ -78,3 +73,5 @@
     smudge = git-lfs smudge -- %f
     process = git-lfs filter-process
     required = true
+[credential "https://dev.azure.com"]
+	useHttpPath = true

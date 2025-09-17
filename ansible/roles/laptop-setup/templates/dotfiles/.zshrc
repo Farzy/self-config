@@ -204,7 +204,7 @@ eval `gdircolors`
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(ansible aws gcloud git gnu-utils history kube-ps1 kubectl nvm poetry rust uv zsh-autosuggestions)
+plugins=(ansible aws gcloud git gnu-utils history kube-ps1 kubectl nvm poetry rust terragrunt uv zsh-autosuggestions)
 
 source $ZSH/oh-my-zsh.sh
 

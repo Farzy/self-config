@@ -122,7 +122,6 @@ homebrew_packages:
   - awscli
   - azure-cli
   - bat
-  - "{{ 'bitwarden' if integration_market_pay else omit}}"
   - "{{ 'checkov' if integration_market_pay else omit}}"
   - colordiff
   - coreutils
@@ -134,7 +133,6 @@ homebrew_packages:
   - gnu-sed
 #  - "{{ 'go' if integration_market_pay else omit}}"
   - "{{ 'golangci-lint' if integration_market_pay else omit}}"
-  - google-cloud-sdk
   - graphicsmagick
   - helm
   - htop
@@ -147,7 +145,6 @@ homebrew_packages:
   - kubectx
   - kubernetes-cli
   - kubie
-  - "{{ 'lens' if integration_market_pay else omit}}"
   - "{{ 'molecule' if integration_market_pay else omit}}"
   - mmv
   - ncdu
@@ -188,6 +185,11 @@ homebrew_packages:
   - "{{ 'yamllint' if integration_market_pay else omit}}"
   - yarn
   - yq
+homebrew_cask_packages:
+  - "{{ 'bitwarden' if integration_market_pay else omit}}"
+  - git-credential-manager
+  - gcloud-cli
+  - "{{ 'lens' if integration_market_pay else omit}}"
 homebrew_packages_removed:
   - python@3.8
   - python@3.9
