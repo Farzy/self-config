@@ -232,6 +232,9 @@ source $ZSH/oh-my-zsh.sh
 # - $ZSH_CUSTOM/aliases.zsh
 # - $ZSH_CUSTOM/macos.zsh
 
+# Bind reverse search key to do pattern search
+bindkey '^R' history-incremental-pattern-search-backward
+
 export PAGER=less
 export EDITOR=vim
 export VISUAL=vim
