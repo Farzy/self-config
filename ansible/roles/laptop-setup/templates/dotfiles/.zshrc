@@ -249,6 +249,9 @@ export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES # See https://github.com/ansible/
 {| endif |}
 
 export GITHUB_TOKEN={{ github_token }}
+{| if integration_personal_laptop |}
+export GITHUB_MCP_TOKEN={{ github_mcp_token }}
+{| endif |}
 {| if is_macos |}
 export HOMEBREW_GITHUB_API_TOKEN={{ github_homebrew_token }}
 {| endif |}
