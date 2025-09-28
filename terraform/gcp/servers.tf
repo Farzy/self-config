@@ -61,10 +61,10 @@ resource "google_compute_instance" "farzad-01" {
   }
 }
 
-resource "google_compute_instance_iam_member" "iap_ssh_access_farzad" {
-  project       = var.project
-  zone          = var.zone
-  instance_name = google_compute_instance.farzad-01.name
-  role          = "roles/iap.tunnelResourceAccessor"
-  member        = "user:farzad.farid@gmail.com"
+resource "google_iap_tunnel_instance_iam_member" "iap_ssh_access_farzad" {
+  project  = var.project
+  zone     = var.zone
+  instance = google_compute_instance.farzad-01.name
+  role     = "roles/iap.tunnelResourceAccessor"
+  member   = "user:farzad.farid@gmail.com"
 }
