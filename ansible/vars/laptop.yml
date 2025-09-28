@@ -1,5 +1,6 @@
 ---
 
+integration_personal_laptop: "{{ ansible_hostname == 'delerium' }}"
 integration_market_pay: "{{ ansible_hostname == 'FRMPTMACFH396' }}"
 
 is_macos: "{{ ansible_facts['os_family'] == 'Darwin' }}"
