@@ -40,7 +40,9 @@ resource "scaleway_instance_security_group" "k8s-sg" {
 
 resource "scaleway_instance_server" "k8s-server" {
   type  = "DEV1-L"
-  image = "debian_bullseye"
+  # Used in place of "debian_bullseye" because of Scaleway provider upgrade and server
+  # re-import.
+  image = "fr-par-1/87d32f91-2887-4daa-b239-45cbaeef10df"
   name  = "k8s-server"
 
   tags = ["docker", "kubernetes"]
@@ -62,7 +64,7 @@ resource "scaleway_instance_server" "k8s-server" {
   }
 }
 
-resource "scaleway_instance_user_data" "k8S-user-data" {
+resource "scaleway_instance_user_data" "k8s-user-data" {
   server_id = scaleway_instance_server.k8s-server.id
   key       = "cloud-init"
   value     = <<-EOF
