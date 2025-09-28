@@ -78,14 +78,6 @@ resource "google_dns_record_set" "quassel" {
   type         = "A"
 }
 
-resource "google_dns_record_set" "farzad-01" {
-  managed_zone = google_dns_managed_zone.farzy-org.name
-  name         = "farzad-01.${google_dns_managed_zone.farzy-org.dns_name}"
-  rrdatas      = [google_compute_address.farzad-01-address.address]
-  ttl          = 3600
-  type         = "A"
-}
-
 resource "google_dns_record_set" "root-a" {
   managed_zone = google_dns_managed_zone.farzy-org.name
   name         = google_dns_managed_zone.farzy-org.dns_name
@@ -119,6 +111,10 @@ resource "google_dns_managed_zone" "farz-ad" {
   name        = "farz-ad"
   description = "DNS Zone for farz.ad"
   visibility  = "public"
+
+  dnssec_config {
+    state = "on"
+  }
 }
 
 resource "google_dns_record_set" "farz-ad-root-a" {

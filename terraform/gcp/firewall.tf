@@ -38,8 +38,8 @@ resource "google_compute_firewall" "production-default-allow-internal" {
   }
 }
 
-resource "google_compute_firewall" "production-default-allow-ssh" {
-  name    = "default-allow-ssh"
+resource "google_compute_firewall" "allow-ssh-via-iap" {
+  name    = "allow-ssh-via-iap"
   network = google_compute_network.production.name
 
   allow {
@@ -47,7 +47,11 @@ resource "google_compute_firewall" "production-default-allow-ssh" {
     ports    = ["22"]
   }
 
-  source_ranges = ["0.0.0.0/0"]
+  # Allow ingress from the IAP TCP forwarding IP range
+  source_ranges = ["35.235.240.0/20"]
+
+  # Apply this rule to instances with the 'iap-ssh-target' tag
+  target_tags = ["iap-ssh-target"]
 
   log_config {
     metadata = "INCLUDE_ALL_METADATA"

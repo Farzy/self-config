@@ -3,6 +3,10 @@ resource "google_dns_managed_zone" "farzad-tech" {
   name        = "farzad-tech"
   description = "Main DNS Zone for farzad-tect"
   visibility  = "public"
+
+  dnssec_config {
+    state = "on"
+  }
 }
 
 resource "google_dns_record_set" "k8s-server" {

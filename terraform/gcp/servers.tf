@@ -5,12 +5,6 @@ resource "google_compute_address" "farzad-01-address-internal" {
   address_type = "INTERNAL"
 }
 
-resource "google_compute_address" "farzad-01-address" {
-  name         = "farzad-01-address"
-  region       = var.region
-  address_type = "EXTERNAL"
-}
-
 resource "google_compute_disk" "farzad-01-system" {
 
   name = "farzad-01"
@@ -30,7 +24,7 @@ resource "google_compute_instance" "farzad-01" {
   zone         = var.zone
   machine_type = "e2-micro"
 
-  tags = ["env-prod"]
+  tags = ["env-prod", "iap-ssh-target"]
 
   boot_disk {
     source      = google_compute_disk.farzad-01-system.self_link
@@ -41,10 +35,6 @@ resource "google_compute_instance" "farzad-01" {
   network_interface {
     subnetwork = google_compute_subnetwork.production-subnetwork-europe-west1.self_link
     network_ip = google_compute_address.farzad-01-address-internal.address
-
-    access_config {
-      nat_ip = google_compute_address.farzad-01-address.address
-    }
   }
 
   labels = {
@@ -69,4 +59,12 @@ resource "google_compute_instance" "farzad-01" {
   scheduling {
     automatic_restart = true
   }
+}
+
+resource "google_iap_tunnel_instance_iam_member" "iap_ssh_access_farzad" {
+  project  = var.project
+  zone     = var.zone
+  instance = google_compute_instance.farzad-01.name
+  role     = "roles/iap.tunnelResourceAccessor"
+  member   = "user:farzad.farid@gmail.com"
 }
