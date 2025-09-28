@@ -42,6 +42,15 @@
   tags:
     - configuration
 
+- name: Install Terragrunt plugin
+  git:
+    repo: "https://github.com/jkavan/terragrunt-oh-my-zsh-plugin"
+    version: "master"
+    dest: "{{ oh_my_zsh_home }}/custom/plugins/terragrunt"
+    accept_hostkey: yes
+  tags:
+    - configuration
+
 # Change Ansible/Jinja block delimiters in order to avoid issues with shell
 # syntax '${%…}'.
 - name: Install Powerlevel10k config file
