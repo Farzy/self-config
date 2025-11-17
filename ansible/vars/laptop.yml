@@ -202,7 +202,6 @@ homebrew_cask_packages:
   - gcloud-cli
   - "{{ 'lens' if integration_market_pay else omit}}"
 homebrew_packages_removed:
-  - python@3.8
   - python@3.9
   - python@3.10
   - python-tk@3.10
