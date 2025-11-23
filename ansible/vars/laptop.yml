@@ -145,6 +145,7 @@ homebrew_packages:
 #  - "{{ 'go' if integration_market_pay else omit}}"
   - "{{ 'golangci-lint' if integration_market_pay else omit}}"
   - graphicsmagick
+  - hcl2json
   - helm
   - htop
   - htop-osx
