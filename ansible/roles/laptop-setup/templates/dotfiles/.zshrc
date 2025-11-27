@@ -393,3 +393,8 @@ elif [ "$SSH_AUTH_SOCK" ] && [ $agent_run_state = 1 ]; then
 fi
 unset env
 {| endif |}
+
+# Added by Antigravity
+if [[ -d "${HOME}/.antigravity/antigravity/bin" ]]; then
+    export PATH="${HOME}/.antigravity/antigravity/bin:$PATH"
+fi
