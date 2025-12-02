@@ -275,19 +275,6 @@ alias psu='ps ux | ${PAGER}'
 # Git alias "gm" conflicts with GraphicsMagick
 unalias gm
 
-# Kubernetes
-alias kctx=kubectx
-alias kns=kubens
-# Display all namespaced resource kinds
-function kgetall {
-    kubectl api-resources --verbs=list --namespaced -o name \
-	    | xargs -n1 kubectl get --show-kind --ignore-not-found "$@"
-}
-compdef kgetall=kubectl
-
-# Google Cloud
-alias gctx=gcloudctx
-
 # Terraform / Terragrunt
 alias tf=terraform
 alias tg=terragrunt
@@ -334,6 +321,19 @@ fi
 # iTerm2 integration
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 {|- endif |}
+
+# Kubernetes
+alias kctx=kubectx
+alias kns=kubens
+# Display all namespaced resource kinds
+function kgetall {
+    kubectl api-resources --verbs=list --namespaced -o name \
+	    | xargs -n1 kubectl get --show-kind --ignore-not-found "$@"
+}
+compdef kgetall=kubectl
+
+# Google Cloud
+alias gctx=gcloudctx
 
 # Docker completion
 if command -v docker &> /dev/null; then
