@@ -148,7 +148,6 @@ homebrew_packages:
   - hcl2json
   - helm
   - htop
-  - htop-osx
   - hugo
   - ipcalc
   - jq
