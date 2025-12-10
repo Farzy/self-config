@@ -7,7 +7,7 @@
     - ../vars/laptop.yml
   vars:
     iterm2_users:
-      - { name: "Main account", home_path: "{{ ansible_user_dir }}", owner: "{{ ansible_user_id }}", group: "{{ ansible_user_gid }}" }
+      - { name: "Main account", home_path: "{{ ansible_facts['user_dir'] }}", owner: "{{ ansible_facts['user_id'] }}", group: "{{ ansible_facts['user_gid'] }}" }
   roles:
     - role: laptop-setup
       tags: deploy

@@ -1,7 +1,7 @@
 ---
 
-integration_personal_laptop: "{{ ansible_hostname == 'delerium' }}"
-integration_market_pay: "{{ ansible_hostname == 'FRMPTMACFH396' }}"
+integration_personal_laptop: "{{ ansible_facts['hostname'] == 'delerium' }}"
+integration_market_pay: "{{ ansible_facts['hostname'] == 'FRMPTMACFH396' }}"
 
 is_macos: "{{ ansible_facts['os_family'] == 'Darwin' }}"
 is_debian_family: "{{ ansible_facts['os_family'] == 'Debian' }}"
