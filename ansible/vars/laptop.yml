@@ -138,6 +138,7 @@ homebrew_packages:
   - direnv
   - fd
   - fzf
+  - ghostty
   - git-lfs
   - glab
   - gnu-sed
@@ -155,6 +156,7 @@ homebrew_packages:
   - kubectx
   - kubernetes-cli
   - kubie
+  - mole
   - "{{ 'molecule' if integration_market_pay else omit}}"
   - mmv
   - ncdu
