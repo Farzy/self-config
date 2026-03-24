@@ -362,6 +362,9 @@ export GEMINI_API_KEY="{{ gemini_api_key }}"
 export TG_PROVIDER_CACHE=1
 
 alias gam="${HOME}/bin/gam7/gam"
+
+# mp-ops auto-completion
+[[ -f ~/.mp_ops-complete.zsh ]] && source ~/.mp_ops-complete.zsh
 {| endif |}
 {| if is_wsl2 |}
 # The path to your Windows home (If you're using WSL)
