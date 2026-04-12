@@ -9,8 +9,14 @@
 
 - name: Set system_serial_number fact
   set_fact:
-    system_serial_number: "{{ mac_serial_output.stdout }}"
+    system_serial_number: "{{ mac_serial_output.stdout | trim }}"
   when: is_macos and mac_serial_output.stdout is defined
+  tags: [always, hostname]
+
+- name: Re-load laptop variables to pick up system_serial_number
+  ansible.builtin.include_vars:
+    file: "../../../vars/laptop.yml"
+  when: is_macos
   tags: [always, hostname]
 
 - name: Set macOS hostname
