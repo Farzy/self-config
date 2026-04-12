@@ -71,3 +71,30 @@
     - configuration
     - iterm2
   when: is_macos
+
+- name: Create .gemini directory
+  ansible.builtin.file:
+    path: "~/.gemini"
+    state: directory
+    mode: "0755"
+  tags:
+    - configuration
+    - gemini
+
+- name: Install AGENTS.md to ~/.gemini
+  ansible.builtin.template:
+    src: "gemini/AGENTS.md"
+    dest: "~/.gemini/AGENTS.md"
+    mode: "0644"
+  tags:
+    - configuration
+    - gemini
+
+- name: Create GEMINI.md symlink pointing to AGENTS.md
+  ansible.builtin.file:
+    src: "AGENTS.md"
+    dest: "~/.gemini/GEMINI.md"
+    state: link
+  tags:
+    - configuration
+    - gemini
