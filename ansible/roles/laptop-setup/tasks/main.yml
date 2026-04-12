@@ -88,7 +88,7 @@
 
 - name: Install AGENTS.md to ~/.gemini
   ansible.builtin.template:
-    src: "gemini/AGENTS.md"
+    src: "gemini/AGENTS.md.j2"
     dest: "~/.gemini/AGENTS.md"
     mode: "0644"
   tags:
