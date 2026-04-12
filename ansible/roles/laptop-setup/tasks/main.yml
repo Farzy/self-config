@@ -1,4 +1,9 @@
 ---
+- name: Set hostname
+  ansible.builtin.include_tasks:
+    file: hostname.yml
+  tags: hostname
+
 - name: Install packages
   ansible.builtin.include_tasks:
     file: packages.yml

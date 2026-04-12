@@ -1,7 +1,17 @@
 ---
 
-integration_personal_laptop: "{{ ansible_facts['hostname'] == 'delerium' }}"
-integration_market_pay: "{{ ansible_facts['hostname'] == 'FRMPTMACFH396' }}"
+# Laptop Identification by Serial Number
+laptop_serial_personal: "C02YG6X6JG5J"
+laptop_serial_professional: "YOUR_PROFESSIONAL_SERIAL_HERE" # Please replace this with your professional Mac's serial number
+
+laptop_mapping:
+  "{{ laptop_serial_personal }}": "Delerium"
+  "{{ laptop_serial_professional }}": "FRMPTMACFH396"
+
+integration_personal_laptop: "{{ ansible_facts['system_serial_number'] == laptop_serial_personal }}"
+integration_market_pay: "{{ ansible_facts['system_serial_number'] == laptop_serial_professional }}"
+
+laptop_hostname: "{{ laptop_mapping[ansible_facts['system_serial_number']] | default(ansible_facts['hostname']) }}"
 
 is_macos: "{{ ansible_facts['os_family'] == 'Darwin' }}"
 is_debian_family: "{{ ansible_facts['os_family'] == 'Debian' }}"

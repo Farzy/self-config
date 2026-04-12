@@ -1,0 +1,19 @@
+---
+
+- name: Set macOS hostname
+  become: true
+  block:
+    - name: Set ComputerName
+      command: "scutil --set ComputerName {{ laptop_hostname }}"
+      when: ansible_facts['computer_name'] != laptop_hostname
+
+    - name: Set LocalHostName
+      command: "scutil --set LocalHostName {{ laptop_hostname }}"
+      when: ansible_facts['hostname'] != laptop_hostname
+
+    - name: Set HostName
+      command: "scutil --set HostName {{ laptop_hostname }}"
+      # We check if HostName is set at all, and if it's the right one
+      when: lookup('pipe', 'scutil --get HostName', errors='ignore') != laptop_hostname
+  when: is_macos
+  tags: hostname
