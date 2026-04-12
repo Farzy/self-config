@@ -1,19 +1,40 @@
 ---
 
+- name: Collect system serial number on macOS
+  shell: "system_profiler SPHardwareDataType | grep 'Serial Number' | awk '{print $NF}'"
+  register: mac_serial_output
+  changed_when: false
+  when: is_macos
+  tags: [always, hostname]
+
+- name: Set system_serial_number fact
+  set_fact:
+    system_serial_number: "{{ mac_serial_output.stdout }}"
+  when: is_macos and mac_serial_output.stdout is defined
+  tags: [always, hostname]
+
 - name: Set macOS hostname
   become: true
   block:
+    - name: Get current hostname settings
+      shell: |
+        echo "ComputerName: $(scutil --get ComputerName)"
+        echo "LocalHostName: $(scutil --get LocalHostName)"
+        echo "HostName: $(scutil --get HostName 2>/dev/null || echo 'not set')"
+      register: current_hostname_settings
+      changed_when: false
+      check_mode: false
+
     - name: Set ComputerName
       command: "scutil --set ComputerName {{ laptop_hostname }}"
-      when: ansible_facts['computer_name'] != laptop_hostname
+      when: "('ComputerName: ' + laptop_hostname) not in current_hostname_settings.stdout"
 
     - name: Set LocalHostName
       command: "scutil --set LocalHostName {{ laptop_hostname }}"
-      when: ansible_facts['hostname'] != laptop_hostname
+      when: "('LocalHostName: ' + laptop_hostname) not in current_hostname_settings.stdout"
 
     - name: Set HostName
       command: "scutil --set HostName {{ laptop_hostname }}"
-      # We check if HostName is set at all, and if it's the right one
-      when: lookup('pipe', 'scutil --get HostName', errors='ignore') != laptop_hostname
+      when: "('HostName: ' + laptop_hostname) not in current_hostname_settings.stdout"
   when: is_macos
   tags: hostname

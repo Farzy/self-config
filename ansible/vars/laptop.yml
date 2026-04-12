@@ -8,10 +8,10 @@ laptop_mapping:
   "{{ laptop_serial_personal }}": "Delerium"
   "{{ laptop_serial_professional }}": "FRMPTMACFH396"
 
-integration_personal_laptop: "{{ ansible_facts['system_serial_number'] == laptop_serial_personal }}"
-integration_market_pay: "{{ ansible_facts['system_serial_number'] == laptop_serial_professional }}"
+integration_personal_laptop: "{{ system_serial_number == laptop_serial_personal }}"
+integration_market_pay: "{{ system_serial_number == laptop_serial_professional }}"
 
-laptop_hostname: "{{ laptop_mapping[ansible_facts['system_serial_number']] | default(ansible_facts['hostname']) }}"
+laptop_hostname: "{{ laptop_mapping[system_serial_number] | default(ansible_facts['hostname']) }}"
 
 is_macos: "{{ ansible_facts['os_family'] == 'Darwin' }}"
 is_debian_family: "{{ ansible_facts['os_family'] == 'Debian' }}"
