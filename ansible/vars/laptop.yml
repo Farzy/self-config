@@ -4,14 +4,17 @@
 laptop_serial_personal: "C02YG6X6JG5J"
 laptop_serial_professional: "YOUR_PROFESSIONAL_SERIAL_HERE" # Please replace this with your professional Mac's serial number
 
-laptop_mapping:
-  "{{ laptop_serial_personal }}": "Delerium"
-  "{{ laptop_serial_professional }}": "FRMPTMACFH396"
+integration_personal_laptop: "{{ (system_serial_number | default('')) == laptop_serial_personal }}"
+integration_market_pay: "{{ (system_serial_number | default('')) == laptop_serial_professional }}"
 
-integration_personal_laptop: "{{ system_serial_number == laptop_serial_personal }}"
-integration_market_pay: "{{ system_serial_number == laptop_serial_professional }}"
-
-laptop_hostname: "{{ laptop_mapping[system_serial_number] | default(ansible_facts['hostname']) }}"
+laptop_hostname: >-
+  {% if (system_serial_number | default('')) == laptop_serial_personal %}
+  Delerium
+  {% elif (system_serial_number | default('')) == laptop_serial_professional %}
+  FRMPTMACFH396
+  {% else %}
+  {{ ansible_facts['hostname'] }}
+  {% endif %}
 
 is_macos: "{{ ansible_facts['os_family'] == 'Darwin' }}"
 is_debian_family: "{{ ansible_facts['os_family'] == 'Debian' }}"

@@ -26,15 +26,15 @@
       check_mode: false
 
     - name: Set ComputerName
-      command: "scutil --set ComputerName {{ laptop_hostname }}"
-      when: "('ComputerName: ' + laptop_hostname) not in current_hostname_settings.stdout"
+      command: "scutil --set ComputerName {{ laptop_hostname | trim }}"
+      when: "('ComputerName: ' + (laptop_hostname | trim)) not in current_hostname_settings.stdout_lines"
 
     - name: Set LocalHostName
-      command: "scutil --set LocalHostName {{ laptop_hostname }}"
-      when: "('LocalHostName: ' + laptop_hostname) not in current_hostname_settings.stdout"
+      command: "scutil --set LocalHostName {{ laptop_hostname | trim }}"
+      when: "('LocalHostName: ' + (laptop_hostname | trim)) not in current_hostname_settings.stdout_lines"
 
     - name: Set HostName
-      command: "scutil --set HostName {{ laptop_hostname }}"
-      when: "('HostName: ' + laptop_hostname) not in current_hostname_settings.stdout"
+      command: "scutil --set HostName {{ laptop_hostname | trim }}"
+      when: "('HostName: ' + (laptop_hostname | trim)) not in current_hostname_settings.stdout_lines"
   when: is_macos
   tags: hostname
