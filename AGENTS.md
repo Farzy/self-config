@@ -44,10 +44,15 @@ The Ansible configuration is in the `ansible/` directory.
 *   **Roles:** `ansible/roles/`
 *   **Playbooks:** `ansible/playbooks/`
 
+- You **must** change directory to `ansible/` before running any playbook.
+- Always test the playbook with `--check` flag first.
+- Always test the playbook with `--diff` flag.
+
 To run a playbook, for example `laptop.yml`:
 
 ```bash
-ansible-playbook ansible/playbooks/laptop.yml
+cd ansible
+ansible-playbook playbooks/laptop.yml
 ```
 
 ### Terraform
