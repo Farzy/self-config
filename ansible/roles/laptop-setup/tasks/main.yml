@@ -2,22 +2,22 @@
 - name: Set hostname
   ansible.builtin.include_tasks:
     file: hostname.yml
-  tags: hostname
+  tags:
+    - always
+    - hostname
 
 - name: Install packages
   ansible.builtin.include_tasks:
     file: packages.yml
     apply:
-      tags:
-        packages
+      tags: packages
   tags: packages
 
 - name: Configure SSH
   ansible.builtin.include_tasks:
     file: ssh.yml
     apply:
-      tags:
-        ssh
+      tags: ssh
   tags: ssh
 
 - name: List installed Helm plugins
@@ -45,8 +45,7 @@
   ansible.builtin.include_tasks:
     file: zsh.yml
     apply:
-      tags:
-        zsh
+      tags: zsh
   tags: zsh
 
 # Change Ansible/Jinja block delimiters in order to avoid issues with shell
@@ -86,14 +85,25 @@
     - configuration
     - gemini
 
-- name: Install AGENTS.md to ~/.gemini
+- name: Install personal AGENTS.md to ~/.gemini
   ansible.builtin.template:
-    src: "gemini/AGENTS.md.j2"
+    src: "gemini/AGENTS_personal.md.j2"
     dest: "~/.gemini/AGENTS.md"
     mode: "0644"
   tags:
     - configuration
     - gemini
+  when: integration_personal_laptop | default(false)
+
+- name: Install professional AGENTS.md to ~/.gemini
+  ansible.builtin.template:
+    src: "gemini/AGENTS_professional.md.j2"
+    dest: "~/.gemini/AGENTS.md"
+    mode: "0644"
+  tags:
+    - configuration
+    - gemini
+  when: integration_market_pay | default(false)
 
 - name: Create GEMINI.md symlink pointing to AGENTS.md
   ansible.builtin.file:

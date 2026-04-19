@@ -1,8 +1,8 @@
 ---
-
 - name: Collect system serial number on macOS
   shell: "system_profiler SPHardwareDataType | grep 'Serial Number' | awk '{print $NF}'"
   register: mac_serial_output
+  check_mode: false
   changed_when: false
   when: is_macos
   tags: [always, hostname]
@@ -10,12 +10,14 @@
 - name: Set system_serial_number fact
   set_fact:
     system_serial_number: "{{ mac_serial_output.stdout | trim }}"
+  check_mode: false
   when: is_macos and mac_serial_output.stdout is defined
   tags: [always, hostname]
 
 - name: Re-load laptop variables to pick up system_serial_number
   ansible.builtin.include_vars:
     file: "../../../vars/laptop.yml"
+  check_mode: false
   when: is_macos
   tags: [always, hostname]
 
