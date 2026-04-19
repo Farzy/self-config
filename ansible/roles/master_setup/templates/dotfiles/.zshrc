@@ -150,7 +150,7 @@ alias bat=batcat
 alias kctx=kubectx
 alias kns=kubens
 
-{% if install_microk8s %}
+{% if master_setup_install_microk8s %}
 # Microk8s
 # This adds Snap directory to PATH
 source /etc/profile.d/apps-bin-path.sh
