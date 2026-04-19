@@ -1,8 +1,8 @@
 ---
 
-is_debian_lower_12: "{{ ansible_facts['distribution'] == 'Debian' and ansible_facts['distribution_major_version'] | int < 12 }}"
+master_setup_is_debian_lower_12: "{{ ansible_facts['distribution'] == 'Debian' and ansible_facts['distribution_major_version'] | int < 12 }}"
 
-global_etcfiles:
+master_setup_global_etcfiles:
   - name: "profile.d/pragmatic.sh"
     mode: "0644"
   - name: "vim/vimrc"
@@ -11,16 +11,16 @@ global_etcfiles:
     mode: "0644"
   - name: "apt/apt.conf.d/50unattended-upgrades"
     mode: "0644"
-global_apt_repositories:
+master_setup_global_apt_repositories:
   - repo: 'deb http://ftp.debian.org/debian jessie-backports main contrib non-free'
     state: present
     filename: 'jessie-backports'
   - repo: "deb [arch=amd64,i386] http://ftp.igh.cnrs.fr/pub/mariadb/repo/10.1/debian jessie main"
     filename: "mariadb"
-global_apt_keys:
+master_setup_global_apt_keys:
   - keyserver: "hkp://keyserver.ubuntu.com:80"
     id: "0xcbcb082a1bb943db"
-global_debconf_defaults:
+master_setup_global_debconf_defaults:
   - name: debconf
     question: "debconf/priority"
     value: low
@@ -41,44 +41,25 @@ global_debconf_defaults:
     question: locales/locales_to_be_generated
     value: "en_US.UTF-8 UTF-8"
     vtype: multiselect
-global_packages_apt:
-#      - aptitude
-#      - apt-listchanges
-#      - apt-listbugs
-#      - apt-rdepends
-#      - apt-show-source
-#      - apt-show-versions
-#      - apt-utils
+master_setup_global_packages_apt:
   - bash-completion
   - bat
-#      - build-essential
   - bzip2
-#      - cronolog
   - debconf
   - deborphan
-#      - debsums
-#      - devscripts
-#      - dh-make
   - dlocate
-#      - dmidecode
   - dnsutils
   - elinks
-#      - fakeroot
   - git
-#      - gnupg
   - jq
   - htop
-#      - iftop
   - less
-#      - lftp
   - locales
-#      - logrotate
   - lsof
   - ltrace
   - mlocate
   - mmv
   - mtr
-#      - mutt
   - ncdu
   - nmap
   - python3-pip
@@ -93,22 +74,20 @@ global_packages_apt:
   - unzip
   - vim
   - wdiff
-#      - wget
-  - whois
-  - "{{ 'yq' if not is_debian_lower_12 else omit}}"
+  - "{{ 'yq' if not master_setup_is_debian_lower_12 else omit }}"
   - zip
   - zsh
 # Only for Debian < 12
-global_packages_pip_system:
+master_setup_global_packages_pip_system:
   - yq
 
-user_home: /home/debian
-user_owner: debian
-user_group: debian
-user_dotfiles:
+master_setup_user_home: /home/debian
+master_setup_user_owner: debian
+master_setup_user_group: debian
+master_setup_user_dotfiles:
   - name: .bashrc
   - name: .gitignore_global
   - name: .profile
   - name: .zshrc
 
-install_microk8s: false
+master_setup_install_microk8s: false

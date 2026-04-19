@@ -13,7 +13,7 @@
   kubernetes.core.helm:
     kubeconfig: "{{ microk8s_kubeconfig }}"
     chart_ref: csi-driver-nfs/csi-driver-nfs
-    chart_version: "{{ csi_driver_nfs_version }}"
+    chart_version: "{{ microk8s_csi_driver_nfs_version }}"
     release_name: csi-driver-nfs
     release_namespace: kube-system
     update_repo_cache: true
@@ -32,7 +32,7 @@
     wait_condition:
       reason: condition
       type: ready
-      status: True
+      status: true
 
 - name: Create StorageClass for NFS
   kubernetes.core.k8s:

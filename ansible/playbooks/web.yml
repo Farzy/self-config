@@ -1,39 +1,38 @@
 ---
 
-- hosts: web
+- name: "Install server"
+  hosts: web
 
-  name: "Install server"
-  collections:
-    - nginxinc.nginx_core
   roles:
-    - role: master-setup
+    - role: master_setup
       tags: deploy
   tasks:
     - name: Install NGINX
       ansible.builtin.include_role:
-        name: nginx
+        name: nginxinc.nginx_core.nginx
         apply:
           tags:
             nginx
       tags: nginx
     - name: Prepare web directory
-      file:
+      ansible.builtin.file:
         path: /srv/www/farzy.org
         state: directory
         owner: www-data
         group: adm
-        mode: 02775
+        mode: '02775'
       tags: www
   vars_files:
     - ../vars/web.yml
 
-- hosts: localhost
-  name: Install web content
+- name: Install web content
+  hosts: localhost
   vars_files:
     - ../vars/web.yml
   tasks:
     - name: Install personal web site with Hugo
-      shell:
+      ansible.builtin.command:
         cmd: ./deploy
         chdir: "{{ hugo_home }}"
+      changed_when: true
       tags: www

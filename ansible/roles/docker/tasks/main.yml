@@ -1,11 +1,11 @@
 ---
 - name: Sysctl settings for Kubernetes
-  sysctl:
+  ansible.posix.sysctl:
     name: "{{ item.name }}"
     value: "{{ item.value }}"
-    sysctl_set: yes
+    sysctl_set: true
     state: present
-    reload: yes
+    reload: true
   loop:
     - name: fs.inotify.max_user_watches
       value: 524288
@@ -13,7 +13,7 @@
       value: 512
 
 - name: Install required system packages
-  apt:
+  ansible.builtin.apt:
     pkg:
       - apt-transport-https
       - ca-certificates
@@ -23,23 +23,23 @@
       - python3-pip
       - virtualenv
       - python3-setuptools
-    state: latest
+    state: present
     update_cache: true
 
 - name: Add Docker GPG apt Key
-  apt_key:
+  ansible.builtin.apt_key:
     url: https://download.docker.com/linux/debian/gpg
     state: present
 
 - name: Add Docker Repository
-  apt_repository:
+  ansible.builtin.apt_repository:
     repo: "deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
     state: present
 
 - name: Update apt and install docker-ce
-  apt:
+  ansible.builtin.apt:
     name: docker-ce
-    state: latest
+    state: present
     update_cache: true
 
 - name: Make main user Docker admin

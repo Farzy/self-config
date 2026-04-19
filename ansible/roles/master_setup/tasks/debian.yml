@@ -1,8 +1,12 @@
 ---
 
 - name: Setup Debian packages configuration (debconf)
-  debconf: name="{{ item.name }}" question="{{ item.question }}" value="{{ item.value }}" vtype="{{ item.vtype }}"
-  loop: "{{ global_debconf_defaults }}"
+  ansible.builtin.debconf:
+    name: "{{ item.name }}"
+    question: "{{ item.question }}"
+    value: "{{ item.value }}"
+    vtype: "{{ item.vtype }}"
+  loop: "{{ master_setup_global_debconf_defaults }}"
   tags: configuration
 
 - name: Force LANG to en_US
@@ -15,18 +19,18 @@
 
 - name: Install packages
   ansible.builtin.apt:
-    name: "{{ global_packages_apt | reject('equalto', omit) | list }}"
+    name: "{{ master_setup_global_packages_apt | reject('equalto', omit) | list }}"
     state: present
   tags: packages
 
 # TODO Option "--system" does not work on Debian 12 Bookworm, and "yq" is available as APT package
 - name: Install system Pip packages
   ansible.builtin.pip:
-    name: "{{ global_packages_pip_system }}"
+    name: "{{ master_setup_global_packages_pip_system }}"
     state: present
     extra_args: "--system"
   tags: packages
-  when: is_debian_lower_12
+  when: master_setup_is_debian_lower_12
 
 - name: Install global /etc files
   ansible.builtin.copy:
@@ -35,5 +39,5 @@
     mode: "{{ item.mode | default('0644') }}"
     owner: root
     group: root
-  loop: "{{ global_etcfiles }}"
+  loop: "{{ master_setup_global_etcfiles }}"
   tags: configuration

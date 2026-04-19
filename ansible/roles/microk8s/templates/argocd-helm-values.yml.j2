@@ -21,7 +21,7 @@ configs:
       g, farzad, role:executor
       g, farzad, role:special-project
   secret:
-    githubSecret: "{! githubSecret !}"
+    githubSecret: "{! microk8s_github_secret !}"
 
   # Define the ArgoCD Vault Plugin: https://argocd-vault-plugin.readthedocs.io/en/stable/installation/
   cmp:
@@ -48,7 +48,7 @@ controller:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {! prometheus_release_name !}
+        release: {! microk8s_prometheus_release_name !}
 
 dex:
   metrics:
@@ -56,7 +56,7 @@ dex:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {! prometheus_release_name !}
+        release: {! microk8s_prometheus_release_name !}
 
 redis:
   metrics:
@@ -64,7 +64,7 @@ redis:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {! prometheus_release_name !}
+        release: {! microk8s_prometheus_release_name !}
 
 server:
   ingress:
@@ -94,7 +94,7 @@ server:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {! prometheus_release_name !}
+        release: {! microk8s_prometheus_release_name !}
 
 # Add ArgoCD Vault Plugin: https://argocd-vault-plugin.readthedocs.io/en/stable/installation/
 repoServer:
@@ -131,7 +131,7 @@ repoServer:
       command: [ sh, -c ]
       env:
         - name: AVP_VERSION
-          value: "{! argocd_vault_plugin_version !}"
+          value: "{! microk8s_argocd_vault_plugin_version !}"
       args:
         - >-
           wget -O argocd-vault-plugin
@@ -156,7 +156,7 @@ repoServer:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {! prometheus_release_name !}
+        release: {! microk8s_prometheus_release_name !}
 
 applicationSet:
   metrics:
@@ -164,7 +164,7 @@ applicationSet:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {! prometheus_release_name !}
+        release: {! microk8s_prometheus_release_name !}
 
 notifications:
   metrics:
@@ -172,10 +172,10 @@ notifications:
     serviceMonitor:
       enabled: true
       additionalLabels:
-        release: {! prometheus_release_name !}
+        release: {! microk8s_prometheus_release_name !}
   secret:
     items:
-      slack-token: {! slack_token !}
+      slack-token: {! microk8s_slack_token !}
   notifiers:
     service.slack: |
       token: $slack-token

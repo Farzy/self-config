@@ -13,7 +13,7 @@
   kubernetes.core.helm:
     kubeconfig: "{{ microk8s_kubeconfig }}"
     chart_ref: jetstack/cert-manager
-    chart_version: "{{ cert_manager_version }}"
+    chart_version: "{{ microk8s_cert_manager_version }}"
     release_name: cert-manager
     release_namespace: cert-manager
     create_namespace: true

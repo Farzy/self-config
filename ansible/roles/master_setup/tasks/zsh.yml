@@ -1,7 +1,7 @@
 ---
 - name: Switch main user to Zsh
   ansible.builtin.user:
-    name: "{{ user_owner }}"
+    name: "{{ master_setup_user_owner }}"
     shell: /usr/bin/zsh
   tags: configuration
 
@@ -30,15 +30,17 @@
     - configuration
 
 - name: Run OMZ installation script for main user
-  ansible.builtin.shell: /tmp/omz-install.sh --unattended --keep-zshrc
+  ansible.builtin.command: /tmp/omz-install.sh --unattended --keep-zshrc
   when: not omz_user.stat.exists
+  changed_when: true
   become: false
   tags:
     - configuration
 
 - name: Run OMZ installation script for root user
-  ansible.builtin.shell: /tmp/omz-install.sh --unattended --keep-zshrc
+  ansible.builtin.command: /tmp/omz-install.sh --unattended --keep-zshrc
   when: not omz_root.stat.exists
+  changed_when: true
   become: true
   tags:
     - configuration

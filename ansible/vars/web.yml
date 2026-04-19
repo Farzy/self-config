@@ -1,7 +1,7 @@
 ---
-user_home: /home/farzad_farid
-user_owner: farzad_farid
-user_group: farzad_farid
+master_setup_user_home: /home/farzad_farid
+master_setup_user_owner: farzad_farid
+master_setup_user_group: farzad_farid
 
 #    nginx_cleanup_config: true
 nginx_http_template_enable: true

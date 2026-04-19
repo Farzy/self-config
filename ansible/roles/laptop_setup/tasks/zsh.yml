@@ -1,69 +1,71 @@
 ---
 - name: Test the installation of Oh My Zsh
-  stat:
-    path: "{{ oh_my_zsh_home }}"
+  ansible.builtin.stat:
+    path: "{{ laptop_setup_oh_my_zsh_home }}"
   register: stat_omz
   check_mode: false
   tags:
     - configuration
 
 - name: Download the Oh My Zsh installer
-  get_url:
+  ansible.builtin.get_url:
     url: https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh
     dest: /tmp/omz-installer.sh
     mode: '0755'
-  when: stat_omz.stat.exists == False
+  when: not stat_omz.stat.exists
   tags:
     - configuration
 
 - name: Install Oh My Zsh
-  shell:
+  ansible.builtin.command:
     cmd: "/tmp/omz-installer.sh"
     chdir: /tmp
-  when: stat_omz.stat.exists == False
+  when: not stat_omz.stat.exists
+  changed_when: true
   tags:
     - configuration
 
 - name: Install OMZ theme Powerlevel10k
-  git:
+  ansible.builtin.git:
     repo: "https://github.com/romkatv/powerlevel10k.git"
     version: "master"
-    dest: "{{ oh_my_zsh_home }}/custom/themes/powerlevel10k"
-    accept_hostkey: yes
+    dest: "{{ laptop_setup_oh_my_zsh_home }}/custom/themes/powerlevel10k"
+    accept_hostkey: true
   tags:
     - configuration
 
 - name: Install ZSH Autosuggestions plugin
-  git:
+  ansible.builtin.git:
     repo: "https://github.com/zsh-users/zsh-autosuggestions.git"
     version: "master"
-    dest: "{{ oh_my_zsh_home }}/custom/plugins/zsh-autosuggestions"
-    accept_hostkey: yes
+    dest: "{{ laptop_setup_oh_my_zsh_home }}/custom/plugins/zsh-autosuggestions"
+    accept_hostkey: true
   tags:
     - configuration
 
 - name: Install Terragrunt plugin
-  git:
+  ansible.builtin.git:
     repo: "https://github.com/jkavan/terragrunt-oh-my-zsh-plugin"
     version: "master"
-    dest: "{{ oh_my_zsh_home }}/custom/plugins/terragrunt"
-    accept_hostkey: yes
+    dest: "{{ laptop_setup_oh_my_zsh_home }}/custom/plugins/terragrunt"
+    accept_hostkey: true
   tags:
     - configuration
 
 # Change Ansible/Jinja block delimiters in order to avoid issues with shell
 # syntax '${%…}'.
 - name: Install Powerlevel10k config file
-  template:
+  ansible.builtin.template:
     src: "zsh/.p10k-{{ 'wsl2' if is_wsl2 else 'full' }}.zsh"
     dest: "~/.p10k.zsh"
+    mode: '0644'
     block_start_string: "{|"
     block_end_string: "|}"
   tags:
     - configuration
 
 - name: Find Brew prefix directory
-  shell:
+  ansible.builtin.command:
     cmd: "brew --prefix"
   register: brew_prefix
   check_mode: false
@@ -73,9 +75,9 @@
   when: is_macos
 
 - name: Fix some permissions in Brew Zsh package
-  file:
+  ansible.builtin.file:
     path: '{{ brew_prefix.stdout_lines[0] }}/{{ item }}'
-    mode: '755'
+    mode: '0755'
     state: directory
     recurse: false
   loop:

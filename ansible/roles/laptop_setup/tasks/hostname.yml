@@ -1,6 +1,10 @@
 ---
 - name: Collect system serial number on macOS
-  shell: "system_profiler SPHardwareDataType | grep 'Serial Number' | awk '{print $NF}'"
+  ansible.builtin.shell: |
+    set -o pipefail
+    system_profiler SPHardwareDataType | grep 'Serial Number' | awk '{print $NF}'
+  args:
+    executable: /bin/bash
   register: mac_serial_output
   check_mode: false
   changed_when: false
@@ -8,7 +12,7 @@
   tags: [always, hostname]
 
 - name: Set system_serial_number fact
-  set_fact:
+  ansible.builtin.set_fact:
     system_serial_number: "{{ mac_serial_output.stdout | trim }}"
   check_mode: false
   when: is_macos and mac_serial_output.stdout is defined
@@ -23,9 +27,11 @@
 
 - name: Set macOS hostname
   become: true
+  when: is_macos
+  tags: hostname
   block:
     - name: Get current hostname settings
-      shell: |
+      ansible.builtin.shell: |
         echo "ComputerName: $(scutil --get ComputerName)"
         echo "LocalHostName: $(scutil --get LocalHostName)"
         echo "HostName: $(scutil --get HostName 2>/dev/null || echo 'not set')"
@@ -34,15 +40,16 @@
       check_mode: false
 
     - name: Set ComputerName
-      command: "scutil --set ComputerName {{ laptop_hostname | trim }}"
+      ansible.builtin.command: "scutil --set ComputerName {{ laptop_hostname | trim }}"
       when: "('ComputerName: ' + (laptop_hostname | trim)) not in current_hostname_settings.stdout_lines"
+      changed_when: true
 
     - name: Set LocalHostName
-      command: "scutil --set LocalHostName {{ laptop_hostname | trim }}"
+      ansible.builtin.command: "scutil --set LocalHostName {{ laptop_hostname | trim }}"
       when: "('LocalHostName: ' + (laptop_hostname | trim)) not in current_hostname_settings.stdout_lines"
+      changed_when: true
 
     - name: Set HostName
-      command: "scutil --set HostName {{ laptop_hostname | trim }}"
+      ansible.builtin.command: "scutil --set HostName {{ laptop_hostname | trim }}"
       when: "('HostName: ' + (laptop_hostname | trim)) not in current_hostname_settings.stdout_lines"
-  when: is_macos
-  tags: hostname
+      changed_when: true

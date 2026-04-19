@@ -1,0 +1,6 @@
+---
+
+laptop_setup_oh_my_zsh_home: "~/.oh-my-zsh"
+laptop_setup_homebrew_packages: {}
+laptop_setup_homebrew_packages_removed: {}
+laptop_setup_global_apt_packages: {}

@@ -128,14 +128,14 @@ gemini_api_key: !vault |
   3131616438393635343038313161653863613031653866336332
 
 # Packages to install
-homebrew_packages:
-  - "{{ 'act' if integration_market_pay else omit}}"
-  - "{{ 'argocd' if integration_market_pay else omit}}"
+laptop_setup_homebrew_packages:
+  - "{{ 'act' if integration_market_pay else omit }}"
+  - "{{ 'argocd' if integration_market_pay else omit }}"
   - argocd-vault-plugin
   - awscli
   - azure-cli
   - bat
-  - "{{ 'checkov' if integration_market_pay else omit}}"
+  - "{{ 'checkov' if integration_market_pay else omit }}"
   - colordiff
   - coreutils
   - direnv
@@ -145,8 +145,8 @@ homebrew_packages:
   - git-lfs
   - glab
   - gnu-sed
-#  - "{{ 'go' if integration_market_pay else omit}}"
-  - "{{ 'golangci-lint' if integration_market_pay else omit}}"
+#  - "{{ 'go' if integration_market_pay else omit }}"
+  - "{{ 'golangci-lint' if integration_market_pay else omit }}"
   - graphicsmagick
   - hcl2json
   - helm
@@ -155,12 +155,12 @@ homebrew_packages:
   - ipcalc
   - jq
   - kube-ps1
-  - "{{ 'kubeconform' if integration_market_pay else omit}}"
+  - "{{ 'kubeconform' if integration_market_pay else omit }}"
   - kubectx
   - kubernetes-cli
   - kubie
   - mole
-  - "{{ 'molecule' if integration_market_pay else omit}}"
+  - "{{ 'molecule' if integration_market_pay else omit }}"
   - mmv
   - ncdu
   - nmap
@@ -168,11 +168,11 @@ homebrew_packages:
   - nvm
   - p7zip
   - hashicorp/tap/packer
-  - "{{ 'ollama' if integration_market_pay else omit}}"
+  - "{{ 'ollama' if integration_market_pay else omit }}"
   - pinentry-mac
   - pipenv
   - poetry
-  - "{{ 'pre-commit' if integration_market_pay else omit}}"
+  - "{{ 'pre-commit' if integration_market_pay else omit }}"
   - pyenv
   - pyenv-virtualenv
   - pwgen
@@ -181,43 +181,43 @@ homebrew_packages:
   - qpdf
   - ripgrep
   - rustup
-  - "{{ 'shellcheck' if integration_market_pay else omit}}"
+  - "{{ 'shellcheck' if integration_market_pay else omit }}"
   - scw
-  - "{{ 'sops' if integration_market_pay else omit}}"
-  - "{{ 'stow' if integration_market_pay else omit}}"
-  - "{{ 'terraform-docs' if integration_market_pay else omit}}"
-  - "{{ 'terragrunt' if integration_market_pay else omit}}"
-  - "{{ 'terrascan' if integration_market_pay else omit}}"
+  - "{{ 'sops' if integration_market_pay else omit }}"
+  - "{{ 'stow' if integration_market_pay else omit }}"
+  - "{{ 'terraform-docs' if integration_market_pay else omit }}"
+  - "{{ 'terragrunt' if integration_market_pay else omit }}"
+  - "{{ 'terrascan' if integration_market_pay else omit }}"
   - tfenv
-  - "{{ 'tflint' if integration_market_pay else omit}}"
-  - "{{ 'tfsec' if integration_market_pay else omit}}"
+  - "{{ 'tflint' if integration_market_pay else omit }}"
+  - "{{ 'tfsec' if integration_market_pay else omit }}"
   - tldr
-  - "{{ 'trivy' if integration_market_pay else omit}}"
+  - "{{ 'trivy' if integration_market_pay else omit }}"
   - uv
   - hashicorp/tap/vault
   - watch
-  - "{{ 'wget' if integration_market_pay else omit}}"
-  - "{{ 'yamllint' if integration_market_pay else omit}}"
+  - "{{ 'wget' if integration_market_pay else omit }}"
+  - "{{ 'yamllint' if integration_market_pay else omit }}"
   - yarn
   - yq
 homebrew_cask_packages:
-  - "{{ 'bitwarden' if integration_market_pay else omit}}"
+  - "{{ 'bitwarden' if integration_market_pay else omit }}"
   - git-credential-manager
   - gcloud-cli
-  - "{{ 'lens' if integration_market_pay else omit}}"
-homebrew_packages_removed:
+  - "{{ 'lens' if integration_market_pay else omit }}"
+laptop_setup_homebrew_packages_removed:
   - python@3.9
   - python@3.10
   - python-tk@3.10
   - gpg2
 
-global_packages_apt:
+laptop_setup_global_apt_packages:
   - bash-completion
   - bat
   - bzip2
-  - "{{ 'debconf' if not is_wsl2 else omit}}"
-  - "{{ 'deborphan' if not is_wsl2 else omit}}"
-  - "{{ 'dlocate' if not is_wsl2 else omit}}"
+  - "{{ 'debconf' if not is_wsl2 else omit }}"
+  - "{{ 'deborphan' if not is_wsl2 else omit }}"
+  - "{{ 'dlocate' if not is_wsl2 else omit }}"
   - dnsutils
   - git
   - git-lfs
@@ -227,24 +227,24 @@ global_packages_apt:
 #      - iftop
   - less
   - locales
-  - "{{ 'lsof' if not is_wsl2 else omit}}"
-  - "{{ 'ltrace' if not is_wsl2 else omit}}"
-  - "{{ 'mlocate' if not is_wsl2 else omit}}"
+  - "{{ 'lsof' if not is_wsl2 else omit }}"
+  - "{{ 'ltrace' if not is_wsl2 else omit }}"
+  - "{{ 'mlocate' if not is_wsl2 else omit }}"
   - mmv
-  - "{{ 'mtr' if not is_wsl2 else omit}}"
+  - "{{ 'mtr' if not is_wsl2 else omit }}"
   - ncdu
-  - "{{ 'nmap' if not is_wsl2 else omit}}"
-  - "{{ 'python3-pip' if not is_wsl2 else omit}}"
+  - "{{ 'nmap' if not is_wsl2 else omit }}"
+  - "{{ 'python3-pip' if not is_wsl2 else omit }}"
   - ripgrep
-  - "{{ 'rsync' if not is_wsl2 else omit}}"
+  - "{{ 'rsync' if not is_wsl2 else omit }}"
   - screen
   - socat
-  - "{{ 'strace' if not is_wsl2 else omit}}"
-  - "{{ 'tcpdump' if not is_wsl2 else omit}}"
+  - "{{ 'strace' if not is_wsl2 else omit }}"
+  - "{{ 'tcpdump' if not is_wsl2 else omit }}"
   - tmux
-  - "{{ 'traceroute' if not is_wsl2 else omit}}"
-  - "{{ 'tshark' if not is_wsl2 else omit}}"
-  - "{{ 'unattended-upgrades' if not is_wsl2 else omit}}"
+  - "{{ 'traceroute' if not is_wsl2 else omit }}"
+  - "{{ 'tshark' if not is_wsl2 else omit }}"
+  - "{{ 'unattended-upgrades' if not is_wsl2 else omit }}"
   - unzip
   - vim
   - wdiff

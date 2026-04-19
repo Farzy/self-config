@@ -1,10 +1,10 @@
 ---
 
-- hosts: k8s
+- name: "Install server"
+  hosts: k8s
 
-  name: "Install server"
   roles:
-    - role: master-setup
+    - role: master_setup
       tags: deploy
     - role: docker
       tags: docker

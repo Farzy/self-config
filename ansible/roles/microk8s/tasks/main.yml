@@ -9,49 +9,56 @@
     extra_args: "--system"
   tags: packages
 
-- ansible.builtin.include_tasks:
+- name: Include Microk8s server tasks
+  ansible.builtin.include_tasks:
     file: microk8s.yml
     apply:
       tags:
         microk8s-server
   tags: microk8s-server
 
-- ansible.builtin.include_tasks:
+- name: Include Helm tasks
+  ansible.builtin.include_tasks:
     file: helm.yml
     apply:
       tags:
         helm
   tags: helm
 
-- ansible.builtin.include_tasks:
+- name: Include Cert Manager tasks
+  ansible.builtin.include_tasks:
     file: cert-manager.yml
     apply:
       tags:
         cert-manager
   tags: cert-manager
 
-- ansible.builtin.include_tasks:
+- name: Include CSI Driver NFS tasks
+  ansible.builtin.include_tasks:
     file: csi-driver-nfs.yml
     apply:
       tags:
         nfs
   tags: nfs
 
-- ansible.builtin.include_tasks:
+- name: Include Prometheus tasks
+  ansible.builtin.include_tasks:
     file: prometheus.yml
     apply:
       tags:
         prometheus
   tags: prometheus
 
-- ansible.builtin.include_tasks:
+- name: Include ArgoCD tasks
+  ansible.builtin.include_tasks:
     file: argocd.yml
     apply:
       tags:
         argocd
   tags: argocd
 
-- ansible.builtin.include_tasks:
+- name: Include Vault tasks
+  ansible.builtin.include_tasks:
     file: vault.yml
     apply:
       tags:

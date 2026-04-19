@@ -1,12 +1,11 @@
 ---
-# XXX Fix this for Ansible 9.3
 - name: Remove Brew packages
   community.general.homebrew:
-    name: "{{ homebrew_packages_removed }}"
+    name: "{{ laptop_setup_homebrew_packages_removed }}"
     state: absent
   tags:
     - packages
-  ignore_errors: true
+  ignore_errors: true # noqa: ignore-errors
   when: is_macos
 
 - name: Add Brew tap for HashiCorp
@@ -19,7 +18,7 @@
 
 - name: Install Brew packages
   community.general.homebrew:
-    name: "{{ homebrew_packages | reject('equalto', omit) | list }}"
+    name: "{{ laptop_setup_homebrew_packages | reject('equalto', omit) | list }}"
     update_homebrew: true
     state: present
   tags:
@@ -36,7 +35,7 @@
 
 - name: Install Debian / Ubuntu packages
   ansible.builtin.apt:
-    name: "{{ global_packages_apt | reject('equalto', omit) | list }}"
+    name: "{{ laptop_setup_global_apt_packages | reject('equalto', omit) | list }}"
     state: present
   become: true
   become_user: root

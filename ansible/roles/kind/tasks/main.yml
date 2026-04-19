@@ -6,7 +6,7 @@
     dest: /usr/local/bin/kind
     owner: root
     group: root
-    mode: 0755
+    mode: '0755'
 
 - name: "Create KinD directory /srv/kind"
   ansible.builtin.file:
@@ -14,7 +14,7 @@
     dest: /srv/kind
     owner: root
     group: root
-    mode: 0755
+    mode: '0755'
 
 - name: "Create KinD configurations"
   ansible.builtin.template:
@@ -22,13 +22,14 @@
     dest: "/srv/kind/{{ item.key }}.yaml"
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   loop: "{{ kind_configs | dict2items }}"
 
 - name: "Check existence of cluster"
   ansible.builtin.command:
     cmd: kind get clusters --quiet
   register: existing_clusters
+  changed_when: false
 
 - name: Debug existing clusters
   ansible.builtin.debug:
@@ -40,6 +41,7 @@
 - name: "Create clusters"
   ansible.builtin.command:
     cmd: "kind create cluster --config /srv/kind/{{ item.key }}.yaml --name {{ item.key }}"
+  changed_when: true
   when:
     item.key not in existing_clusters.stdout_lines
   loop: "{{ kind_configs | dict2items }}"
@@ -51,7 +53,7 @@
   register: containers
 
 - name: Extract Docker containers ids
-  set_fact:
+  ansible.builtin.set_fact:
     container_ids: "{{ containers.containers | map(attribute='Id') | list }}"
 
 - name: Set containerd restart policy to "unless-stopped"

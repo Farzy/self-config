@@ -1,10 +1,14 @@
 ---
-
 - name: Create test file
-  template: src=templates/test.txt.j2 dest=/tmp/test.txt
+  ansible.builtin.template:
+    src: templates/test.txt.j2
+    dest: /tmp/test.txt
+    mode: '0644'
+
 - name: Debugging
-  debug: msg="Install package {{ item }}..."
-  with_items: "{{packages}}"
+  ansible.builtin.debug:
+    msg: "Install package {{ item }}..."
+  with_items: "{{ test_packages }}"
 
 # Config shell
 # compte farzy
