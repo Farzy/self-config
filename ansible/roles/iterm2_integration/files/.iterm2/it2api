@@ -522,7 +522,7 @@ async def monitor_screen(connection, args):
                 line = contents.line(i)
                 if args.query in line.string:
                     return
-    
+
 async def show_selection(connection, args):
     a = await iterm2.async_get_app(connection)
     s = a.get_session_by_id(args.session)

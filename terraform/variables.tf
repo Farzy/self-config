@@ -1,13 +1,11 @@
 variable "google_project" {
+  type    = string
   default = "macro-raceway-277610"
 }
 
 variable "google_region" {
+  type    = string
   default = "europe-west1"
-}
-
-variable "google_zone" {
-  default = "europe-west1-b"
 }
 
 variable "scaleway_project" {
@@ -26,12 +24,6 @@ variable "scaleway_zone" {
   type        = string
   description = "Scaleway zone"
   default     = "fr-par-1"
-}
-
-variable "dns_ttl_long" {
-  type        = number
-  description = "DNS TTL of long duration"
-  default     = 3600
 }
 
 variable "dns_ttl_medium" {

@@ -543,4 +543,3 @@ if i >= len(tips) and len(sys.argv) > 1 and sys.argv[1] == "-w":
 if i < len(tips):
   print_tip(i)
   save_index(i)
-

@@ -1,3 +1,7 @@
+#data "google_compute_global_address" "farzy-org-address" {
+#  name = "farzy-org-address"
+#}
+
 resource "google_dns_managed_zone" "farzy-org" {
   dns_name    = "farzy.org."
   name        = "farzy-org"
@@ -120,7 +124,8 @@ resource "google_dns_managed_zone" "farz-ad" {
 resource "google_dns_record_set" "farz-ad-root-a" {
   managed_zone = google_dns_managed_zone.farz-ad.name
   name         = google_dns_managed_zone.farz-ad.dns_name
-  rrdatas      = [google_compute_global_address.farzy-org.address]
-  ttl          = 3600
-  type         = "A"
+  #rrdatas      = [data.google_compute_global_address.farzy-org-address.address]
+  rrdatas = google_dns_record_set.root-a.rrdatas
+  ttl     = 3600
+  type    = "A"
 }

@@ -133,4 +133,3 @@ altscreen on
 #screen -t "root"   2 sudo -i
 # Sélectionne la première page
 select 0
-

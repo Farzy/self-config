@@ -39,7 +39,7 @@ resource "scaleway_instance_security_group" "k8s-sg" {
 }
 
 resource "scaleway_instance_server" "k8s-server" {
-  type  = "DEV1-L"
+  type = "DEV1-L"
   # Used in place of "debian_bullseye" because of Scaleway provider upgrade and server
   # re-import.
   image = "fr-par-1/87d32f91-2887-4daa-b239-45cbaeef10df"

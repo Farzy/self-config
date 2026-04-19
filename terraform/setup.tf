@@ -2,38 +2,38 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 3.77"
+      version = "~> 7.28"
     }
     google-beta = {
       source  = "hashicorp/google-beta"
-      version = "~> 3.77"
+      version = "~> 7.28"
     }
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.1"
+      version = "~> 3.8"
     }
     scaleway = {
       source  = "scaleway/scaleway"
-      version = "~> 2.19"
+      version = "~> 2.73"
     }
   }
 
-  required_version = ">= 1.4"
+  required_version = ">= 1.14.8"
 
   backend "gcs" {
-    bucket      = "farzad-infrastructure"
-    prefix      = "terraform"
+    bucket = "farzad-infrastructure"
+    prefix = "terraform"
   }
 }
 
 provider "google" {
-  project     = var.google_project
-  region      = var.google_region
+  project = var.google_project
+  region  = var.google_region
 }
 
 provider "google-beta" {
-  project     = var.google_project
-  region      = var.google_region
+  project = var.google_project
+  region  = var.google_region
 }
 
 provider "scaleway" {

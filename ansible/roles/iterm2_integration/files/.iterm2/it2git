@@ -113,5 +113,3 @@ if (($?)); then
 else
     git_poll "$PWD"
 fi
-
-

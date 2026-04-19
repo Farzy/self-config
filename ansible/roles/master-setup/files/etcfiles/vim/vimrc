@@ -65,4 +65,3 @@ set sts=4 sw=4 et
 if filereadable("/etc/vim/vimrc.local")
   source /etc/vim/vimrc.local
 endif
-

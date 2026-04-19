@@ -11,7 +11,7 @@ spec:
     rules:
     - alert: ArgoApplicationOutOfSync
       annotations:
-        description: Application '{{ $labels.name }}' in namespace '{{ $labels.dest_namespace }}' is out 
+        description: Application '{{ $labels.name }}' in namespace '{{ $labels.dest_namespace }}' is out
           of sync on ArgoCD. Check the resources.
         summary: "'{{ $labels.name }}' Application has synchronization issue"
         runbook_url: https://fargo.farzad.tech/applications/argocd/{{ $labels.name }}?view=tree&resource=

@@ -2,4 +2,3 @@
 
 - name: Restart NFS server
   command: /bin/systemctl restart nfs-kernel-server
-
