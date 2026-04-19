@@ -1,0 +1,16 @@
+[Unit]
+Description=OpenClaw Service
+After=network.target
+
+[Service]
+Type=simple
+User={{ openclaw_setup_user }}
+Group={{ openclaw_setup_group }}
+WorkingDirectory={{ openclaw_setup_home }}
+Environment=PORT={{ openclaw_setup_port }}
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

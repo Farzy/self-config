@@ -11,3 +11,6 @@ k8S.farzad.tech ansible_user=debian ansible_python_interpreter=python3
 [linux_servers]
 quassel.farzy.org ansible_user=debian ansible_python_interpreter=python3
 minecraft-01.farzad.tech ansible_user=debian ansible_python_interpreter=python3
+
+[openclaw]
+claw.farzad.tech ansible_user=debian ansible_python_interpreter=python3

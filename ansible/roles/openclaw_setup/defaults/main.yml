@@ -1,0 +1,6 @@
+---
+openclaw_setup_user: claw
+openclaw_setup_group: claw
+openclaw_setup_home: /home/claw
+openclaw_setup_domain: claw.farzad.tech
+openclaw_setup_port: 3000
