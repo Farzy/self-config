@@ -2,7 +2,7 @@
 
 # Laptop Identification by Serial Number
 laptop_serial_personal: "C02YG6X6JG5J"
-laptop_serial_professional: "YOUR_PROFESSIONAL_SERIAL_HERE" # Please replace this with your professional Mac's serial number
+laptop_serial_professional: "FTV32FH396"
 
 integration_personal_laptop: "{{ (system_serial_number | default('')) == laptop_serial_personal }}"
 integration_market_pay: "{{ (system_serial_number | default('')) == laptop_serial_professional }}"
