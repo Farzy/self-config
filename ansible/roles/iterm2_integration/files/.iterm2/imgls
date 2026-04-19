@@ -447,7 +447,7 @@ sub call_Image_Size {
     if (defined $w and defined $h) {
         # Bug: Workaround negative BMP size values, discovered with export to BMP via
         # SnagIt and Pixelmator (classic).
-        if ($type eq 'BMP') {                   
+        if ($type eq 'BMP') {
             $w = (2**32) - $w   if $w > 2**31;
             $h = (2**32) - $h   if $h > 2**31;
         }

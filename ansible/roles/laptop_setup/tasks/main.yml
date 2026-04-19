@@ -1,0 +1,121 @@
+---
+- name: Set hostname
+  ansible.builtin.include_tasks:
+    file: hostname.yml
+  tags:
+    - always
+    - hostname
+
+- name: Install packages
+  ansible.builtin.include_tasks:
+    file: packages.yml
+    apply:
+      tags: packages
+  tags: packages
+
+- name: Configure SSH
+  ansible.builtin.include_tasks:
+    file: ssh.yml
+    apply:
+      tags: ssh
+  tags: ssh
+
+- name: List installed Helm plugins
+  ansible.builtin.shell: |
+    set -o pipefail
+    helm plugin list | tail -n +2 | cut -f 1
+  args:
+    executable: /bin/bash
+  register: helm_plugins
+  check_mode: false
+  changed_when: false
+  tags:
+    - packages
+    - helm
+
+- name: Install Helm plugins
+  ansible.builtin.shell:
+    cmd: "helm plugin install {{ item.url }} || helm plugin update {{ item.name }}"
+  loop:
+    - url: https://github.com/hypnoglow/helm-s3.git
+      name: s3
+  when: item.name not in helm_plugins.stdout
+  changed_when: true
+  tags:
+    - packages
+    - helm
+
+- name: Install Oh My Zsh and configure ZSH
+  ansible.builtin.include_tasks:
+    file: zsh.yml
+    apply:
+      tags: zsh
+  tags: zsh
+
+# Change Ansible/Jinja block delimiters in order to avoid issues with shell
+# syntax '${%…}'.
+- name: "Install personal config files"
+  ansible.builtin.template:
+    src: "dotfiles/{{ item }}"
+    dest: "~/{{ item }}"
+    mode: '0644'
+    block_start_string: "{|"
+    block_end_string: "|}"
+  loop:
+    - .gitconfig
+    - .gitconfig-personal
+    - .gitconfig-professional
+    - .gitignore_global
+    - .tmux.conf
+    - .zshrc
+  tags:
+    - configuration
+    - zsh
+
+- name: Create iTerm2 DynamicProfiles
+  ansible.builtin.template:
+    src: "iTerm2/personal.json.j2"
+    dest: "{{ iterm2_library_path }}/DynamicProfiles/personal.json"
+    mode: '0644'
+  tags:
+    - configuration
+    - iterm2
+  when: is_macos
+
+- name: Create .gemini directory
+  ansible.builtin.file:
+    path: "~/.gemini"
+    state: directory
+    mode: "0755"
+  tags:
+    - configuration
+    - gemini
+
+- name: Install personal AGENTS.md to ~/.gemini
+  ansible.builtin.template:
+    src: "gemini/AGENTS_personal.md.j2"
+    dest: "~/.gemini/AGENTS.md"
+    mode: "0644"
+  tags:
+    - configuration
+    - gemini
+  when: integration_personal_laptop | default(false)
+
+- name: Install professional AGENTS.md to ~/.gemini
+  ansible.builtin.template:
+    src: "gemini/AGENTS_professional.md.j2"
+    dest: "~/.gemini/AGENTS.md"
+    mode: "0644"
+  tags:
+    - configuration
+    - gemini
+  when: integration_market_pay | default(false)
+
+- name: Create GEMINI.md symlink pointing to AGENTS.md
+  ansible.builtin.file:
+    src: "AGENTS.md"
+    dest: "~/.gemini/GEMINI.md"
+    state: link
+  tags:
+    - configuration
+    - gemini

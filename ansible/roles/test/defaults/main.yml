@@ -1,5 +1,5 @@
 ---
-a: toto
-packages:
+test_a: toto
+test_packages:
   - dmidecode
   - screen

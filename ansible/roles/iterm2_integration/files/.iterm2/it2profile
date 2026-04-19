@@ -85,11 +85,11 @@ function check_dependency() {
 # get_profile / set_profile
 #
 # These functions uses POSIX standard synonym for the controlling terminal
-# associated with the current process group - /dev/tty. It is useful for programs 
-# that wish to be sure of writing or reading data from the terminal 
+# associated with the current process group - /dev/tty. It is useful for programs
+# that wish to be sure of writing or reading data from the terminal
 # no matter how STDIN/STDOUT/STDERR has been redirected.
-# 
-# get_profile uses iTerm2 Session Context variable "profileName" to 
+#
+# get_profile uses iTerm2 Session Context variable "profileName" to
 # get currently active profile name.
 #
 function get_profile() {

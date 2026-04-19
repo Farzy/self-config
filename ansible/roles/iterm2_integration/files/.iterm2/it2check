@@ -50,7 +50,7 @@ stty -echo -icanon raw min 0 time 0
 while read none; do :; done
 
 # Reset the TTY, so it behaves as expected for the rest of the it2check script.
-clean_up 
+clean_up
 
 # Enter raw mode and turn off echo so the terminal and I can chat quietly.
 stty -echo -icanon raw

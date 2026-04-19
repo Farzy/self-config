@@ -1,9 +1,9 @@
 ---
 
-iterm2_users:
+iterm2_integration_users:
   - { name: "debian", home_path: "/home/debian", owner: "debian", group: "debian" }
 
-iterm2_dotfiles:
+iterm2_integration_dotfiles:
   - .iterm2_shell_integration.zsh
   - .iterm2_shell_integration.bash
   - .iterm2/imgcat

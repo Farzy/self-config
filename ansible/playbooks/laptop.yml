@@ -1,15 +1,18 @@
 ---
 
-- hosts: laptops
+- name: "Deploy Laptop"
+  hosts: laptops
 
-  name: "Deploy Laptop"
   vars_files:
     - ../vars/laptop.yml
   vars:
-    iterm2_users:
-      - { name: "Main account", home_path: "{{ ansible_facts['user_dir'] }}", owner: "{{ ansible_facts['user_id'] }}", group: "{{ ansible_facts['user_gid'] }}" }
+    iterm2_integration_users:
+      - name: "Main account"
+        home_path: "{{ ansible_facts['user_dir'] }}"
+        owner: "{{ ansible_facts['user_id'] }}"
+        group: "{{ ansible_facts['user_gid'] }}"
   roles:
-    - role: laptop-setup
+    - role: laptop_setup
       tags: deploy
     - role: iterm2_integration
       tags: iterm2

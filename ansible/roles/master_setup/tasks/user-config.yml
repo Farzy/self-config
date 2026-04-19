@@ -1,0 +1,21 @@
+---
+
+- name: Install personal config files for root
+  ansible.builtin.template:
+    src: "dotfiles/{{ item.name }}"
+    dest: "/root/{{ item.name }}"
+    mode: "{{ item.mode | default('0644') }}"
+    owner: root
+    group: root
+  loop: "{{ master_setup_user_dotfiles }}"
+  tags: configuration
+
+- name: Install personal config files for main user
+  ansible.builtin.template:
+    src: "dotfiles/{{ item.name }}"
+    dest: "{{ master_setup_user_home }}/{{ item.name }}"
+    mode: "{{ item.mode | default('0644') }}"
+    owner: "{{ master_setup_user_owner }}"
+    group: "{{ master_setup_user_group }}"
+  loop: "{{ master_setup_user_dotfiles }}"
+  tags: configuration

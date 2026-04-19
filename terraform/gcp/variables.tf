@@ -1,16 +1,20 @@
 variable "project" {
+  type    = string
   default = "macro-raceway-277610"
 }
 
 variable "region" {
+  type    = string
   default = "europe-west1"
 }
 
 variable "production_network_name" {
+  type    = string
   default = "production-network"
 }
 
 variable "zone" {
+  type    = string
   default = "europe-west1-b"
 }
 

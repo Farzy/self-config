@@ -9,7 +9,7 @@
   kubernetes.core.helm:
     kubeconfig: "{{ microk8s_kubeconfig }}"
     chart_ref: argo/argo-cd
-    chart_version: "{{ argocd_version }}"
+    chart_version: "{{ microk8s_argocd_version }}"
     release_name: argocd
     release_namespace: argocd
     create_namespace: true

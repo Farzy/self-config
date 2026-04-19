@@ -1,0 +1,93 @@
+---
+
+master_setup_is_debian_lower_12: "{{ ansible_facts['distribution'] == 'Debian' and ansible_facts['distribution_major_version'] | int < 12 }}"
+
+master_setup_global_etcfiles:
+  - name: "profile.d/pragmatic.sh"
+    mode: "0644"
+  - name: "vim/vimrc"
+    mode: "0644"
+  - name: "screenrc"
+    mode: "0644"
+  - name: "apt/apt.conf.d/50unattended-upgrades"
+    mode: "0644"
+master_setup_global_apt_repositories:
+  - repo: 'deb http://ftp.debian.org/debian jessie-backports main contrib non-free'
+    state: present
+    filename: 'jessie-backports'
+  - repo: "deb [arch=amd64,i386] http://ftp.igh.cnrs.fr/pub/mariadb/repo/10.1/debian jessie main"
+    filename: "mariadb"
+master_setup_global_apt_keys:
+  - keyserver: "hkp://keyserver.ubuntu.com:80"
+    id: "0xcbcb082a1bb943db"
+master_setup_global_debconf_defaults:
+  - name: debconf
+    question: "debconf/priority"
+    value: low
+    vtype: select
+  - name: debconf
+    question: debconf/frontend
+    value: Noninteractive
+    vtype: select
+  - name: postfix
+    question: "postfix/mailname"
+    value: "farzy.org"
+    vtype: string
+  - name: locales
+    question: locales/default_environment_locale
+    value: en_US.UTF-8
+    vtype: select
+  - name: locales
+    question: locales/locales_to_be_generated
+    value: "en_US.UTF-8 UTF-8"
+    vtype: multiselect
+master_setup_global_packages_apt:
+  - bash-completion
+  - bat
+  - bzip2
+  - debconf
+  - deborphan
+  - dlocate
+  - dnsutils
+  - elinks
+  - git
+  - jq
+  - htop
+  - less
+  - locales
+  - lsof
+  - ltrace
+  - mlocate
+  - mmv
+  - mtr
+  - ncdu
+  - nmap
+  - python3-pip
+  - rsync
+  - screen
+  - strace
+  - tcpdump
+  - tmux
+  - traceroute
+  - tshark
+  - unattended-upgrades
+  - unzip
+  - vim
+  - wdiff
+  - "{{ 'yq' if not master_setup_is_debian_lower_12 else omit }}"
+  - zip
+  - zsh
+# Only for Debian < 12
+master_setup_global_packages_pip_system:
+  - yq
+
+master_setup_user_home: /home/debian
+master_setup_user_owner: debian
+master_setup_user_group: debian
+master_setup_user_dotfiles:
+  - name: .bashrc
+  - name: .gitignore_global
+  - name: .profile
+  - name: .zshrc
+
+master_setup_install_microk8s: false

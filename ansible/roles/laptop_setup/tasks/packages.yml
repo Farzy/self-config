@@ -1,0 +1,43 @@
+---
+- name: Remove Brew packages
+  community.general.homebrew:
+    name: "{{ laptop_setup_homebrew_packages_removed }}"
+    state: absent
+  tags:
+    - packages
+  ignore_errors: true # noqa: ignore-errors
+  when: is_macos
+
+- name: Add Brew tap for HashiCorp
+  community.general.homebrew_tap:
+    tap: hashicorp/tap
+    state: present
+  tags:
+    - packages
+  when: is_macos
+
+- name: Install Brew packages
+  community.general.homebrew:
+    name: "{{ laptop_setup_homebrew_packages | reject('equalto', omit) | list }}"
+    update_homebrew: true
+    state: present
+  tags:
+    - packages
+  when: is_macos
+
+- name: Install Brew Cask packages
+  community.general.homebrew:
+    name: "{{ homebrew_cask_packages | reject('equalto', omit) | list }}"
+    state: present
+  tags:
+    - packages
+  when: is_macos
+
+- name: Install Debian / Ubuntu packages
+  ansible.builtin.apt:
+    name: "{{ laptop_setup_global_apt_packages | reject('equalto', omit) | list }}"
+    state: present
+  become: true
+  become_user: root
+  tags: packages
+  when: is_debian_family

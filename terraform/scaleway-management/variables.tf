@@ -1,16 +1,16 @@
-variable "project_id" {
+variable "scaleway_project" {
   type        = string
   description = "Scaleway project ID"
   default     = "5e40a076-f4e5-4328-8052-1a543614ec45"
 }
 
-variable "region" {
+variable "scaleway_region" {
   type        = string
   description = "Scaleway region"
   default     = "fr-par"
 }
 
-variable "zone" {
+variable "scaleway_zone" {
   type        = string
   description = "Scaleway zone"
   default     = "fr-par-1"

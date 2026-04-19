@@ -1,6 +1,6 @@
 ---
 - name: Check Helm version
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "helm version --template='{% raw %}{{{% endraw %}.Version}}'"
   register: helm
   ignore_errors: true
@@ -9,7 +9,7 @@
 
 - name: Check if Helm (re)installation is needed
   ansible.builtin.set_fact:
-    helm_upgrade: "{{ helm.rc !=0 or helm.stdout != helm_version }}"
+    helm_upgrade: "{{ helm.rc != 0 or helm.stdout != microk8s_helm_version }}"
 
 - name: "Install newer Helm version"
   when: helm_upgrade
@@ -23,7 +23,7 @@
 
     - name: "Download Helm release for Linux AMD64"
       ansible.builtin.unarchive:
-        src: "https://get.helm.sh/helm-{{ helm_version }}-linux-amd64.tar.gz"
+        src: "https://get.helm.sh/helm-{{ microk8s_helm_version }}-linux-amd64.tar.gz"
         dest: "{{ dl_path.path }}"
         remote_src: true
       when: not ansible_check_mode
@@ -46,5 +46,5 @@
 - name: Install Helm diff plugin
   kubernetes.core.helm_plugin:
     plugin_path: https://github.com/databus23/helm-diff
-    plugin_version: "{{ helm_diff_version }}"
+    plugin_version: "{{ microk8s_helm_diff_version }}"
     state: present

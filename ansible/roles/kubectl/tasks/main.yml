@@ -1,10 +1,10 @@
 ---
-- name: "Add Kubernetes {{ kubectl_version }} Apt key"
+- name: "Add Kubernetes Apt key {{ kubectl_version }}"
   ansible.builtin.apt_key:
     url: "https://pkgs.k8s.io/core:/stable:/{{ kubectl_version }}/deb/Release.key"
     state: present
 
-- name: "Add Kubernetes {{ kubectl_version }} Apt repository"
+- name: "Add Kubernetes Apt repository {{ kubectl_version }}"
   ansible.builtin.apt_repository:
     repo: "deb https://pkgs.k8s.io/core:/stable:/{{ kubectl_version }}/deb/ /"
     filename: kubernetes
@@ -25,14 +25,14 @@
     - snap
 
 - name: Update Snapd
-  ansible.builtin.snap:
+  community.general.snap:
     name: snapd
   tags:
     - packages
     - snap
 
 - name: Install kubectx
-  ansible.builtin.snap:
+  community.general.snap:
     name: kubectx
     classic: true
   tags:

@@ -46,27 +46,54 @@ Terraform / Ansible configuration for my servers
 ### Initial configuration
 
 * Install XCode command line tools
-  
+
         xcode-select --install
-  
+
+* Install `tflint` (required for Terraform `pre-commit` hooks)
+
+        brew install tflint
+
 * Install Ansible personal key
 
         echo "THIS PASSWORD" > ~/.ansible-personal-key
 
 
-* Install `poetry`
+* Install `uv`
 
-        brew install poetry
+        curl -LsSf https://astral.sh/uv/install.sh | sh
 
-* Run `poetry install` after each `pyproject.toml` update
+* Install dependencies with `uv`
+
+        uv sync
+
+* Install `pre-commit` hooks to ensure code quality
+
+        uv run pre-commit install
 * Configure Git subtrees
 
         git remote add -f ansible-role-nginx https://github.com/nginxinc/ansible-role-nginx.git
         git subtree add --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
 
+### Ansible Linting
+
+To ensure code quality, `ansible-lint` is integrated into `pre-commit`. Due to internal API changes in `ansible-core`, specific versions are pinned in `.pre-commit-config.yaml` to maintain compatibility:
+
+- **ansible-lint**: `v6.21.1`
+- **ansible**: `v9.11.0` (includes `ansible-core` 2.16.x)
+
+If you upgrade Ansible to a version with `ansible-core` > 2.16 (e.g., Ansible 10+), you may encounter a `ModuleNotFoundError: No module named 'ansible.parsing.yaml.constructor'`. In such a case, you'll need to find a newer version of `ansible-lint` that supports the new `ansible-core` internal structure.
+
+A root `ansible.cfg` file is provided to help `ansible-lint` and other tools find the roles when running from the root of the repository.
+
+To run the linting manually for all files:
+
+```bash
+pre-commit run ansible-lint -a
+```
+
 ### Using Ansible
 
-    poetry shell
+    uv run bash
     cd ansible
 
 Install Galaxy modules:
@@ -87,15 +114,15 @@ Here are some sample ansible commands:
     ansible-vault encrypt_string 'XXXX' --name github_token
     ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key --encrypt-vault-id personal 'XXXX' --name github_token
 
-**Note**: If [vault_identity_list](https://docs.ansible.com/ansible/latest/user_guide/vault.html#setting-a-default-vault-id) 
-is set in `ansible.cfg`, there is no need to use `--vault-id` or `--encrypt-vault-id` 
+**Note**: If [vault_identity_list](https://docs.ansible.com/ansible/latest/user_guide/vault.html#setting-a-default-vault-id)
+is set in `ansible.cfg`, there is no need to use `--vault-id` or `--encrypt-vault-id`
 on the command line.
 
 ### Updating
 
 * Update Python modules:
 
-        poetry update
+        uv sync
 
 * Update Git subtrees:
 
@@ -150,7 +177,7 @@ The Kubeconfig file is now available at `/tmp/kubeconfig-multi.yaml`.
 
 ### Merging the remote Kubeconfig with the local one
 
-This can be done using the trick from the website in the references. You have to be careful when the keys already 
+This can be done using the trick from the website in the references. You have to be careful when the keys already
 exist in the local Kubeconfig. It will be so if you recreate the KinD cluster multiple times with the same name.
 
 I found that inputting the configuration files in the following order works:
@@ -172,7 +199,7 @@ ssh -L 46419:localhost:46419 -T root@kind.farzad.tech
 
 And access the cluster with its context name which is `kind-<CLUSTER-NAME>`.
 
-**Limitations**: 
+**Limitations**:
 
 - The Kube API server cannot be directly exposed on the Internet because the domain name is not part of the X509
   certificate and `kubectl` will refuse the connection.

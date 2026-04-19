@@ -11,14 +11,14 @@
     - nfs
 
 - name: Update Snapd
-  ansible.builtin.snap:
+  community.general.snap:
     name: snapd
   tags:
     - packages
     - snap
 
 - name: Install Microk8s
-  ansible.builtin.snap:
+  community.general.snap:
     name: microk8s
     classic: true
     channel: "{{ microk8s_version }}"
@@ -32,8 +32,9 @@
     groups: microk8s
 
 - name: Wait to Microk8s to be ready and check addons
-  ansible.builtin.shell: /snap/bin/microk8s status --wait-ready --format yaml
+  ansible.builtin.command: /snap/bin/microk8s status --wait-ready --format yaml
   register: microk8s_output
+  changed_when: false
 
 - name: Set Microk8s status variable in YAML format
   ansible.builtin.set_fact:
@@ -43,6 +44,7 @@
   ansible.builtin.file:
     name: .kube
     state: directory
+    mode: '0700'
 
 - name: Create Microk8s Kubeconfig
   ansible.builtin.shell:
@@ -50,12 +52,12 @@
     creates: "{{ microk8s_kubeconfig }}"
 
 - name: Enable Nginx Ingress Controller
-  ansible.builtin.shell: /snap/bin/microk8s enable ingress
+  ansible.builtin.command: /snap/bin/microk8s enable ingress
   register: result
   changed_when: "'already enabled' not in result.stdout"
 
 - name: Enable Hostpath Storage
-  ansible.builtin.shell: /snap/bin/microk8s enable hostpath-storage
+  ansible.builtin.command: /snap/bin/microk8s enable hostpath-storage
   register: result
   changed_when: "'already enabled' not in result.stdout"
 
@@ -89,7 +91,7 @@
     dest: "/etc/exports"
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   notify: Restart NFS server
   tags:
     - nfs
