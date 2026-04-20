@@ -12,6 +12,28 @@
     shell: /bin/bash
     state: present
 
+- name: Create compilation cache directory
+  ansible.builtin.file:
+    path: /var/tmp/openclaw-compile-cache
+    state: directory
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0755'
+
+- name: Enable lingering for openclaw user
+  ansible.builtin.command:
+    cmd: "loginctl enable-linger {{ openclaw_setup_user }}"
+  args:
+    creates: "/var/lib/systemd/linger/{{ openclaw_setup_user }}"
+
+- name: Create systemd user configuration directory
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_home }}/.config/systemd/user"
+    state: directory
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0755'
+
 - name: Install dependencies
   ansible.builtin.apt:
     name:
