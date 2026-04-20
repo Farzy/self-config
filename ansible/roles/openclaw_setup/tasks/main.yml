@@ -25,6 +25,23 @@
     state: present
     update_cache: true
 
+- name: Add NodeSource APT key
+  ansible.builtin.apt_key:
+    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    state: present
+
+- name: Add NodeSource repository
+  ansible.builtin.apt_repository:
+    repo: "deb https://deb.nodesource.com/node_24.x nodistro main"
+    state: present
+    filename: nodesource
+
+- name: Install Node.js
+  ansible.builtin.apt:
+    name: nodejs
+    state: present
+    update_cache: true
+
 - name: Run OpenClaw install script
   ansible.builtin.shell:
     cmd: "set -o pipefail && curl -fsSL https://openclaw.ai/install.sh | bash"
