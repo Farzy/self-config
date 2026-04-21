@@ -91,6 +91,29 @@
     - configuration
     - gemini
 
+- name: Create .gemini/policies directory
+  ansible.builtin.file:
+    path: "~/.gemini/policies"
+    state: directory
+    mode: "0755"
+  tags:
+    - configuration
+    - gemini
+
+- name: Install Gemini policies
+  ansible.builtin.template:
+    src: "gemini/{{ item }}.j2"
+    dest: "~/.gemini/policies/{{ item }}"
+    mode: "0644"
+  loop:
+    - atlassian.toml
+    - core.toml
+    - git.toml
+    - notion.toml
+  tags:
+    - configuration
+    - gemini
+
 - name: Install personal AGENTS.md to ~/.gemini
   ansible.builtin.template:
     src: "gemini/AGENTS_personal.md.j2"

@@ -1,0 +1,61 @@
+# Core Utilities (Safe)
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = [
+  "sleep",
+  "env",
+  "break",
+  "xargs",
+  "base64",
+  "uniq",
+  "sort",
+  "echo",
+  "which",
+  "ls",
+  "find",
+  "tail",
+  "head",
+  "cat",
+  "cd",
+  "grep",
+  "ps",
+  "pwd",
+  "wc",
+  "file",
+  "stat",
+  "diff",
+  "lsof",
+  "date",
+  "whoami",
+  "uname",
+  "du",
+  "cut",
+  "true",
+  "false",
+  "readlink",
+  "awk",
+  "jq",
+  "rg",
+  "less",
+  "more",
+  "tree",
+  "mkdir",
+  "curl",
+  "uv",
+  "pytest"
+]
+decision = "allow"
+priority = 950
+modes = [ "default", "autoEdit", "yolo" ]
+
+[[rule]]
+decision = "allow"
+priority = 950
+toolName = "enter_plan_mode"
+modes = [ "default", "autoEdit", "yolo" ]
+
+[[rule]]
+decision = "allow"
+priority = 950
+toolName = "web_fetch"
+modes = [ "default", "autoEdit", "yolo" ]

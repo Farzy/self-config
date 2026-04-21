@@ -1,0 +1,57 @@
+# Git (Safe/Read-only)
+[[rule]]
+decision = "allow"
+priority = 950
+toolName = "run_shell_command"
+commandPrefix = [
+  "git blame",
+  "git show",
+  "git grep",
+  "git show-ref",
+  "git ls-tree",
+  "git ls-remote",
+  "git reflog",
+  "git remote -v",
+  "git diff",
+  "git rev-list",
+  "git rev-parse",
+  "git merge-base",
+  "git cherry",
+  "git fetch",
+  "git status",
+  "git st",
+  "git branch",
+  "git br",
+  "git log",
+  "git --version"
+]
+modes = [ "default", "autoEdit", "yolo" ]
+
+# GitHub CLI (Read-only)
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = [
+  "gh workflow list",
+  "gh auth status",
+  "gh checkout view",
+  "gh run view",
+  "gh run job view",
+  "gh run list",
+  "gh run --help",
+  "gh issue view",
+  "gh issue list",
+  "gh label list",
+  "gh pr diff",
+  "gh pr check",
+  "gh pr checks",
+  "gh pr view",
+  "gh pr list",
+  "gh pr status",
+  "gh repo view",
+  "gh job view",
+  "gh api",
+  "gh log"
+]
+decision = "allow"
+priority = 950
+modes = [ "default", "autoEdit", "yolo" ]
