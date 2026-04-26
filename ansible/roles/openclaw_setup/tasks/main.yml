@@ -1,0 +1,123 @@
+---
+- name: Create openclaw group
+  ansible.builtin.group:
+    name: "{{ openclaw_setup_group }}"
+    state: present
+
+- name: Create openclaw user
+  ansible.builtin.user:
+    name: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    home: "{{ openclaw_setup_home }}"
+    shell: /bin/bash
+    state: present
+
+- name: Create compilation cache directory
+  ansible.builtin.file:
+    path: /var/tmp/openclaw-compile-cache
+    state: directory
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0755'
+
+- name: Enable lingering for openclaw user
+  ansible.builtin.command:
+    cmd: "loginctl enable-linger {{ openclaw_setup_user }}"
+  args:
+    creates: "/var/lib/systemd/linger/{{ openclaw_setup_user }}"
+
+- name: Create systemd user configuration directory
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_home }}/.config/systemd/user"
+    state: directory
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0755'
+
+- name: Install dependencies
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
+      - curl
+      - gnupg
+      - ca-certificates
+      - acl
+    state: present
+    update_cache: true
+
+- name: Add NodeSource APT key
+  ansible.builtin.apt_key:
+    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    state: present
+
+- name: Add NodeSource repository
+  ansible.builtin.apt_repository:
+    repo: "deb https://deb.nodesource.com/node_24.x nodistro main"
+    state: present
+    filename: nodesource
+
+- name: Install Node.js
+  ansible.builtin.apt:
+    name: nodejs
+    state: present
+    update_cache: true
+
+- name: Run OpenClaw install script
+  ansible.builtin.shell:
+    cmd: "set -o pipefail && curl -fsSL https://openclaw.ai/install.sh | bash"
+    executable: /bin/bash
+  args:
+    creates: "{{ openclaw_setup_home }}/openclaw"
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+
+- name: Deploy OpenClaw systemd service
+  ansible.builtin.template:
+    src: openclaw.service.j2
+    dest: /etc/systemd/system/openclaw.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd
+
+- name: Deploy Nginx configuration
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: "/etc/nginx/sites-available/{{ openclaw_setup_domain }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload nginx
+
+- name: Enable Nginx configuration
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ openclaw_setup_domain }}"
+    dest: "/etc/nginx/sites-enabled/{{ openclaw_setup_domain }}"
+    state: link
+  notify: Reload nginx
+
+- name: Ensure OpenClaw is started and enabled
+  ansible.builtin.service:
+    name: openclaw
+    state: started
+    enabled: true
+
+- name: Ensure Nginx is started and enabled
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Check if SSL certificate exists
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ openclaw_setup_domain }}/fullchain.pem"
+  register: cert_stat
+
+- name: Generate SSL certificate with Certbot
+  ansible.builtin.command:
+    cmd: "certbot --nginx -d {{ openclaw_setup_domain }} --non-interactive --agree-tos -m farzy@farzy.org"
+  when: not cert_stat.stat.exists
+  changed_when: true
+  notify: Reload nginx

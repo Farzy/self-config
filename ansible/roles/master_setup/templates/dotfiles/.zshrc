@@ -1,6 +1,6 @@
 # {{ ansible_managed }}
 # If you come from bash you might have to change your $PATH.
-# export PATH=$HOME/bin:/usr/local/bin:$PATH
+# export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 
 # Automatic Poetry shell activation/deactivation
 _togglePoetryShell() {
@@ -8,21 +8,47 @@ _togglePoetryShell() {
   if [[ ! -f "$PWD/pyproject.toml" ]]; then
     if [[ "$POETRY_ACTIVE" == 1 ]]; then
       if [[ "$PWD" != "$pyproject_dir"* ]]; then
-        exit
+        deactivate
+        unset POETRY_ACTIVE
       fi
     fi
   fi
 
-  # activate the shell if pyproject.toml exists
+  # activate the shell if pyproject.toml exists and is managed by Poetry
   if [[ "$POETRY_ACTIVE" != 1 ]]; then
-    if [[ -f "$PWD/pyproject.toml" ]]; then
+    if [[ -f "$PWD/pyproject.toml" ]] && grep -q "tool\.poetry" "$PWD/pyproject.toml"; then
       export pyproject_dir="$PWD"
-      poetry shell
+      $(poetry env activate)
+      POETRY_ACTIVE=1
+    fi
+  fi
+}
+
+# Automatic UV shell activation/deactivation
+_toggleUvShell() {
+  # deactivate shell if uv.lock doesn't exist and not in a subdir
+  if [[ ! -f "$PWD/uv.lock" ]]; then
+    if [[ "$UV_ACTIVE" == 1 ]]; then
+      if [[ "$PWD" != "$pyproject_dir"* ]]; then
+        deactivate
+        unset UV_ACTIVE
+      fi
+    fi
+  fi
+
+  # activate the shell if uv.lock exists
+  if [[ "$UV_ACTIVE" != 1 ]]; then
+    if [[ -f "$PWD/uv.lock" ]]; then
+      export pyproject_dir="$PWD"
+      source .venv/bin/activate
+      UV_ACTIVE=1
     fi
   fi
 }
 autoload -U add-zsh-hook
+add-zsh-hook chpwd _toggleUvShell
 add-zsh-hook chpwd _togglePoetryShell
+_toggleUvShell
 _togglePoetryShell
 
 # Path to your oh-my-zsh installation.
@@ -119,7 +145,7 @@ export LC_TIME="en_US.UTF-8"
 # fi
 
 # Compilation flags
-# export ARCHFLAGS="-arch x86_64"
+# export ARCHFLAGS="-arch $(uname -m)"
 
 export PAGER=less
 export EDITOR=vim
@@ -150,7 +176,7 @@ alias bat=batcat
 alias kctx=kubectx
 alias kns=kubens
 
-{% if install_microk8s %}
+{% if master_setup_install_microk8s %}
 # Microk8s
 # This adds Snap directory to PATH
 source /etc/profile.d/apps-bin-path.sh

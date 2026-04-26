@@ -1,0 +1,18 @@
+[Unit]
+Description=OpenClaw Service
+After=network.target
+
+[Service]
+Type=simple
+User={{ openclaw_setup_user }}
+Group={{ openclaw_setup_group }}
+WorkingDirectory={{ openclaw_setup_home }}
+Environment=PORT={{ openclaw_setup_port }}
+Environment=NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache
+Environment=OPENCLAW_NO_RESPAWN=1
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
