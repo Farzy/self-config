@@ -341,22 +341,8 @@ if command -v docker &> /dev/null; then
 fi
 
 {| if integration_market_pay |}
-export DD_API_KEY="{{ mp_dd_api_key }}"
-export DD_APP_KEY="{{ mp_dd_app_key }}"
-export DD_HOST=https://api.datadoghq.eu
-export OVH_APPLICATION_KEY="{{ mp_ovh_application_key }}"
-export OVH_APPLICATION_SECRET="{{ mp_ovh_application_secret }}"
-export OVH_ENDPOINT=ovh-eu
-export OVH_CONSUMER_KEY="{{ mp_ovh_consumer_key }}"
-export GITHUB_TOKEN="{{ mp_github_token }}"
-export GITHUB_ACCESS_TOKEN="${GITHUB_TOKEN}"
-export GH_TOKEN="${GITHUB_TOKEN}"
-export GITHUB_OWNER=market-pay-tech
-export GITHUB_ORG_OWNER="${GITHUB_OWNER}"
 #export GOOGLE_CREDENTIALS=/Users/ffarid/src/market-pay/.secrets/mp-sa-key.json
 #export GOOGLE_APPLICATION_CREDENTIALS=""${GOOGLE_CREDENTIALS}""
-export GEMINI_API_KEY="{{ gemini_api_key }}"
-export TG_PROVIDER_CACHE=1
 
 alias gam="${HOME}/bin/gam7/gam"
 
@@ -399,3 +385,8 @@ fi
 
 # Mole shell completion
 if output="$(mole completion zsh 2>/dev/null)"; then eval "$output"; fi
+
+{| if integration_market_pay |}
+# Market Pay Platform Engineering Setup
+[ -s "${HOME}/.env" ] && source "${HOME}/.env"
+{| endif |}
