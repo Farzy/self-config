@@ -76,6 +76,7 @@ master_setup_global_packages_apt:
   - wdiff
   - "{{ 'yq' if not master_setup_is_debian_lower_12 else omit }}"
   - zip
+  - zoxide
   - zsh
 # Only for Debian < 12
 master_setup_global_packages_pip_system:
