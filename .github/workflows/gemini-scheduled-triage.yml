@@ -1,8 +1,8 @@
 name: '📋 Gemini Scheduled Issue Triage'
 
 on:
-  #schedule:
-  #  - cron: '0 * * * *' # Runs every hour
+  # schedule:
+  #   - cron: '0 * * * *' # Runs every hour
   pull_request:
     branches:
       - 'main'
@@ -25,8 +25,13 @@ defaults:
   run:
     shell: 'bash'
 
+permissions:
+  contents: read
+
+
 jobs:
   triage:
+    if: github.event.repository.has_issues == true
     runs-on: 'ubuntu-latest'
     timeout-minutes: 7
     permissions:
@@ -56,7 +61,8 @@ jobs:
             }
 
             if (!labels || labels.length === 0) {
-              core.setFailed('There are no issue labels in this repository.')
+              core.setFailed('There are no issue labels in this repository.');
+              return;
             }
 
             const labelNames = labels.map(label => label.name).sort();
@@ -73,14 +79,21 @@ jobs:
           echo '🔍 Finding unlabeled issues and issues marked for triage...'
           ISSUES="$(gh issue list \
             --state 'open' \
-            --search 'no:label label:"status/needs-triage"' \
+            --search 'no:label OR label:"status/needs-triage"' \
             --json number,title,body \
             --limit '100' \
-            --repo "${GITHUB_REPOSITORY}"
-          )"
+            --repo "${GITHUB_REPOSITORY}" \
+          | jq -c '.')"
 
           echo '📝 Setting output for GitHub Actions...'
-          echo "issues_to_triage=${ISSUES}" >> "${GITHUB_OUTPUT}"
+          {
+            echo 'issues_to_triage<<EOF'
+            echo "${ISSUES}"
+            echo 'EOF'
+          } >> "${GITHUB_OUTPUT}"
+
+          ISSUE_NUMBERS="$(echo "${ISSUES}" | jq -r '.[].number | tostring' | paste -sd, -)"
+          echo "issue_numbers=${ISSUE_NUMBERS}" >> "${GITHUB_OUTPUT}"
 
           ISSUE_COUNT="$(echo "${ISSUES}" | jq 'length')"
           echo "✅ Found ${ISSUE_COUNT} issue(s) to triage! 🎯"
@@ -91,6 +104,7 @@ jobs:
           ${{ steps.find_issues.outputs.issues_to_triage != '[]' }}
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
         env:
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'
           GITHUB_TOKEN: '' # Do not pass any auth token here since this runs on untrusted inputs
           ISSUES_TO_TRIAGE: '${{ steps.find_issues.outputs.issues_to_triage }}'
           REPOSITORY: '${{ github.repository }}'
@@ -109,23 +123,24 @@ jobs:
           use_vertex_ai: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
           upload_artifacts: '${{ vars.UPLOAD_ARTIFACTS }}'
           workflow_name: 'gemini-scheduled-triage'
+          github_issue_number: '${{ steps.find_issues.outputs.issue_numbers }}'
           settings: |-
             {
-              "model": {
-                "maxSessionTurns": 25
-              },
-              "telemetry": {
-                "enabled": true,
-                "target": "local",
-                "outfile": ".gemini/telemetry.log"
-              },
-              "tools": {
-                "core": [
-                  "run_shell_command(echo)",
-                  "run_shell_command(jq)",
-                  "run_shell_command(printenv)"
-                ]
-              }
+            "model": {
+            "maxSessionTurns": 25
+            },
+            "telemetry": {
+            "enabled": true,
+            "target": "local",
+            "outfile": ".gemini/telemetry.log"
+            },
+            "tools": {
+            "core": [
+            "run_shell_command(echo)",
+            "run_shell_command(jq)",
+            "run_shell_command(printenv)"
+            ]
+            }
             }
           prompt: '/gemini-scheduled-triage'
 
@@ -171,8 +186,11 @@ jobs:
               .sort()
 
             // Parse out the triaged issues
-            const triagedIssues = (JSON.parse(process.env.TRIAGED_ISSUES || '{}'))
-              .sort((a, b) => a.issue_number - b.issue_number)
+            let triagedIssues = JSON.parse(process.env.TRIAGED_ISSUES || '[]');
+            if (!Array.isArray(triagedIssues)) {
+              triagedIssues = [];
+            }
+            triagedIssues.sort((a, b) => a.issue_number - b.issue_number);
 
             core.debug(`Triaged issues: ${JSON.stringify(triagedIssues)}`);
 

@@ -16,6 +16,10 @@ defaults:
   run:
     shell: 'bash'
 
+permissions:
+  contents: read
+
+
 jobs:
   invoke:
     runs-on: 'ubuntu-latest'
@@ -44,6 +48,7 @@ jobs:
         id: 'run_gemini'
         uses: 'google-github-actions/run-gemini-cli@v0' # ratchet:exclude
         env:
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'
           TITLE: '${{ github.event.pull_request.title || github.event.issue.title }}'
           DESCRIPTION: '${{ github.event.pull_request.body || github.event.issue.body }}'
           EVENT_NAME: '${{ github.event_name }}'
@@ -66,53 +71,54 @@ jobs:
           use_vertex_ai: '${{ vars.GOOGLE_GENAI_USE_VERTEXAI }}'
           upload_artifacts: '${{ vars.UPLOAD_ARTIFACTS }}'
           workflow_name: 'gemini-invoke'
+          github_pr_number: '${{ github.event.pull_request.number }}'
+          github_issue_number: '${{ github.event.issue.number }}'
           settings: |-
             {
-              "model": {
-                "maxSessionTurns": 25
-              },
-              "telemetry": {
-                "enabled": true,
-                "target": "local",
-                "outfile": ".gemini/telemetry.log"
-              },
-              "mcpServers": {
-                "github": {
-                  "command": "docker",
-                  "args": [
-                    "run",
-                    "-i",
-                    "--rm",
-                    "-e",
-                    "GITHUB_PERSONAL_ACCESS_TOKEN",
-                    "ghcr.io/github/github-mcp-server:v0.27.0"
-                  ],
-                  "includeTools": [
-                    "add_issue_comment",
-                    "issue_read",
-                    "list_issues",
-                    "search_issues",
-                    "pull_request_read",
-                    "list_pull_requests",
-                    "search_pull_requests",
-                    "get_commit",
-                    "get_file_contents",
-                    "list_commits",
-                    "search_code"
-                  ],
-                  "env": {
-                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-                  }
-                }
-              },
-              "tools": {
-                "core": [
-                  "run_shell_command(cat)",
-                  "run_shell_command(echo)",
-                  "run_shell_command(grep)",
-                  "run_shell_command(head)",
-                  "run_shell_command(tail)"
-                ]
-              }
+            "model": {
+            "maxSessionTurns": 25
+            },
+            "telemetry": {
+            "enabled": true,
+            "target": "local",
+            "outfile": ".gemini/telemetry.log"
+            },
+            "mcpServers": {
+            "github": {
+            "command": "npx",
+            "args": [
+            "-y",
+            "@modelcontextprotocol/server-github"
+            ],
+            "includeTools": [
+            "add_issue_comment",
+            "get_issue",
+            "list_issues",
+            "search_issues",
+            "get_pull_request",
+            "get_pull_request_files",
+            "list_pull_requests",
+            "get_file_contents",
+            "list_commits",
+            "search_code"
+            ],
+            "env": {
+            "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+            }
+            }
+            },
+            "tools": {
+            "core": [
+            "update_topic",
+            "run_shell_command(cat)",
+            "run_shell_command(echo)",
+            "run_shell_command(grep)",
+            "run_shell_command(head)",
+            "run_shell_command(tail)"
+            ],
+            "allowed": [
+            "mcp_github_*"
+            ]
+            }
             }
           prompt: '/gemini-invoke'

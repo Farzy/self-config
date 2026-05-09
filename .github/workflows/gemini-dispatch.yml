@@ -22,6 +22,10 @@ defaults:
   run:
     shell: 'bash'
 
+permissions:
+  contents: read
+
+
 jobs:
   debugger:
     if: |-
@@ -55,7 +59,7 @@ jobs:
         contains(fromJSON('["opened", "reopened"]'), github.event.action)
       ) || (
         github.event.sender.type == 'User' &&
-        startsWith(github.event.comment.body || github.event.review.body || github.event.issue.body, '@gemini-cli') &&
+        startsWith(github.event.comment.body || github.event.review.body || github.event.issue.body || '', '@gemini-cli') &&
         contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association || github.event.review.author_association || github.event.issue.author_association)
       )
     runs-on: 'ubuntu-latest'
@@ -90,7 +94,7 @@ jobs:
         with:
           script: |
             const eventType = process.env.EVENT_TYPE;
-            const request = process.env.REQUEST;
+            const request = process.env.REQUEST || '';
             core.setOutput('request', request);
 
             if (eventType === 'pull_request.opened') {
@@ -142,7 +146,7 @@ jobs:
   triage:
     needs: 'dispatch'
     if: |-
-      ${{ needs.dispatch.outputs.command == 'triage' }}
+      ${{ needs.dispatch.outputs.command == 'triage' && github.event.repository.has_issues == true }}
     uses: './.github/workflows/gemini-triage.yml'
     permissions:
       contents: 'read'
