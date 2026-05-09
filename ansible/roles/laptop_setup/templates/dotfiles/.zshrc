@@ -386,6 +386,11 @@ fi
 # Mole shell completion
 if output="$(mole completion zsh 2>/dev/null)"; then eval "$output"; fi
 
+# Zoxide (smarter cd)
+if command -v zoxide &> /dev/null; then
+    eval "$(zoxide init zsh)"
+fi
+
 {| if integration_market_pay |}
 # Market Pay Platform Engineering Setup
 [ -s "${HOME}/.env" ] && source "${HOME}/.env"

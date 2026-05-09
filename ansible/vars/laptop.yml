@@ -200,6 +200,7 @@ laptop_setup_homebrew_packages:
   - "{{ 'yamllint' if integration_market_pay else omit }}"
   - yarn
   - yq
+  - zoxide
 homebrew_cask_packages:
   - "{{ 'bitwarden' if integration_market_pay else omit }}"
   - git-credential-manager
@@ -250,6 +251,7 @@ laptop_setup_global_apt_packages:
   - wdiff
   - whois
   - zip
+  - zoxide
   - zsh
 
 iterm2_library_path: ~/Library/Application Support/iTerm2

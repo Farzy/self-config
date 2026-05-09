@@ -165,5 +165,10 @@ alias gctx=gcloudctx
 # Direnv activation
 command -v direnv &> /dev/null && eval "$(direnv hook zsh)"
 
+# Zoxide (smarter cd)
+if command -v zoxide &> /dev/null; then
+    eval "$(zoxide init zsh)"
+fi
+
 # iTerm2 integration
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
