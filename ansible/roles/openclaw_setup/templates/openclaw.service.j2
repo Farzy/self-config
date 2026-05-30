@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User={{ openclaw_setup_user }}
 Group={{ openclaw_setup_group }}
-WorkingDirectory={{ openclaw_setup_home }}
+WorkingDirectory={{ openclaw_setup_home }}/openclaw
 Environment=PORT={{ openclaw_setup_port }}
 Environment=NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache
 Environment=OPENCLAW_NO_RESPAWN=1
