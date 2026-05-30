@@ -4,3 +4,4 @@ openclaw_setup_group: claw
 openclaw_setup_home: /home/claw
 openclaw_setup_domain: claw.farzad.tech
 openclaw_setup_port: 3000
+openclaw_setup_email: farzy@farzy.org

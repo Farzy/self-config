@@ -117,7 +117,7 @@
 
 - name: Generate SSL certificate with Certbot
   ansible.builtin.command:
-    cmd: "certbot --nginx -d {{ openclaw_setup_domain }} --non-interactive --agree-tos -m farzy@farzy.org"
+    cmd: "certbot --nginx -d {{ openclaw_setup_domain }} --non-interactive --agree-tos -m {{ openclaw_setup_email }}"
   when: not cert_stat.stat.exists
   changed_when: true
   notify: Reload nginx
