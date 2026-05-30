@@ -379,9 +379,9 @@ unset env
 {| endif |}
 
 # Added by Antigravity
-if [[ -d "${HOME}/.antigravity/antigravity/bin" ]]; then
-    export PATH="${HOME}/.antigravity/antigravity/bin:$PATH"
-fi
+# if [[ -d "${HOME}/.antigravity/antigravity/bin" ]]; then
+#     export PATH="${HOME}/.antigravity/antigravity/bin:$PATH"
+# fi
 
 # Mole shell completion
 if output="$(mole completion zsh 2>/dev/null)"; then eval "$output"; fi
