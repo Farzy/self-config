@@ -1,0 +1,9 @@
+---
+- name: Deploy OpenClaw
+  hosts: openclaw
+  become: true
+  roles:
+    - role: master_setup
+      tags: setup
+    - role: openclaw_setup
+      tags: openclaw

@@ -2,9 +2,9 @@
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
-{| if is_wsl2 |}
+{| if is_wsl2 -|}
 export LANG=C.UTF-8
-{| elif is_macos |}
+{| elif is_macos -|}
 # You may need to manually set your language environment
 # export LANG=en_US.UTF-8
 export LANG="fr_FR.UTF-8"
@@ -37,7 +37,7 @@ if [[ -d "$HOME/.cargo" ]]; then
     . "$HOME/.cargo/env"
 fi
 
-{| if is_macos |}
+{| if is_macos -|}
 # Homebrew
 if [[ -d /opt/homebrew && ! -v HOMEBREW_PREFIX ]]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -190,7 +190,7 @@ HIST_STAMPS="yyyy-mm-dd"
 # Would you like to use another custom folder than $ZSH/custom?
 # ZSH_CUSTOM=/path/to/new-custom-folder
 
-{| if is_macos |}
+{| if is_macos -|}
 # As the "gnu-utils" plugin already overrides the system ls, we cannot rely on the logic
 # inside https://github.com/ohmyzsh/ohmyzsh/blob/master/lib/theme-and-appearance.zsh to
 # set colors correctly
@@ -241,13 +241,13 @@ export LESS="-MiR"
 # Affiche les accents ISO
 export LESSCHARSET=utf-8
 
-{| if is_macos |}
+{| if is_macos -|}
 # Ansible
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES # See https://github.com/ansible/ansible/issues/32499
 {| endif |}
 
 export GITHUB_TOKEN={{ github_token }}
-{| if is_macos |}
+{| if is_macos -|}
 export HOMEBREW_GITHUB_API_TOKEN={{ github_homebrew_token }}
 {| endif |}
 
@@ -285,7 +285,7 @@ compdef tg=terragrunt
 # Direnv activation
 command -v direnv > /dev/null && eval "$(direnv hook zsh)"
 
-{| if is_macos |}
+{| if is_macos -|}
 if [ -d ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk ]; then
     source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc
     source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc
@@ -340,7 +340,7 @@ if command -v docker &> /dev/null; then
     fi
 fi
 
-{| if integration_market_pay |}
+{| if integration_market_pay -|}
 #export GOOGLE_CREDENTIALS=/Users/ffarid/src/market-pay/.secrets/mp-sa-key.json
 #export GOOGLE_APPLICATION_CREDENTIALS=""${GOOGLE_CREDENTIALS}""
 
@@ -349,7 +349,7 @@ alias gam="${HOME}/bin/gam7/gam"
 # mp-ops auto-completion
 [[ -f ~/.mp_ops-complete.zsh ]] && source ~/.mp_ops-complete.zsh
 {| endif |}
-{| if is_wsl2 |}
+{| if is_wsl2 -|}
 # The path to your Windows home (If you're using WSL)
 export WINDOWS="/mnt/c/Users/farzad.farid"
 export desk="${WINDOWS}/Desktop"
@@ -379,9 +379,9 @@ unset env
 {| endif |}
 
 # Added by Antigravity
-if [[ -d "${HOME}/.antigravity/antigravity/bin" ]]; then
-    export PATH="${HOME}/.antigravity/antigravity/bin:$PATH"
-fi
+# if [[ -d "${HOME}/.antigravity/antigravity/bin" ]]; then
+#     export PATH="${HOME}/.antigravity/antigravity/bin:$PATH"
+# fi
 
 # Mole shell completion
 if output="$(mole completion zsh 2>/dev/null)"; then eval "$output"; fi
@@ -391,7 +391,7 @@ if command -v zoxide &> /dev/null; then
     eval "$(zoxide init zsh)"
 fi
 
-{| if integration_market_pay |}
+{| if integration_market_pay -|}
 # Market Pay Platform Engineering Setup
 [ -s "${HOME}/.env" ] && source "${HOME}/.env"
 {| endif |}

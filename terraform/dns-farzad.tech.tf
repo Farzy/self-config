@@ -64,3 +64,11 @@ resource "google_dns_record_set" "minecraft-02-srv" {
   ttl          = var.dns_ttl_medium
   type         = "SRV"
 }
+
+resource "google_dns_record_set" "openclaw" {
+  managed_zone = google_dns_managed_zone.farzad-tech.name
+  name         = "claw.${google_dns_managed_zone.farzad-tech.dns_name}"
+  rrdatas      = [module.openclaw.public_ip]
+  ttl          = var.dns_ttl_medium
+  type         = "A"
+}
