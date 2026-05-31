@@ -393,5 +393,5 @@ fi
 
 {| if integration_market_pay -|}
 # Market Pay Platform Engineering Setup
-[ -s "${HOME}/.env" ] && source "${HOME}/.env"
+if [ -s "${HOME}/.env" ]; then set -a; source "${HOME}/.env"; set +a; fi
 {| endif |}
