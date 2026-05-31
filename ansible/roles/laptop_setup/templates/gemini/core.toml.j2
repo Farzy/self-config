@@ -2,51 +2,53 @@
 [[rule]]
 toolName = "run_shell_command"
 commandPrefix = [
-  "sleep",
-  "env",
-  "break",
-  "xargs",
-  "base64",
-  "uniq",
-  "sort",
-  "echo",
-  "which",
-  "ls",
-  "find",
-  "tail",
-  "head",
-  "cat",
-  "cd",
-  "grep",
-  "ps",
-  "pwd",
-  "wc",
-  "file",
-  "stat",
-  "diff",
-  "lsof",
-  "date",
-  "whoami",
-  "uname",
-  "du",
-  "cut",
-  "true",
-  "false",
-  "readlink",
-  "awk",
-  "jq",
-  "rg",
-  "less",
-  "more",
-  "tree",
-  "mkdir",
-  "curl",
-  "uv",
-  "pytest"
+    "sleep",
+    "env",
+    "break",
+    "xargs",
+    "base64",
+    "uniq",
+    "sort",
+    "echo",
+    "which",
+    "ls",
+    "find",
+    "tail",
+    "head",
+    "cat",
+    "cd",
+    "grep",
+    "ps",
+    "pwd",
+    "wc",
+    "file",
+    "stat",
+    "diff",
+    "lsof",
+    "date",
+    "whoami",
+    "uname",
+    "du",
+    "cut",
+    "true",
+    "false",
+    "readlink",
+    "awk",
+    "jq",
+    "rg",
+    "less",
+    "more",
+    "tree",
+    "mkdir",
+    "curl",
+    "uv",
+    "pytest",
+    "pdfinfo",
+    "strings"
 ]
 decision = "allow"
 priority = 950
-modes = [ "default", "autoEdit", "yolo" ]
+modes = [ "plan", "default", "autoEdit", "yolo" ]
 
 [[rule]]
 decision = "allow"
@@ -58,4 +60,4 @@ modes = [ "default", "autoEdit", "yolo" ]
 decision = "allow"
 priority = 950
 toolName = "web_fetch"
-modes = [ "default", "autoEdit", "yolo" ]
+modes = [ "plan", "default", "autoEdit", "yolo" ]

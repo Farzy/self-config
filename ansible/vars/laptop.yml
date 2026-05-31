@@ -191,7 +191,7 @@ laptop_setup_homebrew_packages:
   - tfenv
   - "{{ 'tflint' if integration_market_pay else omit }}"
   - "{{ 'tfsec' if integration_market_pay else omit }}"
-  - tldr
+  - tlrc
   - "{{ 'trivy' if integration_market_pay else omit }}"
   - uv
   - hashicorp/tap/vault
@@ -210,7 +210,7 @@ laptop_setup_homebrew_packages_removed:
   - python@3.9
   - python@3.10
   - python-tk@3.10
-  - gpg2
+#  - gpg2
 
 laptop_setup_global_apt_packages:
   - bash-completion
