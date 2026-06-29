@@ -391,6 +391,11 @@ if command -v zoxide &> /dev/null; then
     eval "$(zoxide init zsh)"
 fi
 
+# Gog CLI
+if command -v gog &> /dev/null; then
+    eval "$(gog completion zsh)"
+fi
+
 {| if integration_market_pay -|}
 # Market Pay Platform Engineering Setup
 if [ -s "${HOME}/.env" ]; then set -a; source "${HOME}/.env"; set +a; fi
