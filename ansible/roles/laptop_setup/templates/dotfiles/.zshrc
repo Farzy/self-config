@@ -344,7 +344,6 @@ fi
 #export GOOGLE_CREDENTIALS=/Users/ffarid/src/market-pay/.secrets/mp-sa-key.json
 #export GOOGLE_APPLICATION_CREDENTIALS=""${GOOGLE_CREDENTIALS}""
 
-alias gam="${HOME}/bin/gam7/gam"
 
 # mp-ops auto-completion
 [[ -f ~/.mp_ops-complete.zsh ]] && source ~/.mp_ops-complete.zsh
