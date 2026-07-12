@@ -1,26 +1,30 @@
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "00:00"
-    labels:
-      - "dependencies"
-    groups:
-      github-actions:
-        patterns:
-          - "*"
-
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
-      time: "00:00"
     groups:
-      python-dependencies:
+      security-updates:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      version-updates:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      security-updates:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      version-updates:
+        applies-to: "version-updates"
         patterns:
           - "*"
 
@@ -28,10 +32,13 @@ updates:
     directory: "/ansible"
     schedule:
       interval: "weekly"
-      day: "monday"
-      time: "00:00"
     groups:
-      ansible-dependencies:
+      security-updates:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      version-updates:
+        applies-to: "version-updates"
         patterns:
           - "*"
 
@@ -39,9 +46,12 @@ updates:
     directory: "/terraform"
     schedule:
       interval: "weekly"
-      day: "monday"
-      time: "00:00"
     groups:
-      terraform-dependencies:
+      security-updates:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      version-updates:
+        applies-to: "version-updates"
         patterns:
           - "*"
