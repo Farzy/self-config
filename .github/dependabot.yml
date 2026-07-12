@@ -28,8 +28,8 @@ updates:
         patterns:
           - "*"
 
-  - package-ecosystem: "ansible"
-    directory: "/ansible"
+  - package-ecosystem: "terraform"
+    directory: "/terraform"
     schedule:
       interval: "weekly"
     groups:
@@ -42,8 +42,8 @@ updates:
         patterns:
           - "*"
 
-  - package-ecosystem: "terraform"
-    directory: "/terraform"
+  - package-ecosystem: "pre-commit"
+    directory: "/"
     schedule:
       interval: "weekly"
     groups:
