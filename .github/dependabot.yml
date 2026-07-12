@@ -26,3 +26,16 @@ updates:
         applies-to: "version-updates"
         patterns:
           - "*"
+  - package-ecosystem: "terraform"
+    directory: "/terraform"
+    schedule:
+      interval: "weekly"
+    groups:
+      security-updates:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      version-updates:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
