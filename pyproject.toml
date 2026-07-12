@@ -8,18 +8,18 @@ authors = [
 package-mode = false
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    "ansible >=13.0.0, <14.0.0",
+    "ansible >=13.0.0, <15.0.0",
     "apache-libcloud >=3.4.1, <4.0.0",
     "boto >=2.49.0, <3.0.0",
     "boto3 >=1.20.45, <2.0.0",
-    "cryptography>=48.0.1,<49.0.0",
+    "cryptography>=48.0.1,<50.0.0",
     "jmespath >=1.0.1, <2.0.0",
     "passlib >=1.7.4, <2.0.0,",
     "openshift >=0.13, <1.0",
     "scaleway-sdk >=1.15.0, <2.0.0",
-    "kubernetes >=29.0.0, <30.0.0",
+    "kubernetes >=29.0.0, <37.0.0",
     "jsonpatch >=1.33, <2.0",
-    "pre-commit >=3.7.0, <4.0.0",
+    "pre-commit >=3.7.0, <5.0.0",
 ]
 
 [tool.uv]
