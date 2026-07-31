@@ -397,3 +397,15 @@ fi
 
 # Load environment variables from ~/.env if present
 if [ -s "${HOME}/.env" ]; then set -a; source "${HOME}/.env"; set +a; fi
+
+# Propagate environment variables to macOS launchd for GUI applications
+if command -v launchctl &> /dev/null; then
+    for var in FASTMAIL_API_TOKEN GITHUB_TOKEN; do
+        eval "val=\$$var"
+        if [ -n "$val" ]; then
+            launchctl setenv "$var" "$val"
+        fi
+    done
+    unset var val
+fi
+
