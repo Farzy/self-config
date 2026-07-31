@@ -395,7 +395,5 @@ if command -v gog &> /dev/null; then
     eval "$(gog completion zsh)"
 fi
 
-{| if integration_market_pay -|}
-# Market Pay Platform Engineering Setup
+# Load environment variables from ~/.env if present
 if [ -s "${HOME}/.env" ]; then set -a; source "${HOME}/.env"; set +a; fi
-{| endif |}
