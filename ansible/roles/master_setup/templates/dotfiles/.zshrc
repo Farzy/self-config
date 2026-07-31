@@ -196,5 +196,10 @@ if command -v zoxide &> /dev/null; then
     eval "$(zoxide init zsh)"
 fi
 
+# Gog CLI
+if command -v gog &> /dev/null; then
+    eval "$(gog completion zsh)"
+fi
+
 # iTerm2 integration
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
