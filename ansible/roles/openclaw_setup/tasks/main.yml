@@ -48,12 +48,14 @@
     update_cache: true
 
 - name: Allow HTTP and HTTPS in ufw firewall
-  ansible.builtin.command:
-    cmd: "ufw allow {{ item }}/tcp"
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
   loop:
     - "80"
     - "443"
-  changed_when: false
+
 
 
 - name: Add NodeSource APT key
