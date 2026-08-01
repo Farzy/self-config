@@ -9,8 +9,41 @@
     name: "{{ openclaw_setup_user }}"
     group: "{{ openclaw_setup_group }}"
     home: "{{ openclaw_setup_home }}"
-    shell: /bin/bash
+    shell: /usr/bin/zsh
     state: present
+
+- name: Test existence of Oh My Zsh for openclaw user
+  ansible.builtin.stat:
+    path: "{{ openclaw_setup_home }}/.oh-my-zsh"
+  register: openclaw_setup_omz_stat
+
+- name: Download OMZ installation script
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
+    dest: /tmp/omz-install.sh
+    mode: '0755'
+  when: not openclaw_setup_omz_stat.stat.exists
+
+- name: Run OMZ installation script for openclaw user
+  ansible.builtin.command: /tmp/omz-install.sh --unattended --keep-zshrc
+  when: not openclaw_setup_omz_stat.stat.exists
+  changed_when: true
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+
+- name: Install dotfiles for openclaw user
+  ansible.builtin.template:
+    src: "{{ role_path }}/../master_setup/templates/dotfiles/{{ item }}"
+    dest: "{{ openclaw_setup_home }}/{{ item }}"
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0644'
+  loop:
+    - .bashrc
+    - .gitignore_global
+    - .profile
+    - .zshrc
+
 
 - name: Create compilation cache directory
   ansible.builtin.file:
