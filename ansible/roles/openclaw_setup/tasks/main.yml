@@ -109,6 +109,17 @@
     creates: "{{ openclaw_setup_home }}/.config/gh/hosts.yml"
   when: openclaw_github_pat is defined
 
+- name: Check if uv is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/uv
+  register: openclaw_setup_uv_stat
+
+- name: Install uv Python package manager
+  ansible.builtin.shell:
+    cmd: "curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh"
+  when: not openclaw_setup_uv_stat.stat.exists
+
+
 
 
 
