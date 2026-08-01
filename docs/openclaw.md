@@ -143,6 +143,34 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 
 ---
 
+## 5.3. GitHub Personal Access Token (PAT) Integration
+
+To allow OpenClaw agents to interact securely with private GitHub repositories (e.g. via `gh`, `git`, or GitHub tools):
+
+1. **Create a Fine-Grained PAT on GitHub**:
+   - Go to **GitHub Settings > Developer Settings > Personal Access Tokens > Fine-grained tokens**.
+   - Select your user account and choose **Only select repositories** (select the personal repos OpenClaw needs).
+   - Grant minimal necessary permissions (e.g., `Contents: Read/Write`, `Pull requests: Read/Write`, `Issues: Read/Write`).
+
+2. **Encrypt the PAT with Ansible Vault**:
+   Save the token to a temporary file on your Mac, encrypt it, and remove the temp file:
+   ```bash
+   echo "github_pat_11..." > /tmp/temp-github-pat
+   cd ansible
+   uv run ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key --name openclaw_github_pat "$(cat /tmp/temp-github-pat | tr -d '\r\n')"
+   rm -f /tmp/temp-github-pat
+   ```
+
+3. **Append to Vault Variables & Deploy**:
+   Append `openclaw_github_pat` to [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml) and deploy:
+   ```bash
+   uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
+   ```
+   The Ansible template automatically injects `GITHUB_TOKEN` and `GH_TOKEN` into OpenClaw's systemd environment.
+
+---
+
+
 
 ## 6. Service Management & Troubleshooting
 
