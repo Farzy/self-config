@@ -15,3 +15,7 @@ openclaw_setup_model: "google/gemini-3.1-pro-preview"
 openclaw_setup_signal_cli_version: "0.13.12"
 openclaw_setup_signal_account: ""
 openclaw_setup_signal_allow_from: []
+
+openclaw_setup_telegram_enabled: true
+openclaw_setup_telegram_allow_from: []
+

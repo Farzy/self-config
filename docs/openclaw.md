@@ -113,6 +113,37 @@ OpenClaw enforces a pairing policy for direct messages:
 
 ---
 
+## 5.2. Telegram Control Channel Setup
+
+### 1. Create a Bot via @BotFather
+1. Open Telegram and search for `@BotFather`.
+2. Send `/newbot` and follow instructions to choose a Bot Name and Username.
+3. `@BotFather` will output an HTTP API Bot Token (e.g. `123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ`).
+
+### 2. Encrypt Bot Token with Ansible Vault
+Save the token temporarily to `/tmp/temp-telegram-bot-token` on your laptop, then encrypt it:
+```bash
+cd ansible
+uv run ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key --name openclaw_telegram_bot_token "$(cat /tmp/temp-telegram-bot-token)"
+rm -f /tmp/temp-telegram-bot-token
+```
+Append the encrypted block to [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml) and re-deploy:
+```bash
+uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
+```
+
+### 3. Pair Telegram DM
+1. Open Telegram and start a chat with your new bot.
+2. Send a message to the bot.
+3. The bot will reply with a 6-character pairing code.
+4. Approve the code on the server:
+   ```bash
+   ssh claw "sudo -u claw openclaw pairing approve <CODE>"
+   ```
+
+---
+
+
 ## 6. Service Management & Troubleshooting
 
 * **Check Systemd Status**:

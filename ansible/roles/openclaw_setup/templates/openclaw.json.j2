@@ -21,7 +21,10 @@
     "entries": {
       "signal": {
         "enabled": true
-      }
+      }{% if openclaw_setup_telegram_enabled and openclaw_telegram_bot_token is defined %},
+      "telegram": {
+        "enabled": true
+      }{% endif %}
     }
   },
   "channels": {
@@ -30,7 +33,14 @@
       "cliPath": "/usr/local/bin/signal-cli",
       "dmPolicy": "pairing",
       "allowFrom": {{ openclaw_setup_signal_allow_from | to_json }}
-    }
+    }{% if openclaw_setup_telegram_enabled and openclaw_telegram_bot_token is defined %},
+    "telegram": {
+      "enabled": true,
+      "botToken": "{{ openclaw_telegram_bot_token }}",
+      "dmPolicy": "pairing",
+      "allowFrom": {{ openclaw_setup_telegram_allow_from | to_json }}
+    }{% endif %}
   }
 }
+
 
