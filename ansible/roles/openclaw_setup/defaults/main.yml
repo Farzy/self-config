@@ -8,7 +8,8 @@ openclaw_setup_port: 18789
 
 
 openclaw_setup_email: farzy@farzy.org
-openclaw_setup_model: "google/gemini-3.6-flash"
+openclaw_setup_model: "google/gemini-2.5-flash"
+
 
 openclaw_setup_signal_cli_version: "0.13.12"
 openclaw_setup_signal_account: ""
