@@ -215,3 +215,36 @@
   when: not openclaw_setup_cert_stat.stat.exists
   changed_when: true
   notify: Reload nginx
+
+- name: Clone Addy Osmani's agent-skills repository
+  ansible.builtin.git:
+    repo: 'https://github.com/addyosmani/agent-skills.git'
+    dest: "{{ openclaw_setup_home }}/src/agent-skills"
+    version: main
+    update: true
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+
+- name: Ensure OpenClaw plugin-skills directory exists
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_home }}/.openclaw/plugin-skills"
+    state: directory
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0755'
+
+- name: Find all skills in the cloned repository
+  ansible.builtin.find:
+    paths: "{{ openclaw_setup_home }}/src/agent-skills/skills"
+    file_type: directory
+  register: openclaw_setup_agent_skills_dirs
+
+- name: Symlink skills to OpenClaw plugin-skills directory
+  ansible.builtin.file:
+    src: "{{ item.path }}"
+    dest: "{{ openclaw_setup_home }}/.openclaw/plugin-skills/{{ item.path | basename }}"
+    state: link
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+  loop: "{{ openclaw_setup_agent_skills_dirs.files }}"
+  when: openclaw_setup_agent_skills_dirs.matched > 0
