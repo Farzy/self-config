@@ -19,3 +19,6 @@ openclaw_setup_signal_allow_from: []
 openclaw_setup_telegram_enabled: true
 openclaw_setup_telegram_allow_from: []
 
+
+openclaw_setup_allowed_origins:
+  - "https://{{ openclaw_setup_domain }}"

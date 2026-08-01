@@ -4,7 +4,7 @@
     "port": {{ openclaw_setup_port }},
     "trustedProxies": ["127.0.0.1", "::1"],
     "controlUi": {
-      "allowedOrigins": ["https://claw.farzad.tech"]
+      "allowedOrigins": {{ openclaw_setup_allowed_origins | to_json }}
     },
     "auth": {
       "mode": "token",
