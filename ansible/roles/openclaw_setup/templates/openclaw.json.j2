@@ -1,0 +1,22 @@
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "{{ openclaw_setup_model }}"
+      }
+    }
+  },
+  "channels": {
+    "signal": {
+      "enabled": true,
+      "account": "{{ openclaw_setup_signal_account }}",
+      "transport": {
+        "kind": "managed-native",
+        "cliPath": "/usr/local/bin/signal-cli"
+      },
+      "dmPolicy": "pairing",
+      "allowFrom": {{ openclaw_setup_signal_allow_from | to_json }}
+
+    }
+  }
+}

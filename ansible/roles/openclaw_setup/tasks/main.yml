@@ -64,6 +64,36 @@
     state: present
     update_cache: true
 
+- name: Check if signal-cli is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/signal-cli
+  register: openclaw_setup_signal_cli_stat
+
+- name: Download signal-cli native binary
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/AsamK/signal-cli/releases/download/v{{
+      openclaw_setup_signal_cli_version }}/signal-cli-{{
+      openclaw_setup_signal_cli_version }}-Linux-native.tar.gz
+    dest: "/tmp/signal-cli-{{ openclaw_setup_signal_cli_version }}-Linux-native.tar.gz"
+    mode: '0644'
+  when: not openclaw_setup_signal_cli_stat.stat.exists
+
+
+- name: Extract signal-cli
+  ansible.builtin.unarchive:
+    src: "/tmp/signal-cli-{{ openclaw_setup_signal_cli_version }}-Linux-native.tar.gz"
+    dest: /opt
+    remote_src: true
+  when: not openclaw_setup_signal_cli_stat.stat.exists
+
+- name: Symlink signal-cli to /usr/local/bin
+  ansible.builtin.file:
+    src: "/opt/signal-cli-{{ openclaw_setup_signal_cli_version }}/bin/signal-cli"
+    dest: /usr/local/bin/signal-cli
+    state: link
+  when: not openclaw_setup_signal_cli_stat.stat.exists
+
 - name: Run OpenClaw install script
   ansible.builtin.shell:
     cmd: "set -o pipefail && curl -fsSL https://openclaw.ai/install.sh | bash"
@@ -72,6 +102,23 @@
     creates: "{{ openclaw_setup_home }}/openclaw"
   become: true
   become_user: "{{ openclaw_setup_user }}"
+
+- name: Create OpenClaw config directory
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_home }}/.openclaw"
+    state: directory
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0700'
+
+- name: Deploy openclaw.json configuration
+  ansible.builtin.template:
+    src: openclaw.json.j2
+    dest: "{{ openclaw_setup_home }}/.openclaw/openclaw.json"
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0600'
+  notify: Restart openclaw
 
 - name: Deploy OpenClaw systemd service
   ansible.builtin.template:
@@ -113,11 +160,11 @@
 - name: Check if SSL certificate exists
   ansible.builtin.stat:
     path: "/etc/letsencrypt/live/{{ openclaw_setup_domain }}/fullchain.pem"
-  register: cert_stat
+  register: openclaw_setup_cert_stat
 
 - name: Generate SSL certificate with Certbot
   ansible.builtin.command:
     cmd: "certbot --nginx -d {{ openclaw_setup_domain }} --non-interactive --agree-tos -m {{ openclaw_setup_email }}"
-  when: not cert_stat.stat.exists
+  when: not openclaw_setup_cert_stat.stat.exists
   changed_when: true
   notify: Reload nginx

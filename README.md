@@ -204,8 +204,53 @@ And access the cluster with its context name which is `kind-<CLUSTER-NAME>`.
 - The Kube API server cannot be directly exposed on the Internet because the domain name is not part of the X509
   certificate and `kubectl` will refuse the connection.
 - My goal is to be able to shut down the server in order to save money. But KinD in HA mode (multiple control planes) does
-not support restarts ! This is because Docker changes the nodes' IPs, and the control plane components cannot find
-each other anymore. You must therefore avoid creating HA clusters, unless you are sure to keep the server up and running.
+## OpenClaw Operations
+
+The OpenClaw gateway runs on a dedicated Scaleway instance (`openclaw`) backing `claw.farzad.tech`.
+
+### Scaleway Instance Management (`scw`)
+
+Use the Scaleway CLI `scw` to view, start, or stop the server:
+
+```shell
+# List Scaleway instances
+scw instance server list
+
+# Start the OpenClaw server
+scw instance server start openclaw
+
+# Stop the OpenClaw server (to save costs when unused)
+scw instance server stop openclaw
+```
+
+### SSH Access
+
+Connect directly to the server using the configured SSH host alias:
+
+```shell
+ssh claw
+```
+
+### Deployment with Ansible
+
+To provision or update the server:
+
+```shell
+cd ansible
+ansible-playbook --diff playbooks/openclaw.yml
+```
+
+### Signal Channel Setup & DM Pairing
+
+1. On the server (`ssh claw`), link or register `signal-cli`:
+   - **Linking existing account:** `signal-cli link -n "OpenClaw"` (scan QR code in Signal app).
+   - **Dedicated number:** `signal-cli -a +<BOT_NUMBER> register`.
+2. Check channel status:
+   - `openclaw channels status --probe`
+3. Pair your personal Signal DM:
+   - Send any direct message to the bot's Signal number.
+   - List pending pairing requests: `openclaw pairing list signal`
+   - Approve pairing on the server: `openclaw pairing approve signal <PAIRING_CODE>`
 
 ## References
 
