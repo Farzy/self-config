@@ -269,9 +269,9 @@
   become: true
   become_user: "{{ openclaw_setup_user }}"
 
-- name: Ensure OpenClaw plugin-skills directory exists
+- name: Ensure OpenClaw workspace skills directory exists
   ansible.builtin.file:
-    path: "{{ openclaw_setup_home }}/.openclaw/plugin-skills"
+    path: "{{ openclaw_setup_home }}/.openclaw/workspace/skills"
     state: directory
     owner: "{{ openclaw_setup_user }}"
     group: "{{ openclaw_setup_group }}"
@@ -283,10 +283,10 @@
     file_type: directory
   register: openclaw_setup_agent_skills_dirs
 
-- name: Symlink skills to OpenClaw plugin-skills directory
+- name: Symlink skills to OpenClaw workspace skills directory
   ansible.builtin.file:
     src: "{{ item.path }}"
-    dest: "{{ openclaw_setup_home }}/.openclaw/plugin-skills/{{ item.path | basename }}"
+    dest: "{{ openclaw_setup_home }}/.openclaw/workspace/skills/{{ item.path | basename }}"
     state: link
     owner: "{{ openclaw_setup_user }}"
     group: "{{ openclaw_setup_group }}"
