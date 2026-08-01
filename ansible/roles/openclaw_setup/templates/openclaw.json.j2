@@ -1,9 +1,14 @@
 {
   "gateway": {
     "mode": "local",
-    "port": {{ openclaw_setup_port }}
+    "port": {{ openclaw_setup_port }},
+    "auth": {
+      "mode": "token",
+      "token": "{{ openclaw_setup_gateway_token }}"
+    }
   },
   "agents": {
+
 
     "defaults": {
       "model": {
