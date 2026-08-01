@@ -2,6 +2,7 @@
   "gateway": {
     "mode": "local",
     "port": {{ openclaw_setup_port }},
+    "trustedProxies": ["127.0.0.1", "::1"],
     "auth": {
       "mode": "token",
       "token": "{{ openclaw_gateway_token }}"
