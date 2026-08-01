@@ -208,6 +208,8 @@ And access the cluster with its context name which is `kind-<CLUSTER-NAME>`.
 
 The OpenClaw gateway runs on a dedicated Scaleway instance (`openclaw`) backing `claw.farzad.tech`.
 
+For detailed architecture, SSL proxying, and complete troubleshooting, see the dedicated [OpenClaw Documentation](docs/openclaw.md).
+
 ### Scaleway Instance Management (`scw`)
 
 Use the Scaleway CLI `scw` to view, start, or stop the server:
@@ -223,13 +225,19 @@ scw instance server start openclaw
 scw instance server stop openclaw
 ```
 
-### SSH Access
+### SSH Access & Port 18789 Forwarding
 
-Connect directly to the server using the configured SSH host alias:
+Connect directly to the server using the SSH host alias:
 
 ```shell
 ssh claw
 ```
+
+The SSH host alias includes local port forwarding for OpenClaw's native Gateway RPC port (**18789**):
+```sshconfig
+LocalForward localhost:18789 localhost:18789
+```
+*Note*: If port `18789` is already bound by another active SSH session, SSH will display `bind [127.0.0.1]:18789: Address already in use`. This warning is harmless.
 
 ### Deployment with Ansible
 
@@ -237,20 +245,18 @@ To provision or update the server:
 
 ```shell
 cd ansible
-ansible-playbook --diff playbooks/openclaw.yml
+uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
 ```
 
 ### Signal Channel Setup & DM Pairing
 
-1. On the server (`ssh claw`), link or register `signal-cli`:
-   - **Linking existing account:** `signal-cli link -n "OpenClaw"` (scan QR code in Signal app).
-   - **Dedicated number:** `signal-cli -a +<BOT_NUMBER> register`.
-2. Check channel status:
-   - `openclaw channels status --probe`
-3. Pair your personal Signal DM:
-   - Send any direct message to the bot's Signal number.
-   - List pending pairing requests: `openclaw pairing list signal`
-   - Approve pairing on the server: `openclaw pairing approve signal <PAIRING_CODE>`
+1. On the server (`ssh claw`), link `signal-cli`:
+   - `sudo -u claw signal-cli link -n "OpenClaw"` (scan the displayed QR code in Signal app under **Settings > Linked Devices**).
+2. Pair your personal Signal DM:
+   - Send any direct message to the bot's Signal account.
+   - Note the 6-character pairing code returned by the bot.
+   - Approve pairing on the server: `sudo -u claw openclaw pairing approve <PAIRING_CODE>`
+
 
 ## References
 

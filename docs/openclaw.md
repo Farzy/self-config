@@ -1,0 +1,133 @@
+# OpenClaw Architecture & Operations Guide
+
+This guide details the deployment, configuration, operational management, and troubleshooting for the **OpenClaw** server hosted on Scaleway.
+
+---
+
+## 1. System Overview & Architecture
+
+* **Cloud Provider**: Scaleway (`PLAY2-PICO` instance, Debian Bookworm).
+* **Hostname / Domain**: `claw.farzad.tech` (IP: `163.172.189.14`).
+* **Web Gateway**: Nginx reverse proxy with TLS certificate managed by Certbot (Let's Encrypt), forwarding `https://claw.farzad.tech` to `http://127.0.0.1:3000`.
+* **Runtime Environment**: Node.js 26.x (`node_26.x` APT repository), OpenClaw systemd service (`openclaw.service`).
+* **LLM Provider**: Google Gemini (`google/gemini-3.6-flash`).
+* **API Key Management**: Dedicated Gemini API key stored encrypted with Ansible Vault in [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml).
+* **Control Channel**: Signal integration using `@openclaw/signal` plugin and native `signal-cli` (`v0.13.12`), enforcing Direct Message pairing policy (`dmPolicy: "pairing"`).
+
+---
+
+## 2. Infrastructure Operations (Scaleway)
+
+The Scaleway server can be stopped to save costs when not in active use.
+
+### Server Lifecycle Commands
+
+* **List Servers**:
+  ```bash
+  scw instance server list
+  ```
+* **Start Server**:
+  ```bash
+  scw instance server start openclaw
+  ```
+* **Stop Server**:
+  ```bash
+  scw instance server stop openclaw
+  ```
+
+---
+
+## 3. SSH Access & Port Forwarding (Port 18789)
+
+### Connecting via SSH
+Connect to the host using the SSH alias configured in `~/.ssh/config`:
+```bash
+ssh claw
+```
+
+### SSH Config & Port 18789 Local Forwarding
+The SSH configuration for `claw` includes local port forwarding for port **18789**:
+```sshconfig
+Host claw claw.farzad.tech
+  HostName claw.farzad.tech
+  User debian
+  LocalForward localhost:18789 localhost:18789
+```
+
+#### Why Port 18789 is Forwarded
+* **Default OpenClaw RPC / Gateway Port**: OpenClaw uses port `18789` for native WebSocket RPC communications (`ws://127.0.0.1:18789`).
+* **Security Scenarios**: Binding port 18789 locally over SSH allows local developer tools and CLI commands on your workstation to interact securely with the remote OpenClaw gateway daemon without exposing port 18789 publicly over the internet.
+
+#### Harmless Address Conflict Warning
+If you open a second SSH session to `claw` while a primary SSH session is active, SSH will output:
+```text
+bind [127.0.0.1]:18789: Address already in use
+channel_setup_fwd_listener_tcpip: cannot listen to port: 18789
+Could not request local forwarding.
+```
+*This warning is expected and harmless*: the first SSH connection is already forwarding port 18789, and your second session connects normally.
+
+---
+
+## 4. Provisioning & Deployment with Ansible
+
+To deploy or update OpenClaw configuration on the server:
+
+```bash
+cd ansible
+uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
+```
+
+### Key Ansible Roles & Templates
+* **Playbook**: [ansible/playbooks/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/playbooks/openclaw.yml)
+* **Encrypted Vault Variables**: [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml)
+* **Configuration Template**: [ansible/roles/openclaw_setup/templates/openclaw.json.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.json.j2)
+* **Systemd Service Template**: [ansible/roles/openclaw_setup/templates/openclaw.service.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.service.j2)
+* **Nginx SSL Proxy Template**: [ansible/roles/openclaw_setup/templates/nginx.conf.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/nginx.conf.j2)
+
+---
+
+## 5. Signal Control Channel & Pairing Workflow
+
+### 1. Link Signal CLI
+To link a Signal account (secondary device or new number):
+```bash
+ssh claw "sudo -u claw signal-cli link -n 'OpenClaw'"
+```
+Scan the displayed QR code using the Signal mobile app (**Settings > Linked Devices**).
+
+### 2. Verify Signal Channel
+Check channel readiness and status:
+```bash
+ssh claw "sudo -u claw openclaw channels status"
+```
+
+### 3. DM Pairing Procedure
+OpenClaw enforces a pairing policy for direct messages:
+1. Send a initial Direct Message to your Signal bot.
+2. The bot will reply with a 6-character pairing code.
+3. Approve the pairing request on the server:
+   ```bash
+   ssh claw "sudo -u claw openclaw pairing approve <CODE>"
+   ```
+
+---
+
+## 6. Service Management & Troubleshooting
+
+* **Check Systemd Status**:
+  ```bash
+  ssh claw "sudo systemctl status openclaw"
+  ```
+* **View Live Gateway Logs**:
+  ```bash
+  ssh claw "sudo journalctl -u openclaw -f"
+  ```
+* **Run OpenClaw Deep Diagnostics**:
+  ```bash
+  ssh claw "sudo -u claw openclaw status --deep"
+  ```
+* **Restart OpenClaw Gateway**:
+  ```bash
+  ssh claw "sudo systemctl restart openclaw"
+  ```
