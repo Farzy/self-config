@@ -47,6 +47,15 @@
     state: present
     update_cache: true
 
+- name: Allow HTTP and HTTPS in ufw firewall
+  ansible.builtin.command:
+    cmd: "ufw allow {{ item }}/tcp"
+  loop:
+    - "80"
+    - "443"
+  changed_when: false
+
+
 - name: Add NodeSource APT key
   ansible.builtin.apt_key:
     url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
@@ -54,15 +63,17 @@
 
 - name: Add NodeSource repository
   ansible.builtin.apt_repository:
-    repo: "deb https://deb.nodesource.com/node_24.x nodistro main"
+    repo: "deb https://deb.nodesource.com/node_26.x nodistro main"
     state: present
+
     filename: nodesource
 
 - name: Install Node.js
   ansible.builtin.apt:
     name: nodejs
-    state: present
+    state: latest
     update_cache: true
+
 
 - name: Check if signal-cli is installed
   ansible.builtin.stat:
@@ -89,19 +100,18 @@
 
 - name: Symlink signal-cli to /usr/local/bin
   ansible.builtin.file:
-    src: "/opt/signal-cli-{{ openclaw_setup_signal_cli_version }}/bin/signal-cli"
+    src: /opt/signal-cli
     dest: /usr/local/bin/signal-cli
     state: link
   when: not openclaw_setup_signal_cli_stat.stat.exists
 
-- name: Run OpenClaw install script
-  ansible.builtin.shell:
-    cmd: "set -o pipefail && curl -fsSL https://openclaw.ai/install.sh | bash"
-    executable: /bin/bash
+
+- name: Install OpenClaw globally via npm
+  ansible.builtin.command:
+    cmd: "npm install -g openclaw@latest"
   args:
-    creates: "{{ openclaw_setup_home }}/openclaw"
-  become: true
-  become_user: "{{ openclaw_setup_user }}"
+    creates: /usr/bin/openclaw
+
 
 - name: Create OpenClaw config directory
   ansible.builtin.file:
