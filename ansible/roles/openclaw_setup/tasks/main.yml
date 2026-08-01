@@ -100,6 +100,16 @@
     state: latest
     update_cache: true
 
+- name: Authenticate GitHub CLI (gh) for claw user
+  ansible.builtin.shell:
+    cmd: "echo '{{ openclaw_github_pat }}' | gh auth login --with-token"
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  args:
+    creates: "{{ openclaw_setup_home }}/.config/gh/hosts.yml"
+  when: openclaw_github_pat is defined
+
+
 
 
 - name: Check if signal-cli is installed
