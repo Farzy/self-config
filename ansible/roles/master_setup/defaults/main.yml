@@ -50,6 +50,7 @@ master_setup_global_packages_apt:
   - dlocate
   - dnsutils
   - elinks
+  - fd-find
   - git
   - jq
   - htop
@@ -63,7 +64,9 @@ master_setup_global_packages_apt:
   - ncdu
   - nmap
   - python3-pip
+  - ripgrep
   - rsync
+
   - screen
   - strace
   - tcpdump
