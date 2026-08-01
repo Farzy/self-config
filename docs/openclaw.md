@@ -131,3 +131,9 @@ OpenClaw enforces a pairing policy for direct messages:
   ```bash
   ssh claw "sudo systemctl restart openclaw"
   ```
+* **Display Dashboard URL on Headless Servers (`--no-open`)**:
+  Running `openclaw dashboard` on a remote server attempts to invoke desktop GUI helpers (`xdg-open`) and will delay ~10–12 seconds on headless systems. Pass `--no-open` to output the Gateway URL and token details instantly:
+  ```bash
+  ssh claw "sudo -u claw openclaw dashboard --no-open"
+  ```
+

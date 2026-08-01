@@ -239,6 +239,9 @@ LocalForward localhost:18789 localhost:18789
 ```
 *Note*: If port `18789` is already bound by another active SSH session, SSH will display `bind [127.0.0.1]:18789: Address already in use`. This warning is harmless.
 
+*Tip*: When requesting the Dashboard URL via CLI on headless Linux servers, always pass `--no-open` to prevent browser launcher timeout delays: `ssh claw "sudo -u claw openclaw dashboard --no-open"`.
+
+
 ### Deployment with Ansible
 
 To provision or update the server:
