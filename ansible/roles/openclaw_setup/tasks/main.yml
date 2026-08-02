@@ -248,8 +248,16 @@
     mode: '0644'
   notify: Reload systemd
 
+- name: Restrict ptrace scope to admin-only (YAMA security hardening)
+  ansible.posix.sysctl:
+    name: kernel.yama.ptrace_scope
+    value: "2"
+    sysctl_set: true
+    state: present
+    reload: true
 
 - name: Check if SSL certificate exists
+
   ansible.builtin.stat:
     path: "/etc/letsencrypt/live/{{ openclaw_setup_domain }}/fullchain.pem"
   register: openclaw_setup_cert_stat

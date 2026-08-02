@@ -109,6 +109,8 @@ If a child agent process or session is compromised, Systemd sandboxing mitigates
 - **`PrivateTmp=true`**: Provides an isolated `/tmp` namespace preventing token leakage in shared temporary files.
 - **`NoNewPrivileges=true`**: Blocks privilege escalation via `setuid` binaries.
 - **`ProtectKernelTunables=true`, `ProtectKernelModules=true`, `ProtectControlGroups=true`, `RestrictRealtime=true`**: Disables kernel module loading, control group manipulation, and realtime scheduling.
+- **RAM Dump Protection (`kernel.yama.ptrace_scope = 2`)**: Configures kernel YAMA ptrace scope to admin-only (root with `CAP_SYS_PTRACE`), preventing unprivileged processes from attaching debuggers (`gdb`, `strace`) or inspecting `/proc/<pid>/mem` to extract in-memory tokens.
+
 
 ---
 
