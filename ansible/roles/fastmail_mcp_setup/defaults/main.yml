@@ -5,3 +5,4 @@ fastmail_mcp_home: /home/fastmail-mcp
 fastmail_mcp_app_dir: /opt/fastmail-mcp
 fastmail_mcp_port: 18790
 fastmail_mcp_version: "v1.13.4"
+fastmail_mcp_supergateway_version: "3.4.3"

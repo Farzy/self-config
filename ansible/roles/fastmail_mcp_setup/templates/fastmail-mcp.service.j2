@@ -57,5 +57,14 @@ ProtectControlGroups=true
 # Prevent the service from acquiring realtime scheduling priorities to avoid CPU starvation attacks
 RestrictRealtime=true
 
+# Prevent access to physical devices (the service only needs network and filesystem access)
+PrivateDevices=true
+
+# Prevent the service from changing the system clock
+ProtectClock=true
+
+# Prevent reading from the kernel log ring buffer (/dev/kmsg)
+ProtectKernelLogs=true
+
 [Install]
 WantedBy=multi-user.target

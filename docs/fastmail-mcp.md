@@ -45,6 +45,9 @@ The unit file (`fastmail-mcp.service.j2`) applies defense-in-depth Systemd sandb
 - **`ProtectKernelModules=true`**: Prevents kernel module loading/unloading.
 - **`ProtectControlGroups=true`**: Mounts control group hierarchies read-only.
 - **`RestrictRealtime=true`**: Blocks acquisition of realtime scheduling priorities.
+- **`PrivateDevices=true`**: Restricts access to physical devices (not needed for a network/filesystem service).
+- **`ProtectClock=true`**: Prevents the service from modifying the system clock.
+- **`ProtectKernelLogs=true`**: Prevents reading or writing the kernel log ring buffer.
 
 ---
 
@@ -55,9 +58,10 @@ The installation version is managed by the default variable `fastmail_mcp_versio
 
 ```yaml
 fastmail_mcp_version: "v1.13.4"
+fastmail_mcp_supergateway_version: "3.4.3"
 ```
 
-To upgrade to a new release:
+To upgrade `fastmail-mcp` to a new release:
 1. Update `fastmail_mcp_version` in `defaults/main.yml`.
 2. Run the Ansible playbook:
    ```bash
@@ -66,21 +70,32 @@ To upgrade to a new release:
    ```
 3. Ansible will pull the new tag, re-run `npm install` & `npm run build`, restart `fastmail-mcp.service`, and verify health.
 
+To upgrade `supergateway`:
+1. Update `fastmail_mcp_supergateway_version` in `defaults/main.yml` to the desired version.
+2. Run the same Ansible playbook — Ansible will reinstall the pinned npm package and restart the service.
+
 ---
 
 ## 4. Operational Commands
 
 ### Checking Service Status
+> [!NOTE]
+> All `systemctl` and `journalctl` commands below require `sudo` privileges. User `fastmail-mcp` has no sudo rights by design.
+
 ```bash
-systemctl status fastmail-mcp
+sudo systemctl status fastmail-mcp
 ```
 
 ### Viewing Realtime Logs
 ```bash
-journalctl -u fastmail-mcp -f
+sudo journalctl -u fastmail-mcp -f
 ```
 
 ### Testing Local Loopback Endpoint
 ```bash
+# Health check (lightweight, no SSE stream opened)
+curl -s http://127.0.0.1:18790/healthz
+
+# SSE endpoint (for full protocol verification)
 curl -s http://127.0.0.1:18790/sse
 ```

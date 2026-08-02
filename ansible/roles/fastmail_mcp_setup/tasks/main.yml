@@ -112,7 +112,7 @@
 
 - name: Install supergateway globally via npm
   community.general.npm:
-    name: supergateway
+    name: "supergateway@{{ fastmail_mcp_supergateway_version }}"
     global: true
     state: present
 
