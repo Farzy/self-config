@@ -2,3 +2,6 @@
 exclude_paths:
   - ansible/roles/microk8s/files/
   - .github/
+
+skip_list:
+  - var-naming

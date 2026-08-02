@@ -45,7 +45,6 @@
     - .zshrc
     - .gitconfig
 
-
 - name: Create compilation cache directory
   ansible.builtin.file:
     path: /var/tmp/openclaw-compile-cache
@@ -90,8 +89,6 @@
     - "80"
     - "443"
 
-
-
 - name: Add NodeSource APT key
   ansible.builtin.apt_key:
     url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
@@ -101,13 +98,12 @@
   ansible.builtin.apt_repository:
     repo: "deb https://deb.nodesource.com/node_26.x nodistro main"
     state: present
-
     filename: nodesource
 
 - name: Install Node.js
   ansible.builtin.apt:
     name: nodejs
-    state: latest
+    state: present
     update_cache: true
 
 - name: Create /etc/apt/keyrings directory
@@ -131,12 +127,13 @@
 - name: Install GitHub CLI (gh)
   ansible.builtin.apt:
     name: gh
-    state: latest
+    state: present
     update_cache: true
 
 - name: Authenticate GitHub CLI (gh) for claw user
   ansible.builtin.shell:
-    cmd: "echo '{{ openclaw_github_pat }}' | gh auth login --with-token"
+    cmd: "set -o pipefail; echo '{{ openclaw_github_pat }}' | gh auth login --with-token"
+    executable: /bin/bash
   become: true
   become_user: "{{ openclaw_setup_user }}"
   args:
@@ -148,14 +145,20 @@
     path: /usr/local/bin/uv
   register: openclaw_setup_uv_stat
 
-- name: Install uv Python package manager
-  ansible.builtin.shell:
-    cmd: "curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh"
+- name: Download uv installation script
+  ansible.builtin.get_url:
+    url: https://astral.sh/uv/install.sh
+    dest: /tmp/uv-install.sh
+    mode: '0755'
   when: not openclaw_setup_uv_stat.stat.exists
 
-
-
-
+- name: Install uv Python package manager
+  ansible.builtin.command:
+    cmd: /tmp/uv-install.sh
+  environment:
+    UV_INSTALL_DIR: /usr/local/bin
+  when: not openclaw_setup_uv_stat.stat.exists
+  changed_when: true
 
 - name: Check if signal-cli is installed
   ansible.builtin.stat:
@@ -172,7 +175,6 @@
     mode: '0644'
   when: not openclaw_setup_signal_cli_stat.stat.exists
 
-
 - name: Extract signal-cli
   ansible.builtin.unarchive:
     src: "/tmp/signal-cli-{{ openclaw_setup_signal_cli_version }}-Linux-native.tar.gz"
@@ -187,13 +189,11 @@
     state: link
   when: not openclaw_setup_signal_cli_stat.stat.exists
 
-
 - name: Install OpenClaw globally via npm
   ansible.builtin.command:
     cmd: "npm install -g openclaw@{{ openclaw_setup_version }}"
   args:
     creates: /usr/bin/openclaw
-
 
 - name: Create OpenClaw config directory
   ansible.builtin.file:
@@ -259,8 +259,6 @@
     name: nginx
     state: started
     enabled: true
-
-
 
 - name: Clone Addy Osmani's agent-skills repository
   ansible.builtin.git:
