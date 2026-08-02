@@ -296,7 +296,7 @@ iterm2_sessions:
       - personal
       - k8s
   - name: debian@claw
-    badge: OpenClaw
+    badge: debian@claw
     command: !vault |
       $ANSIBLE_VAULT;1.2;AES256;personal
       63306534633931646535656363326635333461656331383330353263383532653265383464333966
@@ -308,7 +308,7 @@ iterm2_sessions:
       - personal
       - openclaw
   - name: claw@claw
-    badge: OpenClaw
+    badge: claw@claw
     command: !vault |
       $ANSIBLE_VAULT;1.2;AES256;personal
       62383637373538353362366634363066633933653837366162376431363062396430366433343038
