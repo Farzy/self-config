@@ -9,6 +9,7 @@ master_setup_global_etcfiles:
     mode: "0644"
   - name: "screenrc"
     mode: "0644"
+  - name: "apt/apt.conf.d/20auto-upgrades"
   - name: "apt/apt.conf.d/50unattended-upgrades"
     mode: "0644"
 master_setup_global_apt_repositories:
