@@ -33,6 +33,18 @@ MemoryDenyWriteExecute=false
 # Prevent child processes from gaining elevated privileges via setuid binaries (user claw is unprivileged and must never possess sudo access)
 NoNewPrivileges=true
 
+# Drop all Linux kernel capabilities from the process bounding set (unprivileged process needs zero kernel capabilities)
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Restrict creation or execution of SUID/SGID binaries by child processes
+RestrictSUIDSGID=true
+
+# Prevent modification of system hostname or domain name by isolating UTS namespace
+ProtectHostname=true
+
+# Prevent switching execution domain or architecture personality
+LockPersonality=true
 
 # Protect kernel variables (/proc/sys, /sys, /proc/sysrq-trigger) from modification
 ProtectKernelTunables=true

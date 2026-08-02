@@ -113,7 +113,12 @@ The Systemd unit file ([ansible/roles/openclaw_setup/templates/openclaw.service.
 - **`ProtectKernelModules=true`**: Prevents loading or unloading Linux kernel modules at runtime.
 - **`ProtectControlGroups=true`**: Mounts control group hierarchies (`/sys/fs/cgroup`) as read-only.
 - **`RestrictRealtime=true`**: Prevents the service from acquiring realtime scheduling priorities to avoid CPU starvation attacks.
+- **`CapabilityBoundingSet=` & `AmbientCapabilities=`**: Empty set drops all Linux kernel capabilities from the process bounding set.
+- **`RestrictSUIDSGID=true`**: Prevents creation or execution of SUID/SGID binaries by child processes.
+- **`ProtectHostname=true`**: Isolates UTS namespace to prevent modifications to system hostname or domain name.
+- **`LockPersonality=true`**: Locks execution domain to prevent personality switching.
 - **RAM Dump Protection (`kernel.yama.ptrace_scope = 2`)**: Configures kernel YAMA ptrace scope to admin-only (root with `CAP_SYS_PTRACE`), preventing unprivileged processes from attaching debuggers (`gdb`, `strace`) or inspecting `/proc/<pid>/mem` to extract in-memory tokens.
+
 
 #### 3. Automated User Privilege Verification in Ansible
 Ansible automatically asserts system user isolation during playbook execution:
