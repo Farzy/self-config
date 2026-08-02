@@ -101,15 +101,20 @@ To protect API tokens and sensitive credentials from unauthorized process access
 
 - Systemd loads `EnvironmentFile=/etc/openclaw/secrets.env` during unit startup before relinquishing root privileges to user `claw`.
 
-#### 2. Threat Model Defense & Systemd Process Sandboxing
-If a child agent process or session is compromised, Systemd sandboxing mitigates privilege escalation and lateral movement:
-- **`ProtectSystem=strict`**: Mounts root `/`, `/usr`, `/boot`, `/etc` as read-only filesystem paths.
-- **`ProtectHome=read-only`**: Protects `/home` directories from unauthorized write access while allowing explicit access via `ReadWritePaths`.
-- **`ReadWritePaths=/home/claw /var/tmp/openclaw-compile-cache`**: Limits filesystem write access strictly to OpenClaw's home directory and compile cache.
-- **`PrivateTmp=true`**: Provides an isolated `/tmp` namespace preventing token leakage in shared temporary files.
-- **`NoNewPrivileges=true`**: Blocks privilege escalation via `setuid` binaries.
-- **`ProtectKernelTunables=true`, `ProtectKernelModules=true`, `ProtectControlGroups=true`, `RestrictRealtime=true`**: Disables kernel module loading, control group manipulation, and realtime scheduling.
+#### 2. Threat Model Defense & Harmonized Systemd Sandboxing
+The Systemd unit file ([ansible/roles/openclaw_setup/templates/openclaw.service.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.service.j2)) configures harmonized process sandboxing balancing security against Node.js runtime needs:
+- **`ProtectSystem=strict`**: Mounts root `/`, `/usr`, `/boot`, `/etc` as read-only filesystem paths to prevent OS file tampering.
+- **`ReadWritePaths=/home/claw /var/tmp/openclaw-compile-cache`**: Explicitly restricts write permissions strictly to `/home/claw` and the compilation cache directory.
+- **`ProtectHome=false`**: Set to `false` to permit user `claw` to read and write its database, configuration, and workspace files under `/home/claw/`.
+- **`PrivateTmp=true`**: Provides an isolated `/tmp` namespace preventing token leakage in shared temporary folders.
+- **`MemoryDenyWriteExecute=false`**: Set to `false` because the Node.js V8 engine requires W^X JIT (Just-In-Time) compilation memory allocations to execute.
+- **`NoNewPrivileges=false`**: Set to `false` to allow the agent to execute administrative subcommands (e.g., `sudo`) if configured.
+- **`ProtectKernelTunables=true`**: Protects `/proc/sys`, `/sys`, and kernel variables from modification.
+- **`ProtectKernelModules=true`**: Prevents loading or unloading Linux kernel modules at runtime.
+- **`ProtectControlGroups=true`**: Mounts control group hierarchies (`/sys/fs/cgroup`) as read-only.
+- **`RestrictRealtime=true`**: Prevents the service from acquiring realtime scheduling priorities to avoid CPU starvation attacks.
 - **RAM Dump Protection (`kernel.yama.ptrace_scope = 2`)**: Configures kernel YAMA ptrace scope to admin-only (root with `CAP_SYS_PTRACE`), preventing unprivileged processes from attaching debuggers (`gdb`, `strace`) or inspecting `/proc/<pid>/mem` to extract in-memory tokens.
+
 
 
 ---
