@@ -20,8 +20,8 @@
   when: openclaw_setup_ssh_key | length > 0
 
 - name: Remove any sudoers configuration for openclaw user
-
   ansible.builtin.file:
+
     path: "/etc/sudoers.d/{{ openclaw_setup_user }}"
     state: absent
 
@@ -100,8 +100,8 @@
 - name: Create compilation cache directory
   ansible.builtin.file:
     path: "{{ openclaw_setup_compile_cache }}"
-
     state: directory
+
     owner: "{{ openclaw_setup_user }}"
     group: "{{ openclaw_setup_group }}"
     mode: '0755'
@@ -252,15 +252,15 @@
 - name: Create OpenClaw compile cache directory
   ansible.builtin.file:
     path: "{{ openclaw_setup_compile_cache }}"
-
     state: directory
+
     owner: "{{ openclaw_setup_user }}"
     group: "{{ openclaw_setup_group }}"
     mode: '0755'
 
 - name: Create OpenClaw config directory
-
   ansible.builtin.file:
+
     path: "{{ openclaw_setup_home }}/.openclaw"
     state: directory
     owner: "{{ openclaw_setup_user }}"
@@ -312,8 +312,8 @@
     reload: true
 
 - name: Check if SSL certificate exists
-
   ansible.builtin.stat:
+
     path: "/etc/letsencrypt/live/{{ openclaw_setup_domain }}/fullchain.pem"
   register: openclaw_setup_cert_stat
 
