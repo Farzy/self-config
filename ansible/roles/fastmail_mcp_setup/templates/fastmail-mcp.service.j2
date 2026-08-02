@@ -8,7 +8,7 @@ User={{ fastmail_mcp_user }}
 Group={{ fastmail_mcp_group }}
 WorkingDirectory={{ fastmail_mcp_app_dir }}
 EnvironmentFile=/etc/fastmail-mcp/secrets.env
-ExecStart=/usr/bin/supergateway --stdio "node {{ fastmail_mcp_app_dir }}/dist/index.js" --host 127.0.0.1 --port {{ fastmail_mcp_port }}
+ExecStart=/usr/bin/supergateway --stdio "node {{ fastmail_mcp_app_dir }}/dist/index.js" --host 127.0.0.1 --port {{ fastmail_mcp_port }} --healthEndpoint /healthz
 Restart=always
 RestartSec=10
 
