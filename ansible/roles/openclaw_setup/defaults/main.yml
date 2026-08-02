@@ -20,4 +20,8 @@ openclaw_setup_telegram_allow_from: []
 openclaw_setup_allowed_origins:
   - "https://{{ openclaw_setup_domain }}"
 
+openclaw_setup_memory_search_provider: "google"
+openclaw_setup_memory_search_model: "text-embedding-004"
+openclaw_setup_dreaming_enabled: true
+
 openclaw_setup_version: "2026.7.1"

@@ -128,7 +128,21 @@ Ansible automatically asserts system user isolation during playbook execution:
 - **Sudo Access Check**: Executes `sudo -n -l -U claw` to verify that `claw` has no sudo privileges on the host.
 
 
+#### 4.2 Memory Search & Background Dreaming Configuration
 
+To leverage semantic search and automatic long-term memory consolidation, OpenClaw includes active memory searching and dreaming plugins pre-integrated into your Ansible defaults:
+
+* **Semantic Memory Search (`agents.defaults.memorySearch`)**:
+  - Configures OpenClaw's vector search pipeline using Google's modern embedding API.
+  - Defaults are managed in Ansible via:
+    - `openclaw_setup_memory_search_provider` (default: `"google"`)
+    - `openclaw_setup_memory_search_model` (default: `"text-embedding-004"`)
+  - It generates the standard `memorySearch` block inside `openclaw.json`, allowing the agent to dynamically index and retrieve matching historical contexts during conversation turns.
+
+* **Memory Dreaming (`plugins.entries.memory-core`)**:
+  - Enables OpenClaw's background memory dreaming and consolidation sweeps.
+  - Dreaming moves highly reinforced, short-term conversational signals into durable long-term memory (`MEMORY.md`) automatically on a background cron schedule.
+  - Managed in Ansible via `openclaw_setup_dreaming_enabled` (default: `true`).
 
 ---
 
