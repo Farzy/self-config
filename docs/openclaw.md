@@ -102,10 +102,9 @@ To protect API tokens and sensitive credentials from unauthorized process access
 - **Notion Integration (`NOTION_API_TOKEN` & `NOTION_API_VERSION`)**: Managed securely via Ansible Vault (`openclaw_notion_api_token` in `ansible/vars/openclaw.yml`) and injected into `/etc/openclaw/secrets.env` along with `NOTION_API_VERSION=2026-03-11` for Notion API integrations.
 - Systemd loads `EnvironmentFile=/etc/openclaw/secrets.env` during unit startup before relinquishing root privileges to user `claw`.
 
-
-
 #### 2. Threat Model Defense & Harmonized Systemd Sandboxing
 The Systemd unit file ([ansible/roles/openclaw_setup/templates/openclaw.service.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.service.j2)) configures harmonized process sandboxing balancing security against Node.js runtime needs:
+
 - **`ProtectSystem=strict`**: Mounts root `/`, `/usr`, `/boot`, `/etc` as read-only filesystem paths to prevent OS file tampering.
 - **`ReadWritePaths=/home/claw /var/tmp/openclaw-compile-cache`**: Explicitly restricts write permissions strictly to `/home/claw` and the compilation cache directory.
 - **`ProtectHome=false`**: Set to `false` to permit user `claw` to read and write its database, configuration, and workspace files under `/home/claw/`.
