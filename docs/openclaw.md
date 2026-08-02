@@ -138,6 +138,7 @@ To leverage semantic search and automatic long-term memory consolidation, OpenCl
   - Defaults are managed in Ansible via:
     - `openclaw_setup_memory_search_provider` (default: `"gemini"`)
     - `openclaw_setup_memory_search_model` (default: `"gemini-embedding-001"`)
+    - `openclaw_setup_memory_search_extra_paths` (default: `["{{ openclaw_setup_home }}/.openclaw/workspace/farzad-wiki"]` to index your professional wiki).
   - It generates the standard `memorySearch` block inside `openclaw.json`, allowing the agent to dynamically index and retrieve matching historical contexts during conversation turns.
 
 * **Memory Dreaming (`plugins.entries.memory-core`)**:

@@ -24,7 +24,9 @@
       },
       "memorySearch": {
         "provider": "{{ openclaw_setup_memory_search_provider }}",
-        "model": "{{ openclaw_setup_memory_search_model }}"
+        "model": "{{ openclaw_setup_memory_search_model }}"{% if openclaw_setup_memory_search_extra_paths is defined and openclaw_setup_memory_search_extra_paths | length > 0 %},
+        "extraPaths": {{ openclaw_setup_memory_search_extra_paths | to_json }}
+{% endif %}
       }
     }
   },
