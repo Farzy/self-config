@@ -30,6 +30,7 @@
     cmd: "id -Gn {{ openclaw_setup_user }}"
   register: openclaw_setup_user_groups_cmd
   changed_when: false
+  check_mode: false
 
 - name: Assert openclaw user is not a member of privileged groups
   ansible.builtin.assert:
@@ -49,6 +50,8 @@
   register: openclaw_setup_sudo_check
   changed_when: false
   failed_when: false
+  check_mode: false
+
 
 - name: Assert openclaw user has no sudo privileges
   ansible.builtin.assert:
@@ -245,7 +248,16 @@
     global: true
 
 
+- name: Create OpenClaw compile cache directory
+  ansible.builtin.file:
+    path: /var/tmp/openclaw-compile-cache
+    state: directory
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0755'
+
 - name: Create OpenClaw config directory
+
   ansible.builtin.file:
     path: "{{ openclaw_setup_home }}/.openclaw"
     state: directory
