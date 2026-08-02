@@ -12,6 +12,14 @@
     shell: /usr/bin/zsh
     state: present
 
+- name: Deploy SSH authorized key for openclaw user
+  ansible.posix.authorized_key:
+    user: "{{ openclaw_setup_user }}"
+    state: present
+    key: "{{ openclaw_setup_ssh_key }}"
+  when: openclaw_setup_ssh_key | length > 0
+
+
 - name: Test existence of Oh My Zsh for openclaw user
   ansible.builtin.stat:
     path: "{{ openclaw_setup_home }}/.oh-my-zsh"
