@@ -1,0 +1,140 @@
+---
+- name: Create fastmail-mcp system group
+  ansible.builtin.group:
+    name: "{{ fastmail_mcp_group }}"
+    state: present
+    system: true
+
+- name: Create fastmail-mcp system user
+  ansible.builtin.user:
+    name: "{{ fastmail_mcp_user }}"
+    group: "{{ fastmail_mcp_group }}"
+    home: "{{ fastmail_mcp_home }}"
+    shell: /usr/sbin/nologin
+    system: true
+    create_home: true
+
+- name: Remove any sudoers configuration for fastmail-mcp user
+  ansible.builtin.file:
+    path: "/etc/sudoers.d/{{ fastmail_mcp_user }}"
+    state: absent
+
+- name: Get active groups for fastmail-mcp user
+  ansible.builtin.command:
+    cmd: "id -Gn {{ fastmail_mcp_user }}"
+  register: fastmail_mcp_user_groups_cmd
+  changed_when: false
+  check_mode: false
+
+- name: Assert fastmail-mcp user is not a member of privileged groups
+  ansible.builtin.assert:
+    that:
+      - "'sudo' not in fastmail_mcp_user_groups_cmd.stdout.split()"
+      - "'root' not in fastmail_mcp_user_groups_cmd.stdout.split()"
+      - "'wheel' not in fastmail_mcp_user_groups_cmd.stdout.split()"
+      - "'shadow' not in fastmail_mcp_user_groups_cmd.stdout.split()"
+      - "'adm' not in fastmail_mcp_user_groups_cmd.stdout.split()"
+      - "'disk' not in fastmail_mcp_user_groups_cmd.stdout.split()"
+    fail_msg: "SECURITY VIOLATION: User {{ fastmail_mcp_user }} belongs to a privileged group! Groups: {{ fastmail_mcp_user_groups_cmd.stdout }}"
+    success_msg: "Security assertion passed: User {{ fastmail_mcp_user }} is not a member of any privileged groups."
+
+- name: Check sudo privilege status for fastmail-mcp user
+  ansible.builtin.command:
+    cmd: "sudo -n -l -U {{ fastmail_mcp_user }}"
+  register: fastmail_mcp_sudo_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Assert fastmail-mcp user has no sudo privileges
+  ansible.builtin.assert:
+    that:
+      - >-
+        fastmail_mcp_sudo_check.rc != 0 or
+        'not allowed to run sudo' in fastmail_mcp_sudo_check.stderr or
+        'not allowed to run sudo' in fastmail_mcp_sudo_check.stdout
+    fail_msg: "SECURITY VIOLATION: User {{ fastmail_mcp_user }} has sudo privileges on this system!"
+    success_msg: "Security assertion passed: User {{ fastmail_mcp_user }} has no sudo privileges."
+
+- name: Create Fastmail MCP application directory
+  ansible.builtin.file:
+    path: "{{ fastmail_mcp_app_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Clone Fastmail MCP repository
+  ansible.builtin.git:
+    repo: 'https://github.com/MadLlama25/fastmail-mcp.git'
+    dest: "{{ fastmail_mcp_app_dir }}"
+    version: "{{ fastmail_mcp_version }}"
+    update: true
+  register: fastmail_mcp_repo
+
+- name: Check if dist directory exists
+  ansible.builtin.stat:
+    path: "{{ fastmail_mcp_app_dir }}/dist/index.js"
+  register: fastmail_mcp_dist_stat
+
+- name: Install Fastmail MCP npm dependencies
+  community.general.npm:
+    path: "{{ fastmail_mcp_app_dir }}"
+    state: present
+  when: fastmail_mcp_repo.changed or not fastmail_mcp_dist_stat.stat.exists
+
+- name: Build Fastmail MCP server
+  ansible.builtin.command:
+    cmd: npm run build
+    chdir: "{{ fastmail_mcp_app_dir }}"
+  when: fastmail_mcp_repo.changed or not fastmail_mcp_dist_stat.stat.exists
+  changed_when: true
+
+- name: Install supergateway globally via npm
+  community.general.npm:
+    name: supergateway
+    global: true
+    state: present
+
+- name: Create Fastmail MCP downloads directory
+  ansible.builtin.file:
+    path: "{{ fastmail_mcp_home }}/downloads"
+    state: directory
+
+    owner: "{{ fastmail_mcp_user }}"
+    group: "{{ fastmail_mcp_group }}"
+    mode: '0750'
+
+- name: Create Fastmail MCP secrets directory
+  ansible.builtin.file:
+    path: /etc/fastmail-mcp
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Deploy Fastmail MCP secrets environment file
+  ansible.builtin.template:
+    src: secrets.env.j2
+    dest: /etc/fastmail-mcp/secrets.env
+    owner: root
+    group: root
+    mode: '0600'
+  notify: Restart fastmail-mcp
+
+- name: Deploy Fastmail MCP systemd service
+  ansible.builtin.template:
+    src: fastmail-mcp.service.j2
+    dest: /etc/systemd/system/fastmail-mcp.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Reload systemd
+    - Restart fastmail-mcp
+
+- name: Ensure Fastmail MCP service is started and enabled
+  ansible.builtin.service:
+    name: fastmail-mcp
+    state: started
+    enabled: true

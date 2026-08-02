@@ -7,5 +7,7 @@
   roles:
     - role: master_setup
       tags: setup
+    - role: fastmail_mcp_setup
+      tags: fastmail_mcp
     - role: openclaw_setup
       tags: openclaw

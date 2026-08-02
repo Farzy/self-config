@@ -1,0 +1,61 @@
+[Unit]
+Description=Fastmail MCP Server
+After=network.target
+
+[Service]
+Type=simple
+User={{ fastmail_mcp_user }}
+Group={{ fastmail_mcp_group }}
+WorkingDirectory={{ fastmail_mcp_app_dir }}
+EnvironmentFile=/etc/fastmail-mcp/secrets.env
+ExecStart=/usr/bin/supergateway --stdio "node {{ fastmail_mcp_app_dir }}/dist/index.js" --host 127.0.0.1 --port {{ fastmail_mcp_port }}
+Restart=always
+RestartSec=10
+
+# --- SECURITY HARDENING & SANDBOXING ---
+
+# Mount system directories (/usr, /etc, /boot) as read-only to prevent OS file modification
+ProtectSystem=strict
+
+# Allow write access exclusively to Fastmail MCP home directory
+ReadWritePaths={{ fastmail_mcp_home }}
+
+# Disable ProtectHome restriction so fastmail-mcp user can access its home directory
+ProtectHome=false
+
+# Mount a private, isolated /tmp and /var/tmp namespace to prevent multi-tenant token leakage
+PrivateTmp=true
+
+# Set MemoryDenyWriteExecute to false because Node.js V8 engine requires W^X JIT compilation memory allocation
+MemoryDenyWriteExecute=false
+
+# Prevent child processes from gaining elevated privileges via setuid binaries (user is unprivileged and must never possess sudo access)
+NoNewPrivileges=true
+
+# Drop all Linux kernel capabilities from the process bounding set (unprivileged process needs zero kernel capabilities)
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Restrict creation or execution of SUID/SGID binaries by child processes
+RestrictSUIDSGID=true
+
+# Prevent modification of system hostname or domain name by isolating UTS namespace
+ProtectHostname=true
+
+# Prevent switching execution domain or architecture personality
+LockPersonality=true
+
+# Protect kernel variables (/proc/sys, /sys, /proc/sysrq-trigger) from modification
+ProtectKernelTunables=true
+
+# Prevent loading or unloading Linux kernel modules at runtime
+ProtectKernelModules=true
+
+# Mount control group hierarchies (/sys/fs/cgroup) as read-only
+ProtectControlGroups=true
+
+# Prevent the service from acquiring realtime scheduling priorities to avoid CPU starvation attacks
+RestrictRealtime=true
+
+[Install]
+WantedBy=multi-user.target
