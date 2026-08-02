@@ -19,7 +19,8 @@ RestartSec=10
 ProtectSystem=strict
 
 # Allow write access exclusively to OpenClaw's home directory and Node compilation cache
-ReadWritePaths={{ openclaw_setup_home }} -/var/tmp/openclaw-compile-cache
+ReadWritePaths={{ openclaw_setup_home }} -{{ openclaw_setup_compile_cache }}
+
 
 
 # Disable ProtectHome restriction so user claw can manage its database, configuration, and workspace files in /home/claw

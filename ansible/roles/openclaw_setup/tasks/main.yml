@@ -99,7 +99,8 @@
 
 - name: Create compilation cache directory
   ansible.builtin.file:
-    path: /var/tmp/openclaw-compile-cache
+    path: "{{ openclaw_setup_compile_cache }}"
+
     state: directory
     owner: "{{ openclaw_setup_user }}"
     group: "{{ openclaw_setup_group }}"
@@ -250,7 +251,8 @@
 
 - name: Create OpenClaw compile cache directory
   ansible.builtin.file:
-    path: /var/tmp/openclaw-compile-cache
+    path: "{{ openclaw_setup_compile_cache }}"
+
     state: directory
     owner: "{{ openclaw_setup_user }}"
     group: "{{ openclaw_setup_group }}"
