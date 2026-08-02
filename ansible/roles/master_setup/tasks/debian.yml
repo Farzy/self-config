@@ -53,3 +53,12 @@
     group: root
   loop: "{{ master_setup_global_etcfiles }}"
   tags: configuration
+
+- name: Install global gitconfig for all users
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/dotfiles/.gitconfig"
+    dest: /etc/gitconfig
+    owner: root
+    group: root
+    mode: '0644'
+  tags: configuration

@@ -43,6 +43,7 @@
     - .gitignore_global
     - .profile
     - .zshrc
+    - .gitconfig
 
 
 - name: Create compilation cache directory
