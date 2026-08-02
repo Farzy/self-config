@@ -7,20 +7,57 @@ Type=simple
 User={{ openclaw_setup_user }}
 Group={{ openclaw_setup_group }}
 WorkingDirectory={{ openclaw_setup_home }}
-Environment=PORT={{ openclaw_setup_port }}
-Environment=NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache
-Environment=OPENCLAW_NO_RESPAWN=1
-Environment=GEMINI_API_KEY={{ openclaw_gemini_api_key }}
-{% if openclaw_github_pat is defined %}
-Environment=GITHUB_TOKEN={{ openclaw_github_pat }}
-Environment=GH_TOKEN={{ openclaw_github_pat }}
-{% endif %}
-
+EnvironmentFile=/etc/openclaw/secrets.env
 
 ExecStart=/usr/bin/env openclaw gateway --port {{ openclaw_setup_port }}
 Restart=always
-
 RestartSec=10
+
+# --- SECURITY HARDENING & SANDBOXING ---
+
+# Mount system directories (/usr, /etc, /boot) as read-only to prevent OS file modification
+ProtectSystem=strict
+
+# Allow write access exclusively to OpenClaw's home directory and Node compilation cache
+ReadWritePaths={{ openclaw_setup_home }} -{{ openclaw_setup_compile_cache }}
+
+# Disable ProtectHome restriction so user claw can manage its database, configuration, and workspace files in /home/claw
+ProtectHome=false
+
+
+# Mount a private, isolated /tmp and /var/tmp namespace to prevent multi-tenant token leakage
+PrivateTmp=true
+
+# Set MemoryDenyWriteExecute to false because Node.js V8 engine requires W^X JIT compilation memory allocation
+MemoryDenyWriteExecute=false
+
+# Prevent child processes from gaining elevated privileges via setuid binaries (user claw is unprivileged and must never possess sudo access)
+NoNewPrivileges=true
+
+# Drop all Linux kernel capabilities from the process bounding set (unprivileged process needs zero kernel capabilities)
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Restrict creation or execution of SUID/SGID binaries by child processes
+RestrictSUIDSGID=true
+
+# Prevent modification of system hostname or domain name by isolating UTS namespace
+ProtectHostname=true
+
+# Prevent switching execution domain or architecture personality
+LockPersonality=true
+
+# Protect kernel variables (/proc/sys, /sys, /proc/sysrq-trigger) from modification
+ProtectKernelTunables=true
+
+# Prevent loading or unloading Linux kernel modules at runtime
+ProtectKernelModules=true
+
+# Mount control group hierarchies (/sys/fs/cgroup) as read-only
+ProtectControlGroups=true
+
+# Prevent the service from acquiring realtime scheduling priorities to avoid CPU starvation attacks
+RestrictRealtime=true
 
 [Install]
 WantedBy=multi-user.target

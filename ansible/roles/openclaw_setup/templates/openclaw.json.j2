@@ -21,6 +21,10 @@
     "defaults": {
       "model": {
         "primary": "{{ openclaw_setup_model }}"
+      },
+      "memorySearch": {
+        "provider": "{{ openclaw_setup_memory_search_provider }}",
+        "model": "{{ openclaw_setup_memory_search_model }}"
       }
     }
   },
@@ -31,6 +35,13 @@
       },
       "google": {
         "enabled": true
+      },
+      "memory-core": {
+        "config": {
+          "dreaming": {
+            "enabled": {{ openclaw_setup_dreaming_enabled | to_json }}
+          }
+        }
       }{% if openclaw_setup_telegram_enabled and openclaw_telegram_bot_token is defined %},
       "telegram": {
         "enabled": true

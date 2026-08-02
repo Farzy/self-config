@@ -88,9 +88,65 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 * **OpenClaw Role**: [ansible/roles/openclaw_setup/tasks/main.yml](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/tasks/main.yml)
 * **Configuration Template**: [ansible/roles/openclaw_setup/templates/openclaw.json.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.json.j2)
 * **Systemd Service Template**: [ansible/roles/openclaw_setup/templates/openclaw.service.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.service.j2)
+* **Secrets Environment Template**: [ansible/roles/openclaw_setup/templates/secrets.env.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/secrets.env.j2)
 * **Nginx SSL Proxy Template**: [ansible/roles/openclaw_setup/templates/nginx.conf.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/nginx.conf.j2)
 
+### 4.1 Systemd Secrets Externalization & Security Sandboxing
+
+To protect API tokens and sensitive credentials from unauthorized process access or shell environment leaks, OpenClaw isolates credentials into a restricted secrets file and applies Systemd process sandboxing:
+
+#### 1. Secrets File Isolation (`/etc/openclaw/secrets.env`)
+- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`GEMINI_API_KEY`, `GITHUB_TOKEN`, `GH_TOKEN`, `ANSIBLE_VAULT_PASSWORD`, `NOTION_API_TOKEN`) are templated into `/etc/openclaw/secrets.env`.
+- Directory `/etc/openclaw` (`root:root`, mode `0700`) and file `/etc/openclaw/secrets.env` (`root:root`, mode `0600`) permissions are strictly locked down to `root`, preventing all unprivileged users (including `claw`) from reading raw tokens.
+- **Ansible Vault Password Injection (`ANSIBLE_VAULT_PASSWORD`)**: The control node dynamically reads the local Ansible Vault key (`~/.ansible-personal-key`) during playbook deployment via Jinja2 file lookup (`{{ lookup('file', '~/.ansible-personal-key') | trim }}`) and injects it as `ANSIBLE_VAULT_PASSWORD` into `/etc/openclaw/secrets.env`. This allows OpenClaw subagents and tasks to execute Ansible operations using the standard Vault environment variable without hardcoding or committing plaintext keys to the repository.
+- **Notion Integration (`NOTION_API_TOKEN` & `NOTION_API_VERSION`)**: Managed securely via Ansible Vault (`openclaw_notion_api_token` in `ansible/vars/openclaw.yml`) and injected into `/etc/openclaw/secrets.env` along with `NOTION_API_VERSION=2026-03-11` for Notion API integrations.
+- Systemd loads `EnvironmentFile=/etc/openclaw/secrets.env` during unit startup before relinquishing root privileges to user `claw`.
+
+#### 2. Threat Model Defense & Harmonized Systemd Sandboxing
+The Systemd unit file ([ansible/roles/openclaw_setup/templates/openclaw.service.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.service.j2)) configures harmonized process sandboxing balancing security against Node.js runtime needs:
+
+- **`ProtectSystem=strict`**: Mounts root `/`, `/usr`, `/boot`, `/etc` as read-only filesystem paths to prevent OS file tampering.
+- **`ReadWritePaths=/home/claw /var/tmp/openclaw-compile-cache`**: Explicitly restricts write permissions strictly to `/home/claw` and the compilation cache directory.
+- **`ProtectHome=false`**: Set to `false` to permit user `claw` to read and write its database, configuration, and workspace files under `/home/claw/`.
+- **`PrivateTmp=true`**: Provides an isolated `/tmp` namespace preventing token leakage in shared temporary folders.
+- **`MemoryDenyWriteExecute=false`**: Set to `false` because the Node.js V8 engine requires W^X JIT (Just-In-Time) compilation memory allocations to execute.
+- **`NoNewPrivileges=true`**: Set to `true` to prevent child processes from gaining elevated privileges via `setuid` binaries (user `claw` is unprivileged and has zero sudo access).
+- **`ProtectKernelTunables=true`**: Protects `/proc/sys`, `/sys`, and kernel variables from modification.
+- **`ProtectKernelModules=true`**: Prevents loading or unloading Linux kernel modules at runtime.
+- **`ProtectControlGroups=true`**: Mounts control group hierarchies (`/sys/fs/cgroup`) as read-only.
+- **`RestrictRealtime=true`**: Prevents the service from acquiring realtime scheduling priorities to avoid CPU starvation attacks.
+- **`CapabilityBoundingSet=` & `AmbientCapabilities=`**: Empty set drops all Linux kernel capabilities from the process bounding set.
+- **`RestrictSUIDSGID=true`**: Prevents creation or execution of SUID/SGID binaries by child processes.
+- **`ProtectHostname=true`**: Isolates UTS namespace to prevent modifications to system hostname or domain name.
+- **`LockPersonality=true`**: Locks execution domain to prevent personality switching.
+- **RAM Dump Protection (`kernel.yama.ptrace_scope = 2`)**: Configures kernel YAMA ptrace scope to admin-only (root with `CAP_SYS_PTRACE`), preventing unprivileged processes from attaching debuggers (`gdb`, `strace`) or inspecting `/proc/<pid>/mem` to extract in-memory tokens.
+
+
+#### 3. Automated User Privilege Verification in Ansible
+Ansible automatically asserts system user isolation during playbook execution:
+- **Sudoers Cleanup**: Ensures `/etc/sudoers.d/claw` is absent.
+- **Group Membership Assertion**: Verifies user `claw` is NOT a member of any privileged groups (`sudo`, `root`, `wheel`, `shadow`, `adm`, `disk`).
+- **Sudo Access Check**: Executes `sudo -n -l -U claw` to verify that `claw` has no sudo privileges on the host.
+
+
+#### 4.2 Memory Search & Background Dreaming Configuration
+
+To leverage semantic search and automatic long-term memory consolidation, OpenClaw includes active memory searching and dreaming plugins pre-integrated into your Ansible defaults:
+
+* **Semantic Memory Search (`agents.defaults.memorySearch`)**:
+  - Configures OpenClaw's vector search pipeline using Google's modern embedding API.
+  - Defaults are managed in Ansible via:
+    - `openclaw_setup_memory_search_provider` (default: `"gemini"`)
+    - `openclaw_setup_memory_search_model` (default: `"gemini-embedding-001"`)
+  - It generates the standard `memorySearch` block inside `openclaw.json`, allowing the agent to dynamically index and retrieve matching historical contexts during conversation turns.
+
+* **Memory Dreaming (`plugins.entries.memory-core`)**:
+  - Enables OpenClaw's background memory dreaming and consolidation sweeps.
+  - Dreaming moves highly reinforced, short-term conversational signals into durable long-term memory (`MEMORY.md`) automatically on a background cron schedule.
+  - Managed in Ansible via `openclaw_setup_dreaming_enabled` (default: `true`).
+
 ---
+
 
 ## 5. System User, Shell & Tooling Environment
 

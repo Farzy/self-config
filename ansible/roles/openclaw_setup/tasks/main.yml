@@ -19,8 +19,52 @@
     key: "{{ openclaw_setup_ssh_key }}"
   when: openclaw_setup_ssh_key | length > 0
 
+- name: Remove any sudoers configuration for openclaw user
+  ansible.builtin.file:
+
+    path: "/etc/sudoers.d/{{ openclaw_setup_user }}"
+    state: absent
+
+- name: Get active groups for openclaw user
+  ansible.builtin.command:
+    cmd: "id -Gn {{ openclaw_setup_user }}"
+  register: openclaw_setup_user_groups_cmd
+  changed_when: false
+  check_mode: false
+
+- name: Assert openclaw user is not a member of privileged groups
+  ansible.builtin.assert:
+    that:
+      - "'sudo' not in openclaw_setup_user_groups_cmd.stdout.split()"
+      - "'root' not in openclaw_setup_user_groups_cmd.stdout.split()"
+      - "'wheel' not in openclaw_setup_user_groups_cmd.stdout.split()"
+      - "'shadow' not in openclaw_setup_user_groups_cmd.stdout.split()"
+      - "'adm' not in openclaw_setup_user_groups_cmd.stdout.split()"
+      - "'disk' not in openclaw_setup_user_groups_cmd.stdout.split()"
+    fail_msg: "SECURITY VIOLATION: User {{ openclaw_setup_user }} belongs to a privileged group! Groups: {{ openclaw_setup_user_groups_cmd.stdout }}"
+    success_msg: "Security assertion passed: User {{ openclaw_setup_user }} is not a member of any privileged groups."
+
+- name: Check sudo privilege status for openclaw user
+  ansible.builtin.command:
+    cmd: "sudo -n -l -U {{ openclaw_setup_user }}"
+  register: openclaw_setup_sudo_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+
+- name: Assert openclaw user has no sudo privileges
+  ansible.builtin.assert:
+    that:
+      - >-
+        openclaw_setup_sudo_check.rc != 0 or
+        'not allowed to run sudo' in openclaw_setup_sudo_check.stderr or
+        'not allowed to run sudo' in openclaw_setup_sudo_check.stdout
+    fail_msg: "SECURITY VIOLATION: User {{ openclaw_setup_user }} has sudo privileges on this system!"
+    success_msg: "Security assertion passed: User {{ openclaw_setup_user }} has no sudo privileges."
 
 - name: Test existence of Oh My Zsh for openclaw user
+
   ansible.builtin.stat:
     path: "{{ openclaw_setup_home }}/.oh-my-zsh"
   register: openclaw_setup_omz_stat
@@ -55,8 +99,9 @@
 
 - name: Create compilation cache directory
   ansible.builtin.file:
-    path: /var/tmp/openclaw-compile-cache
+    path: "{{ openclaw_setup_compile_cache }}"
     state: directory
+
     owner: "{{ openclaw_setup_user }}"
     group: "{{ openclaw_setup_group }}"
     mode: '0755'
@@ -204,8 +249,18 @@
     global: true
 
 
+- name: Create OpenClaw compile cache directory
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_compile_cache }}"
+    state: directory
+
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0755'
+
 - name: Create OpenClaw config directory
   ansible.builtin.file:
+
     path: "{{ openclaw_setup_home }}/.openclaw"
     state: directory
     owner: "{{ openclaw_setup_user }}"
@@ -221,6 +276,24 @@
     mode: '0600'
   notify: Restart openclaw
 
+- name: Create OpenClaw secrets directory
+  ansible.builtin.file:
+    path: /etc/openclaw
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Deploy OpenClaw secrets environment file
+  ansible.builtin.template:
+    src: secrets.env.j2
+    dest: /etc/openclaw/secrets.env
+    owner: root
+    group: root
+    mode: '0600'
+  notify: Restart openclaw
+
+
 - name: Deploy OpenClaw systemd service
   ansible.builtin.template:
     src: openclaw.service.j2
@@ -230,8 +303,17 @@
     mode: '0644'
   notify: Reload systemd
 
+- name: Restrict ptrace scope to admin-only (YAMA security hardening)
+  ansible.posix.sysctl:
+    name: kernel.yama.ptrace_scope
+    value: "2"
+    sysctl_set: true
+    state: present
+    reload: true
+
 - name: Check if SSL certificate exists
   ansible.builtin.stat:
+
     path: "/etc/letsencrypt/live/{{ openclaw_setup_domain }}/fullchain.pem"
   register: openclaw_setup_cert_stat
 
