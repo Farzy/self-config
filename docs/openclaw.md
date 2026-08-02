@@ -97,7 +97,8 @@ To protect API tokens and sensitive credentials from unauthorized process access
 
 #### 1. Secrets File Isolation (`/etc/openclaw/secrets.env`)
 - Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`GEMINI_API_KEY`, `GITHUB_TOKEN`, `GH_TOKEN`) are templated into `/etc/openclaw/secrets.env`.
-- File permissions are restricted to `root:claw` mode `0640`, preventing standard unprivileged shell accounts from reading raw tokens.
+- Directory `/etc/openclaw` (`root:root`, mode `0700`) and file `/etc/openclaw/secrets.env` (`root:root`, mode `0600`) permissions are strictly locked down to `root`, preventing all unprivileged users (including `claw`) from reading raw tokens.
+
 - Systemd loads `EnvironmentFile=/etc/openclaw/secrets.env` during unit startup before relinquishing root privileges to user `claw`.
 
 #### 2. Threat Model Defense & Systemd Process Sandboxing
