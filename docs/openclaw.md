@@ -108,12 +108,19 @@ The Systemd unit file ([ansible/roles/openclaw_setup/templates/openclaw.service.
 - **`ProtectHome=false`**: Set to `false` to permit user `claw` to read and write its database, configuration, and workspace files under `/home/claw/`.
 - **`PrivateTmp=true`**: Provides an isolated `/tmp` namespace preventing token leakage in shared temporary folders.
 - **`MemoryDenyWriteExecute=false`**: Set to `false` because the Node.js V8 engine requires W^X JIT (Just-In-Time) compilation memory allocations to execute.
-- **`NoNewPrivileges=false`**: Set to `false` to allow the agent to execute administrative subcommands (e.g., `sudo`) if configured.
+- **`NoNewPrivileges=true`**: Set to `true` to prevent child processes from gaining elevated privileges via `setuid` binaries (user `claw` is unprivileged and has zero sudo access).
 - **`ProtectKernelTunables=true`**: Protects `/proc/sys`, `/sys`, and kernel variables from modification.
 - **`ProtectKernelModules=true`**: Prevents loading or unloading Linux kernel modules at runtime.
 - **`ProtectControlGroups=true`**: Mounts control group hierarchies (`/sys/fs/cgroup`) as read-only.
 - **`RestrictRealtime=true`**: Prevents the service from acquiring realtime scheduling priorities to avoid CPU starvation attacks.
 - **RAM Dump Protection (`kernel.yama.ptrace_scope = 2`)**: Configures kernel YAMA ptrace scope to admin-only (root with `CAP_SYS_PTRACE`), preventing unprivileged processes from attaching debuggers (`gdb`, `strace`) or inspecting `/proc/<pid>/mem` to extract in-memory tokens.
+
+#### 3. Automated User Privilege Verification in Ansible
+Ansible automatically asserts system user isolation during playbook execution:
+- **Sudoers Cleanup**: Ensures `/etc/sudoers.d/claw` is absent.
+- **Group Membership Assertion**: Verifies user `claw` is NOT a member of any privileged groups (`sudo`, `root`, `wheel`, `shadow`, `adm`, `disk`).
+- **Sudo Access Check**: Executes `sudo -n -l -U claw` to verify that `claw` has no sudo privileges on the host.
+
 
 
 

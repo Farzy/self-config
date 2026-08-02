@@ -30,8 +30,9 @@ PrivateTmp=true
 # Set MemoryDenyWriteExecute to false because Node.js V8 engine requires W^X JIT compilation memory allocation
 MemoryDenyWriteExecute=false
 
-# Set NoNewPrivileges to false so the service user can invoke sudo or administrative commands if configured
-NoNewPrivileges=false
+# Prevent child processes from gaining elevated privileges via setuid binaries (user claw is unprivileged and must never possess sudo access)
+NoNewPrivileges=true
+
 
 # Protect kernel variables (/proc/sys, /sys, /proc/sysrq-trigger) from modification
 ProtectKernelTunables=true
