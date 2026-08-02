@@ -202,7 +202,7 @@ if command -v gog &> /dev/null; then
 fi
 
 # OpenClaw completion
-if command -v openclaw &> /dev/null; then
+if [[ $(id -un) == "{{ openclaw_setup_user }}" ]] && command -v openclaw &> /dev/null; then
     eval "$(openclaw completion --shell zsh)"
 fi
 

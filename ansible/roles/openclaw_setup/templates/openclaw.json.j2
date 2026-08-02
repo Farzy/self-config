@@ -15,9 +15,7 @@
     }
   },
   "commands": {
-    "native": {
-      "mcp": true
-    }
+    "ownerAllowFrom": {{ openclaw_setup_telegram_allow_from | to_json }}
   },
   "agents": {
     "defaults": {
@@ -30,11 +28,14 @@
     "entries": {
       "signal": {
         "enabled": true
+      },
+      "google": {
+        "enabled": true
       }{% if openclaw_setup_telegram_enabled and openclaw_telegram_bot_token is defined %},
       "telegram": {
         "enabled": true
       }
-{%- endif %}
+{% endif %}
     }
   },
   "channels": {
@@ -50,9 +51,9 @@
       "dmPolicy": "pairing",
       "allowFrom": {{ openclaw_setup_telegram_allow_from | to_json }}
     }
-{%- endif %}
-  }
-{% if openclaw_fastmail_token is defined %},
+{% endif %}
+  },
+{% if openclaw_fastmail_token is defined %}
   "mcp": {
     "servers": {
       "fastmail": {
@@ -63,6 +64,98 @@
         }
       }
     }
+  },
+{% endif %}
+  "skills": {
+    "load": {
+      "extraDirs": ["{{ openclaw_setup_home }}/src/agent-skills/skills"],
+      "allowSymlinkTargets": ["{{ openclaw_setup_home }}/src/agent-skills/skills"]
+    },
+    "entries": {
+      "1password": {
+        "enabled": false
+      },
+      "blogwatcher": {
+        "enabled": false
+      },
+      "blucli": {
+        "enabled": false
+      },
+      "camsnap": {
+        "enabled": false
+      },
+      "coding-agent": {
+        "enabled": false
+      },
+      "eightctl": {
+        "enabled": false
+      },
+      "gemini": {
+        "enabled": false
+      },
+      "gifgrep": {
+        "enabled": false
+      },
+      "gog": {
+        "enabled": false
+      },
+      "goplaces": {
+        "enabled": false
+      },
+      "himalaya": {
+        "enabled": false
+      },
+      "mcporter": {
+        "enabled": false
+      },
+      "nano-pdf": {
+        "enabled": false
+      },
+      "obsidian": {
+        "enabled": false
+      },
+      "openai-whisper": {
+        "enabled": false
+      },
+      "openai-whisper-api": {
+        "enabled": false
+      },
+      "openhue": {
+        "enabled": false
+      },
+      "oracle": {
+        "enabled": false
+      },
+      "ordercli": {
+        "enabled": false
+      },
+      "sag": {
+        "enabled": false
+      },
+      "sherpa-onnx-tts": {
+        "enabled": false
+      },
+      "songsee": {
+        "enabled": false
+      },
+      "sonoscli": {
+        "enabled": false
+      },
+      "spotify-player": {
+        "enabled": false
+      },
+      "summarize": {
+        "enabled": false
+      },
+      "trello": {
+        "enabled": false
+      },
+      "video-frames": {
+        "enabled": false
+      },
+      "xurl": {
+        "enabled": false
+      }
+    }
   }
-{%- endif %}
 }
