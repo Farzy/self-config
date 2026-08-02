@@ -47,4 +47,17 @@
     }
 {%- endif %}
   }
+{% if openclaw_fastmail_token is defined %},
+  "mcp": {
+    "servers": {
+      "fastmail": {
+        "url": "https://api.fastmail.com/mcp",
+        "transport": "sse",
+        "headers": {
+          "Authorization": "Bearer {{ openclaw_fastmail_token }}"
+        }
+      }
+    }
+  }
+{%- endif %}
 }
