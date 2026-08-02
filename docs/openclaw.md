@@ -10,9 +10,13 @@ This guide details the deployment, configuration, operational management, and tr
 * **Hostname / Domain**: `claw.farzad.tech` (IP: `163.172.189.14`).
 * **Web Gateway**: Nginx reverse proxy with TLS certificate managed by Certbot (Let's Encrypt), forwarding `https://claw.farzad.tech` to `http://127.0.0.1:3000`.
 * **Runtime Environment**: Node.js 26.x (`node_26.x` APT repository), OpenClaw systemd service (`openclaw.service`).
-* **LLM Provider**: Google Gemini (`google/gemini-3.6-flash`).
+* **Dedicated System Account**: User `claw` (`/home/claw`, default shell `/usr/bin/zsh`).
+* **LLM Provider**: Google Gemini (`google/gemini-3.1-pro-preview`).
 * **API Key Management**: Dedicated Gemini API key stored encrypted with Ansible Vault in [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml).
-* **Control Channel**: Signal integration using `@openclaw/signal` plugin and native `signal-cli` (`v0.13.12`), enforcing Direct Message pairing policy (`dmPolicy: "pairing"`).
+* **Control Channels**:
+  - **Telegram**: Stock `@openclaw/telegram` plugin connected in live long-polling mode using an encrypted bot token.
+  - **Signal**: Integration using `@openclaw/signal` plugin and native `signal-cli` (`v0.13.12`), enforcing Direct Message pairing policy (`dmPolicy: "pairing"`).
+* **Agent Skills Integration**: Automated cloning of Addy Osmani's `agent-skills` repository with workspace symlinks in `/home/claw/.openclaw/workspace/skills/`.
 
 ---
 
@@ -81,81 +85,112 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 ### Key Ansible Roles & Templates
 * **Playbook**: [ansible/playbooks/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/playbooks/openclaw.yml)
 * **Encrypted Vault Variables**: [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml)
+* **OpenClaw Role**: [ansible/roles/openclaw_setup/tasks/main.yml](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/tasks/main.yml)
 * **Configuration Template**: [ansible/roles/openclaw_setup/templates/openclaw.json.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.json.j2)
 * **Systemd Service Template**: [ansible/roles/openclaw_setup/templates/openclaw.service.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.service.j2)
 * **Nginx SSL Proxy Template**: [ansible/roles/openclaw_setup/templates/nginx.conf.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/nginx.conf.j2)
 
 ---
 
-## 5. Signal Control Channel & Pairing Workflow
+## 5. System User, Shell & Tooling Environment
 
-### 1. Link Signal CLI
-To link a Signal account (secondary device or new number):
-```bash
-ssh claw "sudo -u claw signal-cli link -n 'OpenClaw'"
-```
-Scan the displayed QR code using the Signal mobile app (**Settings > Linked Devices**).
+### 5.1 Dedicated `claw` User & SSH Key Authorization
+- The service runs under a dedicated system user `claw` (`/home/claw`).
+- Personal SSH public key authorization for `claw` is managed via Ansible Vault (`openclaw_setup_ssh_key` in `ansible/vars/openclaw.yml`) and deployed using `ansible.posix.authorized_key`.
 
-### 2. Verify Signal Channel
-Check channel readiness and status:
-```bash
-ssh claw "sudo -u claw openclaw channels status"
-```
+### 5.2 Zsh Shell, Dotfiles & OpenClaw Autocompletion
+- **Default Shell**: `claw` user is configured with `/usr/bin/zsh` and Oh My Zsh.
+- **Dotfiles**: Standard dotfiles (`.zshrc`, `.bashrc`, `.profile`, `.gitignore_global`, `.gitconfig`) are deployed to `/home/claw/`.
+- **Zsh Autocompletion**: `.zshrc` automatically loads OpenClaw CLI completion dynamically:
+  ```zsh
+  if command -v openclaw &> /dev/null; then
+      eval "$(openclaw completion --shell zsh)"
+  fi
+  ```
 
-### 3. DM Pairing Procedure
-OpenClaw enforces a pairing policy for direct messages:
-1. Send a initial Direct Message to your Signal bot.
-2. The bot will reply with a 6-character pairing code.
-3. Approve the pairing request on the server:
-   ```bash
-   ssh claw "sudo -u claw openclaw pairing approve <CODE>"
-   ```
+### 5.3 Modern CLI Tools & Short-Name Symlinks
+The server includes modern CLI tools configured with standard short names:
+* `bat` -> `/usr/bin/batcat` (`/usr/local/bin/bat`)
+* `fd` -> `/usr/bin/fdfind` (`/usr/local/bin/fd`)
+* `rg` -> `/usr/bin/rg` (`ripgrep`)
 
----
-
-## 5.2. Telegram Control Channel Setup
-
-### 1. Create a Bot via @BotFather
-1. Open Telegram and search for `@BotFather`.
-2. Send `/newbot` and follow instructions to choose a Bot Name and Username.
-3. `@BotFather` will output an HTTP API Bot Token (e.g. `123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ`).
-
-### 2. Encrypt Bot Token with Ansible Vault
-Save the token temporarily to `/tmp/temp-telegram-bot-token` on your laptop, then encrypt it:
-```bash
-cd ansible
-uv run ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key --name openclaw_telegram_bot_token "$(cat /tmp/temp-telegram-bot-token)"
-rm -f /tmp/temp-telegram-bot-token
-```
-Append the encrypted block to [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml) and re-deploy:
-```bash
-uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
-```
-
-### 3. Pair Telegram DM
-1. Open Telegram and start a chat with your new bot.
-2. Send a message to the bot.
-3. The bot will reply with a 6-character pairing code.
-4. Approve the code on the server:
-   ```bash
-   ssh claw "sudo -u claw openclaw pairing approve <CODE>"
-   ```
+### 5.4 Python & Package Managers
+* **`uv`**: Installed system-wide at `/usr/local/bin/uv` for fast Python package management.
+* **`gh`**: GitHub CLI installed via official GitHub APT keyring and authenticated for user `claw`.
 
 ---
 
-## 5.3. GitHub Personal Access Token (PAT) Integration
+## 6. Control Channels & Integration Workflows
 
-To allow OpenClaw agents to interact securely with private GitHub repositories (e.g. via `gh`, `git`, or GitHub tools):
+### 6.1 Telegram Control Channel Setup
+
+1. **Create a Bot via @BotFather**:
+   - Open Telegram and search for `@BotFather`.
+   - Send `/newbot` and follow instructions to choose a Bot Name and Username.
+   - `@BotFather` will output an HTTP API Bot Token (e.g. `123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ`).
+
+2. **Encrypt Bot Token with Ansible Vault**:
+   Save the token temporarily to `/tmp/temp-telegram-bot-token` on your laptop, then encrypt it:
+   ```bash
+   cd ansible
+   uv run ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key --name openclaw_telegram_bot_token "$(cat /tmp/temp-telegram-bot-token)"
+   rm -f /tmp/temp-telegram-bot-token
+   ```
+3. **Append to Vault Variables & Deploy**:
+   Append the encrypted block to [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml) and re-deploy:
+   ```bash
+   uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
+   ```
+
+4. **Pair Telegram DM**:
+   - Open Telegram and start a chat with your new bot.
+   - Send a message to the bot.
+   - The bot will reply with a 6-character pairing code.
+   - Approve the code on the server:
+     ```bash
+     ssh claw "sudo -u claw openclaw pairing approve <CODE>"
+     ```
+
+---
+
+### 6.2 Signal Control Channel Setup
+
+1. **Link Signal CLI**:
+   To link a Signal account (secondary device or new number):
+   ```bash
+   ssh claw "sudo -u claw signal-cli link -n 'OpenClaw'"
+   ```
+   Scan the displayed QR code using the Signal mobile app (**Settings > Linked Devices**).
+
+2. **Verify Signal Channel**:
+   Check channel readiness and status:
+   ```bash
+   ssh claw "sudo -u claw openclaw channels status"
+   ```
+
+3. **DM Pairing Procedure**:
+   OpenClaw enforces a pairing policy for direct messages:
+   - Send an initial Direct Message to your Signal bot.
+   - The bot will reply with a 6-character pairing code.
+   - Approve the pairing request on the server:
+     ```bash
+     ssh claw "sudo -u claw openclaw pairing approve <CODE>"
+     ```
+
+---
+
+### 6.3 GitHub Personal Access Token (PAT) Integration
+
+To allow OpenClaw agents to interact securely with private GitHub repositories:
 
 1. **Create a Fine-Grained PAT on GitHub**:
    - Go to **GitHub Settings > Developer Settings > Personal Access Tokens > Fine-grained tokens**.
-   - Select your user account and choose **Only select repositories** (select the personal repos OpenClaw needs).
-   - Grant minimal necessary permissions (e.g., `Contents: Read/Write`, `Pull requests: Read/Write`, `Issues: Read/Write`).
+   - Select your user account and choose **Only select repositories**.
+   - Grant minimal necessary permissions (`Contents: Read/Write`, `Pull requests: Read/Write`, `Issues: Read/Write`).
 
 2. **Encrypt the PAT with Ansible Vault**:
    Save the token to a temporary file on your Mac, encrypt it, and remove the temp file:
    ```bash
-   echo "github_pat_11..." > /tmp/temp-github-pat
    cd ansible
    uv run ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key --name openclaw_github_pat "$(cat /tmp/temp-github-pat | tr -d '\r\n')"
    rm -f /tmp/temp-github-pat
@@ -166,13 +201,19 @@ To allow OpenClaw agents to interact securely with private GitHub repositories (
    ```bash
    uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
    ```
-   The Ansible template automatically injects `GITHUB_TOKEN` and `GH_TOKEN` into OpenClaw's systemd environment.
+   Ansible automatically authenticates `gh` for user `claw` (`gh auth login --with-token`) and injects `GITHUB_TOKEN` and `GH_TOKEN` into the systemd environment.
 
 ---
 
+## 7. Agent Skills Ecosystem
 
+OpenClaw workspace skills are automatically provisioned via Ansible:
+1. **Repository Clone**: Clones Addy Osmani's `agent-skills` repository to `/home/claw/src/agent-skills`.
+2. **Workspace Symlinks**: Automatically creates symlinks for all available skills under `/home/claw/.openclaw/workspace/skills/`.
 
-## 6. Service Management & Troubleshooting
+---
+
+## 8. Service Management & Troubleshooting
 
 * **Check Systemd Status**:
   ```bash

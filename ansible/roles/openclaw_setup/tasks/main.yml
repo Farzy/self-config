@@ -201,7 +201,8 @@
   community.general.npm:
     name: openclaw
     version: "{{ openclaw_setup_version }}"
-    global: yes
+    global: true
+
 
 - name: Create OpenClaw config directory
   ansible.builtin.file:
