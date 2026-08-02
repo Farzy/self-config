@@ -22,3 +22,5 @@ openclaw_setup_telegram_allow_from: []
 
 openclaw_setup_allowed_origins:
   - "https://{{ openclaw_setup_domain }}"
+
+openclaw_setup_version: "2026.7.1"

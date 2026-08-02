@@ -181,7 +181,7 @@
 
 - name: Symlink signal-cli to /usr/local/bin
   ansible.builtin.file:
-    src: /opt/signal-cli
+    src: "/opt/signal-cli-{{ openclaw_setup_signal_cli_version }}/bin/signal-cli"
     dest: /usr/local/bin/signal-cli
     state: link
   when: not openclaw_setup_signal_cli_stat.stat.exists
@@ -189,7 +189,7 @@
 
 - name: Install OpenClaw globally via npm
   ansible.builtin.command:
-    cmd: "npm install -g openclaw@latest"
+    cmd: "npm install -g openclaw@{{ openclaw_setup_version }}"
   args:
     creates: /usr/bin/openclaw
 
@@ -220,6 +220,17 @@
     mode: '0644'
   notify: Reload systemd
 
+- name: Check if SSL certificate exists
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ openclaw_setup_domain }}/fullchain.pem"
+  register: openclaw_setup_cert_stat
+
+- name: Generate SSL certificate with Certbot
+  ansible.builtin.command:
+    cmd: "certbot --nginx -d {{ openclaw_setup_domain }} --non-interactive --agree-tos -m {{ openclaw_setup_email }}"
+  when: not openclaw_setup_cert_stat.stat.exists
+  changed_when: true
+
 - name: Deploy Nginx configuration
   ansible.builtin.template:
     src: nginx.conf.j2
@@ -248,17 +259,7 @@
     state: started
     enabled: true
 
-- name: Check if SSL certificate exists
-  ansible.builtin.stat:
-    path: "/etc/letsencrypt/live/{{ openclaw_setup_domain }}/fullchain.pem"
-  register: openclaw_setup_cert_stat
 
-- name: Generate SSL certificate with Certbot
-  ansible.builtin.command:
-    cmd: "certbot --nginx -d {{ openclaw_setup_domain }} --non-interactive --agree-tos -m {{ openclaw_setup_email }}"
-  when: not openclaw_setup_cert_stat.stat.exists
-  changed_when: true
-  notify: Reload nginx
 
 - name: Clone Addy Osmani's agent-skills repository
   ansible.builtin.git:
