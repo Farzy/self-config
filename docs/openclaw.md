@@ -96,10 +96,12 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 To protect API tokens and sensitive credentials from unauthorized process access or shell environment leaks, OpenClaw isolates credentials into a restricted secrets file and applies Systemd process sandboxing:
 
 #### 1. Secrets File Isolation (`/etc/openclaw/secrets.env`)
-- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`GEMINI_API_KEY`, `GITHUB_TOKEN`, `GH_TOKEN`, `ANSIBLE_VAULT_PASSWORD`) are templated into `/etc/openclaw/secrets.env`.
+- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`GEMINI_API_KEY`, `GITHUB_TOKEN`, `GH_TOKEN`, `ANSIBLE_VAULT_PASSWORD`, `NOTION_API_TOKEN`) are templated into `/etc/openclaw/secrets.env`.
 - Directory `/etc/openclaw` (`root:root`, mode `0700`) and file `/etc/openclaw/secrets.env` (`root:root`, mode `0600`) permissions are strictly locked down to `root`, preventing all unprivileged users (including `claw`) from reading raw tokens.
 - **Ansible Vault Password Injection (`ANSIBLE_VAULT_PASSWORD`)**: The control node dynamically reads the local Ansible Vault key (`~/.ansible-personal-key`) during playbook deployment via Jinja2 file lookup (`{{ lookup('file', '~/.ansible-personal-key') | trim }}`) and injects it as `ANSIBLE_VAULT_PASSWORD` into `/etc/openclaw/secrets.env`. This allows OpenClaw subagents and tasks to execute Ansible operations using the standard Vault environment variable without hardcoding or committing plaintext keys to the repository.
+- **Notion Integration (`NOTION_API_TOKEN` & `NOTION_API_VERSION`)**: Managed securely via Ansible Vault (`openclaw_notion_api_token` in `ansible/vars/openclaw.yml`) and injected into `/etc/openclaw/secrets.env` along with `NOTION_API_VERSION=2026-03-11` for Notion API integrations.
 - Systemd loads `EnvironmentFile=/etc/openclaw/secrets.env` during unit startup before relinquishing root privileges to user `claw`.
+
 
 
 #### 2. Threat Model Defense & Harmonized Systemd Sandboxing
