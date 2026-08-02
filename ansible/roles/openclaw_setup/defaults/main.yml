@@ -6,7 +6,6 @@ openclaw_setup_domain: claw.farzad.tech
 openclaw_setup_port: 18789
 openclaw_setup_ssh_key: ""
 
-
 openclaw_setup_email: farzy@farzy.org
 openclaw_setup_model: "google/gemini-3.1-pro-preview"
 
@@ -24,4 +23,4 @@ openclaw_setup_memory_search_provider: "google"
 openclaw_setup_memory_search_model: "text-embedding-004"
 openclaw_setup_dreaming_enabled: true
 
-openclaw_setup_version: "2026.7.1"
+openclaw_setup_version: "2026.7.1-2"
