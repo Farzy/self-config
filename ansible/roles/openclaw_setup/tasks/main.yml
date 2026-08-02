@@ -221,6 +221,23 @@
     mode: '0600'
   notify: Restart openclaw
 
+- name: Create OpenClaw secrets directory
+  ansible.builtin.file:
+    path: /etc/openclaw
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Deploy OpenClaw secrets environment file
+  ansible.builtin.template:
+    src: secrets.env.j2
+    dest: /etc/openclaw/secrets.env
+    owner: root
+    group: "{{ openclaw_setup_group }}"
+    mode: '0640'
+  notify: Restart openclaw
+
 - name: Deploy OpenClaw systemd service
   ansible.builtin.template:
     src: openclaw.service.j2
@@ -229,6 +246,7 @@
     group: root
     mode: '0644'
   notify: Reload systemd
+
 
 - name: Check if SSL certificate exists
   ansible.builtin.stat:

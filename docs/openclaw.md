@@ -88,9 +88,29 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 * **OpenClaw Role**: [ansible/roles/openclaw_setup/tasks/main.yml](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/tasks/main.yml)
 * **Configuration Template**: [ansible/roles/openclaw_setup/templates/openclaw.json.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.json.j2)
 * **Systemd Service Template**: [ansible/roles/openclaw_setup/templates/openclaw.service.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.service.j2)
+* **Secrets Environment Template**: [ansible/roles/openclaw_setup/templates/secrets.env.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/secrets.env.j2)
 * **Nginx SSL Proxy Template**: [ansible/roles/openclaw_setup/templates/nginx.conf.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/nginx.conf.j2)
 
+### 4.1 Systemd Secrets Externalization & Security Sandboxing
+
+To protect API tokens and sensitive credentials from unauthorized process access or shell environment leaks, OpenClaw isolates credentials into a restricted secrets file and applies Systemd process sandboxing:
+
+#### 1. Secrets File Isolation (`/etc/openclaw/secrets.env`)
+- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`GEMINI_API_KEY`, `GITHUB_TOKEN`, `GH_TOKEN`) are templated into `/etc/openclaw/secrets.env`.
+- File permissions are restricted to `root:claw` mode `0640`, preventing standard unprivileged shell accounts from reading raw tokens.
+- Systemd loads `EnvironmentFile=/etc/openclaw/secrets.env` during unit startup before relinquishing root privileges to user `claw`.
+
+#### 2. Threat Model Defense & Systemd Process Sandboxing
+If a child agent process or session is compromised, Systemd sandboxing mitigates privilege escalation and lateral movement:
+- **`ProtectSystem=strict`**: Mounts root `/`, `/usr`, `/boot`, `/etc` as read-only filesystem paths.
+- **`ProtectHome=read-only`**: Protects `/home` directories from unauthorized write access while allowing explicit access via `ReadWritePaths`.
+- **`ReadWritePaths=/home/claw /var/tmp/openclaw-compile-cache`**: Limits filesystem write access strictly to OpenClaw's home directory and compile cache.
+- **`PrivateTmp=true`**: Provides an isolated `/tmp` namespace preventing token leakage in shared temporary files.
+- **`NoNewPrivileges=true`**: Blocks privilege escalation via `setuid` binaries.
+- **`ProtectKernelTunables=true`, `ProtectKernelModules=true`, `ProtectControlGroups=true`, `RestrictRealtime=true`**: Disables kernel module loading, control group manipulation, and realtime scheduling.
+
 ---
+
 
 ## 5. System User, Shell & Tooling Environment
 
