@@ -7,3 +7,8 @@
   ansible.builtin.service:
     name: nginx
     state: reloaded
+
+- name: Restart openclaw
+  ansible.builtin.service:
+    name: openclaw
+    state: restarted

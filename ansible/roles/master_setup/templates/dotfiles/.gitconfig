@@ -1,0 +1,32 @@
+[user]
+    name = {{ openclaw_setup_user_name | default('Farzad FARID') }}
+    email = {{ openclaw_setup_email | default('farzy@farzy.org') }}
+[core]
+    editor = vim
+    excludesfile = ~/.gitignore_global
+[alias]
+    st = status
+    co = checkout
+    ci = commit
+    br = branch
+    df = diff
+    logg = log --graph --decorate --oneline --abbrev-commit --all
+    unstage = reset HEAD --
+[color]
+    ui = auto
+[pull]
+    rebase = true
+[push]
+    default = simple
+[init]
+    defaultBranch = main
+
+
+{% if openclaw_github_pat is defined %}
+[credential "https://github.com"]
+    helper =
+    helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+    helper =
+    helper = !/usr/bin/gh auth git-credential
+{%- endif %}

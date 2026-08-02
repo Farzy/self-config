@@ -2,6 +2,8 @@
 - name: Deploy OpenClaw
   hosts: openclaw
   become: true
+  vars_files:
+    - ../vars/openclaw.yml
   roles:
     - role: master_setup
       tags: setup

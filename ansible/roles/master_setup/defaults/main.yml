@@ -9,6 +9,7 @@ master_setup_global_etcfiles:
     mode: "0644"
   - name: "screenrc"
     mode: "0644"
+  - name: "apt/apt.conf.d/20auto-upgrades"
   - name: "apt/apt.conf.d/50unattended-upgrades"
     mode: "0644"
 master_setup_global_apt_repositories:
@@ -50,6 +51,7 @@ master_setup_global_packages_apt:
   - dlocate
   - dnsutils
   - elinks
+  - fd-find
   - git
   - jq
   - htop
@@ -63,7 +65,9 @@ master_setup_global_packages_apt:
   - ncdu
   - nmap
   - python3-pip
+  - ripgrep
   - rsync
+
   - screen
   - strace
   - tcpdump

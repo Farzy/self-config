@@ -9,8 +9,49 @@
     name: "{{ openclaw_setup_user }}"
     group: "{{ openclaw_setup_group }}"
     home: "{{ openclaw_setup_home }}"
-    shell: /bin/bash
+    shell: /usr/bin/zsh
     state: present
+
+- name: Deploy SSH authorized key for openclaw user
+  ansible.posix.authorized_key:
+    user: "{{ openclaw_setup_user }}"
+    state: present
+    key: "{{ openclaw_setup_ssh_key }}"
+  when: openclaw_setup_ssh_key | length > 0
+
+
+- name: Test existence of Oh My Zsh for openclaw user
+  ansible.builtin.stat:
+    path: "{{ openclaw_setup_home }}/.oh-my-zsh"
+  register: openclaw_setup_omz_stat
+
+- name: Download OMZ installation script
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
+    dest: /tmp/omz-install.sh
+    mode: '0755'
+  when: not openclaw_setup_omz_stat.stat.exists
+
+- name: Run OMZ installation script for openclaw user
+  ansible.builtin.command: /tmp/omz-install.sh --unattended --keep-zshrc
+  when: not openclaw_setup_omz_stat.stat.exists
+  changed_when: true
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+
+- name: Install dotfiles for openclaw user
+  ansible.builtin.template:
+    src: "{{ role_path }}/../master_setup/templates/dotfiles/{{ item }}"
+    dest: "{{ openclaw_setup_home }}/{{ item }}"
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0644'
+  loop:
+    - .bashrc
+    - .gitignore_global
+    - .profile
+    - .zshrc
+    - .gitconfig
 
 - name: Create compilation cache directory
   ansible.builtin.file:
@@ -47,6 +88,15 @@
     state: present
     update_cache: true
 
+- name: Allow HTTP and HTTPS in ufw firewall
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "80"
+    - "443"
+
 - name: Add NodeSource APT key
   ansible.builtin.apt_key:
     url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
@@ -54,7 +104,7 @@
 
 - name: Add NodeSource repository
   ansible.builtin.apt_repository:
-    repo: "deb https://deb.nodesource.com/node_24.x nodistro main"
+    repo: "deb https://deb.nodesource.com/node_26.x nodistro main"
     state: present
     filename: nodesource
 
@@ -64,14 +114,112 @@
     state: present
     update_cache: true
 
-- name: Run OpenClaw install script
+- name: Create /etc/apt/keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Add GitHub CLI APT key
+  ansible.builtin.get_url:
+    url: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+    dest: /etc/apt/keyrings/githubcli-archive-keyring.gpg
+    mode: '0644'
+
+- name: Add GitHub CLI APT repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main"
+    state: present
+    filename: github-cli
+
+- name: Install GitHub CLI (gh)
+  ansible.builtin.apt:
+    name: gh
+    state: present
+    update_cache: true
+
+- name: Authenticate GitHub CLI (gh) for claw user
   ansible.builtin.shell:
-    cmd: "set -o pipefail && curl -fsSL https://openclaw.ai/install.sh | bash"
+    cmd: "set -o pipefail; echo '{{ openclaw_github_pat }}' | gh auth login --with-token"
     executable: /bin/bash
-  args:
-    creates: "{{ openclaw_setup_home }}/openclaw"
   become: true
   become_user: "{{ openclaw_setup_user }}"
+  args:
+    creates: "{{ openclaw_setup_home }}/.config/gh/hosts.yml"
+  when: openclaw_github_pat is defined
+
+- name: Check if uv is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/uv
+  register: openclaw_setup_uv_stat
+
+- name: Download uv installation script
+  ansible.builtin.get_url:
+    url: https://astral.sh/uv/install.sh
+    dest: /tmp/uv-install.sh
+    mode: '0755'
+  when: not openclaw_setup_uv_stat.stat.exists
+
+- name: Install uv Python package manager
+  ansible.builtin.command:
+    cmd: /tmp/uv-install.sh
+  environment:
+    UV_INSTALL_DIR: /usr/local/bin
+  when: not openclaw_setup_uv_stat.stat.exists
+  changed_when: true
+
+- name: Check if signal-cli is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/signal-cli
+  register: openclaw_setup_signal_cli_stat
+
+- name: Download signal-cli native binary
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/AsamK/signal-cli/releases/download/v{{
+      openclaw_setup_signal_cli_version }}/signal-cli-{{
+      openclaw_setup_signal_cli_version }}-Linux-native.tar.gz
+    dest: "/tmp/signal-cli-{{ openclaw_setup_signal_cli_version }}-Linux-native.tar.gz"
+    mode: '0644'
+  when: not openclaw_setup_signal_cli_stat.stat.exists
+
+- name: Extract signal-cli
+  ansible.builtin.unarchive:
+    src: "/tmp/signal-cli-{{ openclaw_setup_signal_cli_version }}-Linux-native.tar.gz"
+    dest: /opt
+    remote_src: true
+  when: not openclaw_setup_signal_cli_stat.stat.exists
+
+- name: Symlink signal-cli to /usr/local/bin
+  ansible.builtin.file:
+    src: "/opt/signal-cli-{{ openclaw_setup_signal_cli_version }}/bin/signal-cli"
+    dest: /usr/local/bin/signal-cli
+    state: link
+  when: not openclaw_setup_signal_cli_stat.stat.exists
+
+- name: Install OpenClaw globally via npm
+  community.general.npm:
+    name: openclaw
+    version: "{{ openclaw_setup_version }}"
+    global: true
+
+
+- name: Create OpenClaw config directory
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_home }}/.openclaw"
+    state: directory
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0700'
+
+- name: Deploy openclaw.json configuration
+  ansible.builtin.template:
+    src: openclaw.json.j2
+    dest: "{{ openclaw_setup_home }}/.openclaw/openclaw.json"
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0600'
+  notify: Restart openclaw
 
 - name: Deploy OpenClaw systemd service
   ansible.builtin.template:
@@ -81,6 +229,17 @@
     group: root
     mode: '0644'
   notify: Reload systemd
+
+- name: Check if SSL certificate exists
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ openclaw_setup_domain }}/fullchain.pem"
+  register: openclaw_setup_cert_stat
+
+- name: Generate SSL certificate with Certbot
+  ansible.builtin.command:
+    cmd: "certbot --nginx -d {{ openclaw_setup_domain }} --non-interactive --agree-tos -m {{ openclaw_setup_email }}"
+  when: not openclaw_setup_cert_stat.stat.exists
+  changed_when: true
 
 - name: Deploy Nginx configuration
   ansible.builtin.template:
@@ -110,14 +269,35 @@
     state: started
     enabled: true
 
-- name: Check if SSL certificate exists
-  ansible.builtin.stat:
-    path: "/etc/letsencrypt/live/{{ openclaw_setup_domain }}/fullchain.pem"
-  register: cert_stat
+- name: Clone Addy Osmani's agent-skills repository
+  ansible.builtin.git:
+    repo: 'https://github.com/addyosmani/agent-skills.git'
+    dest: "{{ openclaw_setup_home }}/src/agent-skills"
+    version: main
+    update: true
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
 
-- name: Generate SSL certificate with Certbot
-  ansible.builtin.command:
-    cmd: "certbot --nginx -d {{ openclaw_setup_domain }} --non-interactive --agree-tos -m {{ openclaw_setup_email }}"
-  when: not cert_stat.stat.exists
-  changed_when: true
-  notify: Reload nginx
+- name: Ensure OpenClaw workspace skills directory exists
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_home }}/.openclaw/workspace/skills"
+    state: directory
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0755'
+
+- name: Find all skills in the cloned repository
+  ansible.builtin.find:
+    paths: "{{ openclaw_setup_home }}/src/agent-skills/skills"
+    file_type: directory
+  register: openclaw_setup_agent_skills_dirs
+
+- name: Symlink skills to OpenClaw workspace skills directory
+  ansible.builtin.file:
+    src: "{{ item.path }}"
+    dest: "{{ openclaw_setup_home }}/.openclaw/workspace/skills/{{ item.path | basename }}"
+    state: link
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+  loop: "{{ openclaw_setup_agent_skills_dirs.files }}"
+  when: openclaw_setup_agent_skills_dirs.matched > 0

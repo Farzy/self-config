@@ -89,6 +89,10 @@ terraform apply
 > [!CAUTION]
 > **No Secrets in Prompts**: Under no circumstances should raw API tokens, passwords, private keys, or other credentials be copied or pasted directly into a chat prompt or agent message.
 
+> [!CAUTION]
+> **No Plaintext Secrets in Ansible Vars**: NEVER store secrets (SSH keys, API tokens, passwords, private keys) in plain text in Ansible vars or role default files. They MUST always be encrypted using the default Ansible Vault key (`ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key ...`).
+
+
 ### Prompt Leak Warning & Invalidation Rule
 If the user ever copies or pastes a raw private key, password, or token into a prompt:
 1. **Warn the User immediately**: Alert the user that a secret was shared in plain text.

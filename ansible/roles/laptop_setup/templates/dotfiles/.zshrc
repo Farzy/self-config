@@ -408,4 +408,3 @@ if command -v launchctl &> /dev/null; then
     done
     unset var val
 fi
-

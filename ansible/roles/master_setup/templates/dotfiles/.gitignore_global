@@ -1,3 +1,11 @@
-# {{ ansible_managed }}
-*~
 .DS_Store
+*~
+*.swp
+*.orig
+.idea/
+.vscode/
+node_modules/
+__pycache__/
+*.pyc
+.env
+.venv

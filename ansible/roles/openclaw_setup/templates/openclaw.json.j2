@@ -1,0 +1,161 @@
+{
+  "gateway": {
+    "mode": "local",
+    "port": {{ openclaw_setup_port }},
+    "trustedProxies": [
+      "127.0.0.1",
+      "::1"
+    ],
+    "controlUi": {
+      "allowedOrigins": {{ openclaw_setup_allowed_origins | to_json }}
+    },
+    "auth": {
+      "mode": "token",
+      "token": "{{ openclaw_gateway_token }}"
+    }
+  },
+  "commands": {
+    "ownerAllowFrom": {{ openclaw_setup_telegram_allow_from | to_json }}
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "{{ openclaw_setup_model }}"
+      }
+    }
+  },
+  "plugins": {
+    "entries": {
+      "signal": {
+        "enabled": true
+      },
+      "google": {
+        "enabled": true
+      }{% if openclaw_setup_telegram_enabled and openclaw_telegram_bot_token is defined %},
+      "telegram": {
+        "enabled": true
+      }
+{% endif %}
+    }
+  },
+  "channels": {
+    "signal": {
+      "enabled": true,
+      "cliPath": "/usr/local/bin/signal-cli",
+      "dmPolicy": "pairing",
+      "allowFrom": {{ openclaw_setup_signal_allow_from | to_json }}
+    }{% if openclaw_setup_telegram_enabled and openclaw_telegram_bot_token is defined %},
+    "telegram": {
+      "enabled": true,
+      "botToken": "{{ openclaw_telegram_bot_token }}",
+      "dmPolicy": "pairing",
+      "allowFrom": {{ openclaw_setup_telegram_allow_from | to_json }}
+    }
+{% endif %}
+  },
+{% if openclaw_fastmail_token is defined %}
+  "mcp": {
+    "servers": {
+      "fastmail": {
+        "url": "https://api.fastmail.com/mcp",
+        "transport": "sse",
+        "headers": {
+          "Authorization": "Bearer {{ openclaw_fastmail_token }}"
+        }
+      }
+    }
+  },
+{% endif %}
+  "skills": {
+    "load": {
+      "extraDirs": ["{{ openclaw_setup_home }}/src/agent-skills/skills"],
+      "allowSymlinkTargets": ["{{ openclaw_setup_home }}/src/agent-skills/skills"]
+    },
+    "entries": {
+      "1password": {
+        "enabled": false
+      },
+      "blogwatcher": {
+        "enabled": false
+      },
+      "blucli": {
+        "enabled": false
+      },
+      "camsnap": {
+        "enabled": false
+      },
+      "coding-agent": {
+        "enabled": false
+      },
+      "eightctl": {
+        "enabled": false
+      },
+      "gemini": {
+        "enabled": false
+      },
+      "gifgrep": {
+        "enabled": false
+      },
+      "gog": {
+        "enabled": false
+      },
+      "goplaces": {
+        "enabled": false
+      },
+      "himalaya": {
+        "enabled": false
+      },
+      "mcporter": {
+        "enabled": false
+      },
+      "nano-pdf": {
+        "enabled": false
+      },
+      "obsidian": {
+        "enabled": false
+      },
+      "openai-whisper": {
+        "enabled": false
+      },
+      "openai-whisper-api": {
+        "enabled": false
+      },
+      "openhue": {
+        "enabled": false
+      },
+      "oracle": {
+        "enabled": false
+      },
+      "ordercli": {
+        "enabled": false
+      },
+      "sag": {
+        "enabled": false
+      },
+      "sherpa-onnx-tts": {
+        "enabled": false
+      },
+      "songsee": {
+        "enabled": false
+      },
+      "sonoscli": {
+        "enabled": false
+      },
+      "spotify-player": {
+        "enabled": false
+      },
+      "summarize": {
+        "enabled": false
+      },
+      "trello": {
+        "enabled": false
+      },
+      "video-frames": {
+        "enabled": false
+      },
+      "xurl": {
+        "enabled": false
+      }
+    }
+  }
+}

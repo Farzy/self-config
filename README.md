@@ -204,8 +204,62 @@ And access the cluster with its context name which is `kind-<CLUSTER-NAME>`.
 - The Kube API server cannot be directly exposed on the Internet because the domain name is not part of the X509
   certificate and `kubectl` will refuse the connection.
 - My goal is to be able to shut down the server in order to save money. But KinD in HA mode (multiple control planes) does
-not support restarts ! This is because Docker changes the nodes' IPs, and the control plane components cannot find
-each other anymore. You must therefore avoid creating HA clusters, unless you are sure to keep the server up and running.
+## OpenClaw Operations
+
+The OpenClaw gateway runs on a dedicated Scaleway instance (`openclaw`) backing `claw.farzad.tech`.
+
+For detailed architecture, SSL proxying, and complete troubleshooting, see the dedicated [OpenClaw Documentation](docs/openclaw.md).
+
+### Scaleway Instance Management (`scw`)
+
+Use the Scaleway CLI `scw` to view, start, or stop the server:
+
+```shell
+# List Scaleway instances
+scw instance server list
+
+# Start the OpenClaw server
+scw instance server start openclaw
+
+# Stop the OpenClaw server (to save costs when unused)
+scw instance server stop openclaw
+```
+
+### SSH Access & Port 18789 Forwarding
+
+Connect directly to the server using the SSH host alias:
+
+```shell
+ssh claw
+```
+
+The SSH host alias includes local port forwarding for OpenClaw's native Gateway RPC port (**18789**):
+```sshconfig
+LocalForward localhost:18789 localhost:18789
+```
+*Note*: If port `18789` is already bound by another active SSH session, SSH will display `bind [127.0.0.1]:18789: Address already in use`. This warning is harmless.
+
+*Tip*: When requesting the Dashboard URL via CLI on headless Linux servers, always pass `--no-open` to prevent browser launcher timeout delays: `ssh claw "sudo -u claw openclaw dashboard --no-open"`.
+
+
+### Deployment with Ansible
+
+To provision or update the server:
+
+```shell
+cd ansible
+uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
+```
+
+### Signal Channel Setup & DM Pairing
+
+1. On the server (`ssh claw`), link `signal-cli`:
+   - `sudo -u claw signal-cli link -n "OpenClaw"` (scan the displayed QR code in Signal app under **Settings > Linked Devices**).
+2. Pair your personal Signal DM:
+   - Send any direct message to the bot's Signal account.
+   - Note the 6-character pairing code returned by the bot.
+   - Approve pairing on the server: `sudo -u claw openclaw pairing approve <PAIRING_CODE>`
+
 
 ## References
 
