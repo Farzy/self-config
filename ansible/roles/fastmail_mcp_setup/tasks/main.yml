@@ -14,6 +14,20 @@
     system: true
     create_home: true
 
+- name: Ensure Fastmail MCP home directory permissions allow group read
+  ansible.builtin.file:
+    path: "{{ fastmail_mcp_home }}"
+    state: directory
+    owner: "{{ fastmail_mcp_user }}"
+    group: "{{ fastmail_mcp_group }}"
+    mode: '0750'
+
+- name: Add claw user to fastmail-mcp group
+  ansible.builtin.user:
+    name: "{{ openclaw_setup_user | default('claw') }}"
+    groups: "{{ fastmail_mcp_group }}"
+    append: true
+
 - name: Remove any sudoers configuration for fastmail-mcp user
   ansible.builtin.file:
     path: "/etc/sudoers.d/{{ fastmail_mcp_user }}"
@@ -40,7 +54,7 @@
 
 - name: Check sudo privilege status for fastmail-mcp user
   ansible.builtin.command:
-    cmd: "sudo -n -l -U {{ fastmail_mcp_user }}"
+    cmd: "sudo -U {{ fastmail_mcp_user }} -l"
   register: fastmail_mcp_sudo_check
   changed_when: false
   failed_when: false
@@ -50,29 +64,35 @@
   ansible.builtin.assert:
     that:
       - >-
-        fastmail_mcp_sudo_check.rc != 0 or
-        'not allowed to run sudo' in fastmail_mcp_sudo_check.stderr or
-        'not allowed to run sudo' in fastmail_mcp_sudo_check.stdout
-    fail_msg: "SECURITY VIOLATION: User {{ fastmail_mcp_user }} has sudo privileges on this system!"
+        'not allowed to run sudo' in fastmail_mcp_sudo_check.stdout or
+        'is not allowed to run sudo' in fastmail_mcp_sudo_check.stderr or
+        fastmail_mcp_sudo_check.rc != 0
+    fail_msg: "SECURITY VIOLATION: User {{ fastmail_mcp_user }} has sudo privileges!"
     success_msg: "Security assertion passed: User {{ fastmail_mcp_user }} has no sudo privileges."
 
 - name: Create Fastmail MCP application directory
   ansible.builtin.file:
     path: "{{ fastmail_mcp_app_dir }}"
     state: directory
-    owner: root
-    group: root
+    owner: "{{ fastmail_mcp_user }}"
+    group: "{{ fastmail_mcp_group }}"
     mode: '0755'
+
+- name: Add safe.directory exception for Fastmail MCP application directory
+  community.general.git_config:
+    name: safe.directory
+    value: "{{ fastmail_mcp_app_dir }}"
+    scope: global
 
 - name: Clone Fastmail MCP repository
   ansible.builtin.git:
-    repo: 'https://github.com/MadLlama25/fastmail-mcp.git'
+    repo: https://github.com/MadLlama25/fastmail-mcp.git
     dest: "{{ fastmail_mcp_app_dir }}"
     version: "{{ fastmail_mcp_version }}"
-    update: true
+    force: true
   register: fastmail_mcp_repo
 
-- name: Check if dist directory exists
+- name: Check if dist/index.js exists
   ansible.builtin.stat:
     path: "{{ fastmail_mcp_app_dir }}/dist/index.js"
   register: fastmail_mcp_dist_stat
@@ -100,7 +120,6 @@
   ansible.builtin.file:
     path: "{{ fastmail_mcp_home }}/downloads"
     state: directory
-
     owner: "{{ fastmail_mcp_user }}"
     group: "{{ fastmail_mcp_group }}"
     mode: '0750'

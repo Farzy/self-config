@@ -32,6 +32,8 @@ The unit file (`fastmail-mcp.service.j2`) applies defense-in-depth Systemd sandb
 - **`ProtectSystem=strict`**: Mounts root `/`, `/usr`, `/boot`, `/etc` as read-only.
 - **`ReadWritePaths=/home/fastmail-mcp`**: Limits write permissions strictly to the user's home directory.
 - **`ProtectHome=false`**: Allows `fastmail-mcp` to write attachment downloads in `/home/fastmail-mcp/downloads`.
+- **OpenClaw File Access**: User `claw` is added to group `fastmail-mcp`, and directories `/home/fastmail-mcp` and `/home/fastmail-mcp/downloads` are configured with permissions `0750` (`owner: fastmail-mcp`, `group: fastmail-mcp`), allowing OpenClaw to read email attachment downloads.
+
 - **`PrivateTmp=true`**: Provides an isolated `/tmp` and `/var/tmp` namespace.
 - **`MemoryDenyWriteExecute=false`**: Allows Node.js V8 engine W^X JIT compilation allocations.
 - **`NoNewPrivileges=true`**: Blocks privilege escalation via `setuid`/`setgid` binaries.
