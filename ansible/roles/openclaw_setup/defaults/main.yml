@@ -12,14 +12,14 @@ openclaw_setup_email: farzy@farzy.org
 openclaw_setup_model: "google/gemini-3.1-pro-preview"
 
 openclaw_setup_scaleway_enabled: false
-openclaw_setup_scaleway_project_id: "5e40a076-f4e5-4328-8052-1a543614ec45"
+openclaw_setup_scaleway_project_id: ""
 openclaw_setup_scaleway_api_key: ""
 openclaw_setup_scaleway_models:
-  - id: "glm-5-2-chat"
+  - id: "glm-5-2"
     name: "GLM 5.2"
-  - id: "qwen-3-6-coder"
-    name: "Qwen 3.6 Coder"
-  - id: "mistral-small-3"
+  - id: "qwen3.6-35b-a3b"
+    name: "Qwen 3.6"
+  - id: "mistral-small-3.2-24b-instruct-2506"
     name: "Mistral Small 3"
 
 openclaw_setup_signal_cli_version: "0.13.12"
