@@ -15,7 +15,7 @@ openclaw_setup_scaleway_enabled: false
 openclaw_setup_scaleway_project_id: ""
 openclaw_setup_scaleway_api_key: ""
 openclaw_setup_scaleway_models:
-  - id: "glm-5-2"
+  - id: "glm-5.2"
     name: "GLM 5.2"
   - id: "qwen3.6-35b-a3b"
     name: "Qwen 3.6"
