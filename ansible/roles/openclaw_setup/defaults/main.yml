@@ -12,6 +12,7 @@ openclaw_setup_email: farzy@farzy.org
 openclaw_setup_model: "google/gemini-3.1-pro-preview"
 
 openclaw_setup_scaleway_enabled: false
+openclaw_setup_scaleway_project_id: "5e40a076-f4e5-4328-8052-1a543614ec45"
 openclaw_setup_scaleway_api_key: ""
 openclaw_setup_scaleway_models:
   - id: "glm-5-2-chat"

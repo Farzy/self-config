@@ -11,7 +11,7 @@ This guide details the deployment, configuration, operational management, and tr
 * **Web Gateway**: Nginx reverse proxy with TLS certificate managed by Certbot (Let's Encrypt), forwarding `https://claw.farzad.tech` to `http://127.0.0.1:3000`.
 * **Runtime Environment**: Node.js 26.x (`node_26.x` APT repository), OpenClaw systemd service (`openclaw.service`).
 * **Dedicated System Account**: User `claw` (`/home/claw`, default shell `/usr/bin/zsh`).
-* **LLM Provider**: Google Gemini (`google/gemini-3.1-pro-preview`), with optional Scaleway Generative APIs (`api.scaleway.ai/v1`, supporting GLM 5.2, Qwen 3.6 Coder, and Mistral Small 3).
+* **LLM Provider**: Google Gemini (`google/gemini-3.1-pro-preview`), with optional Scaleway Generative APIs (`https://api.scaleway.ai/5e40a076-f4e5-4328-8052-1a543614ec45/v1`, supporting GLM 5.2, Qwen 3.6 Coder, and Mistral Small 3).
 * **API Key Management**: Dedicated Gemini API key (and optional Scaleway API key) stored encrypted with Ansible Vault in [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml).
 * **Control Channels**:
   - **Telegram**: Stock `@openclaw/telegram` plugin connected in live long-polling mode using an encrypted bot token.

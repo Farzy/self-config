@@ -70,7 +70,7 @@
   "models": {
     "providers": {
       "openai": {
-        "baseUrl": "https://api.scaleway.ai/v1",
+        "baseUrl": "https://api.scaleway.ai/{{ openclaw_scaleway_project_id | default(openclaw_setup_scaleway_project_id) }}/v1",
         "apiKey": "{{ openclaw_scaleway_api_key | default(openclaw_setup_scaleway_api_key) | default('') }}",
         "models": {{ openclaw_setup_scaleway_models | to_json }}
       }
