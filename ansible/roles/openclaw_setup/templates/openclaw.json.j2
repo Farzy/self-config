@@ -28,7 +28,15 @@
         "extraPaths": {{ openclaw_setup_memory_search_extra_paths | to_json }}
 {% endif %}
       }
-    }
+    },
+    "list": [
+      {
+        "id": "main",
+        "identity": {
+          "avatar": "{{ openclaw_setup_avatar }}"
+        }
+      }
+    ]
   },
   "plugins": {
     "entries": {

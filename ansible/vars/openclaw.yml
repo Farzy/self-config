@@ -1,4 +1,6 @@
 ---
+openclaw_setup_avatar: "avatars/android-lobster.jpg"
+
 openclaw_setup_ssh_key: !vault |
           $ANSIBLE_VAULT;1.2;AES256;personal
           65643634653532303830376564393564303930616435393337303732383636356461343332363430
@@ -31,7 +33,7 @@ openclaw_gateway_token: !vault |
           34333763643334396436653066333864353539616431346137343337383964393163633937373733
           653438656231623833363761353534306331
 
-openclaw_setup_telegram_allow_from: ["telegram:8925006783"]
+openclaw_setup_telegram_allow_from: ["telegram:1252517755"]
 
 openclaw_telegram_bot_token: !vault |
           $ANSIBLE_VAULT;1.2;AES256;personal
