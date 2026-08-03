@@ -66,6 +66,17 @@
     }
 {% endif %}
   },
+{% if openclaw_setup_scaleway_enabled | default(false) %}
+  "models": {
+    "providers": {
+      "openai": {
+        "baseUrl": "https://api.scaleway.ai/v1",
+        "apiKey": "{{ openclaw_scaleway_api_key | default(openclaw_setup_scaleway_api_key) | default('') }}",
+        "models": {{ openclaw_setup_scaleway_models | to_json }}
+      }
+    }
+  },
+{% endif %}
 {% if openclaw_fastmail_token is defined %}
   "mcp": {
     "servers": {
