@@ -11,8 +11,8 @@ This guide details the deployment, configuration, operational management, and tr
 * **Web Gateway**: Nginx reverse proxy with TLS certificate managed by Certbot (Let's Encrypt), forwarding `https://claw.farzad.tech` to `http://127.0.0.1:3000`.
 * **Runtime Environment**: Node.js 26.x (`node_26.x` APT repository), OpenClaw systemd service (`openclaw.service`).
 * **Dedicated System Account**: User `claw` (`/home/claw`, default shell `/usr/bin/zsh`).
-* **LLM Provider**: Google Gemini (`google/gemini-3.1-pro-preview`).
-* **API Key Management**: Dedicated Gemini API key stored encrypted with Ansible Vault in [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml).
+* **LLM Provider**: Google Gemini (`google/gemini-3.1-pro-preview`), with optional Scaleway Generative APIs (`https://api.scaleway.ai/5e40a076-f4e5-4328-8052-1a543614ec45/v1`, supporting GLM 5.2, Qwen 3.6 Coder, and Mistral Small 3).
+* **API Key Management**: Dedicated Gemini API key (and optional Scaleway API key) stored encrypted with Ansible Vault in [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml).
 * **Control Channels**:
   - **Telegram**: Stock `@openclaw/telegram` plugin connected in live long-polling mode using an encrypted bot token.
   - **Signal**: Integration using `@openclaw/signal` plugin and native `signal-cli` (`v0.13.12`), enforcing Direct Message pairing policy (`dmPolicy: "pairing"`).
@@ -96,7 +96,7 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 To protect API tokens and sensitive credentials from unauthorized process access or shell environment leaks, OpenClaw isolates credentials into a restricted secrets file and applies Systemd process sandboxing:
 
 #### 1. Secrets File Isolation (`/etc/openclaw/secrets.env`)
-- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`GEMINI_API_KEY`, `GITHUB_TOKEN`, `GH_TOKEN`, `ANSIBLE_VAULT_PASSWORD`, `NOTION_API_TOKEN`) are templated into `/etc/openclaw/secrets.env`.
+- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`GEMINI_API_KEY`, `GITHUB_TOKEN`, `GH_TOKEN`, `ANSIBLE_VAULT_PASSWORD`, `NOTION_API_TOKEN`, `SCALEWAY_API_KEY`) are templated into `/etc/openclaw/secrets.env`.
 - Directory `/etc/openclaw` (`root:root`, mode `0700`) and file `/etc/openclaw/secrets.env` (`root:root`, mode `0600`) permissions are strictly locked down to `root`, preventing all unprivileged users (including `claw`) from reading raw tokens.
 - **Ansible Vault Password Injection (`ANSIBLE_VAULT_PASSWORD`)**: The control node dynamically reads the local Ansible Vault key (`~/.ansible-personal-key`) during playbook deployment via Jinja2 file lookup (`{{ lookup('file', '~/.ansible-personal-key') | trim }}`) and injects it as `ANSIBLE_VAULT_PASSWORD` into `/etc/openclaw/secrets.env`. This allows OpenClaw subagents and tasks to execute Ansible operations using the standard Vault environment variable without hardcoding or committing plaintext keys to the repository.
 - **Notion Integration (`NOTION_API_TOKEN` & `NOTION_API_VERSION`)**: Managed securely via Ansible Vault (`openclaw_notion_api_token` in `ansible/vars/openclaw.yml`) and injected into `/etc/openclaw/secrets.env` along with `NOTION_API_VERSION=2026-03-11` for Notion API integrations.

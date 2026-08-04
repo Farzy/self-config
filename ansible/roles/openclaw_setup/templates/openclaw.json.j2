@@ -28,7 +28,15 @@
         "extraPaths": {{ openclaw_setup_memory_search_extra_paths | to_json }}
 {% endif %}
       }
-    }
+    },
+    "list": [
+      {
+        "id": "main",
+        "identity": {
+          "avatar": "{{ openclaw_setup_avatar }}"
+        }
+      }
+    ]
   },
   "plugins": {
     "entries": {
@@ -66,6 +74,17 @@
     }
 {% endif %}
   },
+{% if openclaw_setup_scaleway_enabled | default(false) %}
+  "models": {
+    "providers": {
+      "scaleway": {
+        "baseUrl": "https://api.scaleway.ai/{{ openclaw_scaleway_project_id | default(openclaw_setup_scaleway_project_id) }}/v1",
+        "apiKey": "{{ openclaw_scaleway_api_key | default(openclaw_setup_scaleway_api_key) | default('') }}",
+        "models": {{ openclaw_setup_scaleway_models | to_json }}
+      }
+    }
+  },
+{% endif %}
 {% if openclaw_fastmail_token is defined %}
   "mcp": {
     "servers": {
