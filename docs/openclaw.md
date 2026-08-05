@@ -16,7 +16,7 @@ This guide details the deployment, configuration, operational management, and tr
 * **API Key Management**: Dedicated Gemini API key (embeddings only) and optional Scaleway API key stored encrypted with Ansible Vault in [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml). Claude auth uses a long-lived OAuth token (`CLAUDE_CODE_OAUTH_TOKEN`), also vault-encrypted.
 * **Control Channels**:
   - **Telegram**: Stock `@openclaw/telegram` plugin connected in live long-polling mode using an encrypted bot token.
-  - **Signal**: Integration using `@openclaw/signal` plugin and native `signal-cli` (`v0.13.12`), enforcing Direct Message pairing policy (`dmPolicy: "pairing"`).
+  - **Signal**: Integration using `@openclaw/signal` plugin and native `signal-cli` (`v0.14.7`), enforcing Direct Message pairing policy (`dmPolicy: "pairing"`).
 * **Agent Skills Integration**: Automated cloning of Addy Osmani's `agent-skills` repository with workspace symlinks in `/home/claw/.openclaw/workspace/skills/`.
 
 ---

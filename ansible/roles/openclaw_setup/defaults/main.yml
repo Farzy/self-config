@@ -34,7 +34,7 @@ openclaw_setup_scaleway_reasoning_model_ids:
   - "glm-5.2"
   - "qwen3.6-35b-a3b"
 
-openclaw_setup_signal_cli_version: "0.13.12"
+openclaw_setup_signal_cli_version: "0.14.7"
 openclaw_setup_signal_account: ""
 openclaw_setup_signal_allow_from: []
 
