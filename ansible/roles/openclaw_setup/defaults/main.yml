@@ -10,11 +10,18 @@ openclaw_setup_port: 18789
 openclaw_setup_ssh_key: ""
 
 openclaw_setup_email: farzy@farzy.org
-openclaw_setup_model: "google/gemini-3.1-pro-preview"
+openclaw_setup_model: "anthropic/claude-sonnet-5"
+openclaw_setup_claude_cli_enabled: true
+openclaw_setup_model_fallbacks:
+  - "google/gemini-3.1-pro-preview"
+  - "scaleway/glm-5.2"
+  - "scaleway/qwen3.6-35b-a3b"
+openclaw_setup_reasoning_default: "stream"
 
 openclaw_setup_scaleway_enabled: false
 openclaw_setup_scaleway_project_id: ""
 openclaw_setup_scaleway_api_key: ""
+openclaw_setup_scaleway_api: "openai-responses"
 openclaw_setup_scaleway_models:
   - id: "glm-5.2"
     name: "GLM 5.2"
@@ -22,6 +29,10 @@ openclaw_setup_scaleway_models:
     name: "Qwen 3.6"
   - id: "mistral-small-3.2-24b-instruct-2506"
     name: "Mistral Small 3"
+# Scaleway model ids (without the "scaleway/" prefix) that get extended-thinking params
+openclaw_setup_scaleway_reasoning_model_ids:
+  - "glm-5.2"
+  - "qwen3.6-35b-a3b"
 
 openclaw_setup_signal_cli_version: "0.13.12"
 openclaw_setup_signal_account: ""
@@ -29,6 +40,7 @@ openclaw_setup_signal_allow_from: []
 
 openclaw_setup_telegram_enabled: true
 openclaw_setup_telegram_allow_from: []
+openclaw_setup_telegram_thread_bindings_enabled: true
 
 openclaw_setup_allowed_origins:
   - "https://{{ openclaw_setup_domain }}"

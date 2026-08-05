@@ -17,11 +17,24 @@
   "commands": {
     "ownerAllowFrom": {{ openclaw_setup_telegram_allow_from | to_json }}
   },
+{% set ns = namespace(models={}) %}
+{% if openclaw_setup_claude_cli_enabled %}
+{% set ns.models = ns.models | combine({openclaw_setup_model: {"agentRuntime": {"id": "claude-cli"}}}) %}
+{% endif %}
+{% if openclaw_setup_scaleway_enabled | default(false) %}
+{% for scaleway_model_id in openclaw_setup_scaleway_reasoning_model_ids %}
+{% set ns.models = ns.models | combine({"scaleway/" ~ scaleway_model_id: {"params": {"extra_body": {"thinking": {"type": "enabled"}, "reasoning_effort": "high"}}}}) %}
+{% endfor %}
+{% endif %}
   "agents": {
     "defaults": {
       "model": {
-        "primary": "{{ openclaw_setup_model }}"
+        "primary": "{{ openclaw_setup_model }}"{% if openclaw_setup_model_fallbacks | default([]) | length > 0 %},
+        "fallbacks": {{ openclaw_setup_model_fallbacks | to_json }}
+{% endif %}
       },
+      "models": {{ ns.models | to_json }},
+      "reasoningDefault": "{{ openclaw_setup_reasoning_default }}",
       "memorySearch": {
         "provider": "{{ openclaw_setup_memory_search_provider }}",
         "model": "{{ openclaw_setup_memory_search_model }}"{% if openclaw_setup_memory_search_extra_paths is defined and openclaw_setup_memory_search_extra_paths | length > 0 %},
@@ -70,7 +83,10 @@
       "enabled": true,
       "botToken": "{{ openclaw_telegram_bot_token }}",
       "dmPolicy": "pairing",
-      "allowFrom": {{ openclaw_setup_telegram_allow_from | to_json }}
+      "allowFrom": {{ openclaw_setup_telegram_allow_from | to_json }},
+      "threadBindings": {
+        "enabled": {{ openclaw_setup_telegram_thread_bindings_enabled | to_json }}
+      }
     }
 {% endif %}
   },
@@ -78,6 +94,7 @@
   "models": {
     "providers": {
       "scaleway": {
+        "api": "{{ openclaw_setup_scaleway_api }}",
         "baseUrl": "https://api.scaleway.ai/{{ openclaw_scaleway_project_id | default(openclaw_setup_scaleway_project_id) }}/v1",
         "apiKey": "{{ openclaw_scaleway_api_key | default(openclaw_setup_scaleway_api_key) | default('') }}",
         "models": {{ openclaw_setup_scaleway_models | to_json }}
@@ -186,5 +203,14 @@
         "enabled": false
       }
     }
+  }{% if openclaw_setup_claude_cli_enabled %},
+  "auth": {
+    "profiles": {
+      "anthropic:manual": {
+        "provider": "anthropic",
+        "mode": "token"
+      }
+    }
   }
+{% endif %}
 }

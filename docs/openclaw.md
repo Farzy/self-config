@@ -11,8 +11,9 @@ This guide details the deployment, configuration, operational management, and tr
 * **Web Gateway**: Nginx reverse proxy with TLS certificate managed by Certbot (Let's Encrypt), forwarding `https://claw.farzad.tech` to `http://127.0.0.1:3000`.
 * **Runtime Environment**: Node.js 26.x (`node_26.x` APT repository), OpenClaw systemd service (`openclaw.service`).
 * **Dedicated System Account**: User `claw` (`/home/claw`, default shell `/usr/bin/zsh`).
-* **LLM Provider**: Google Gemini (`google/gemini-3.1-pro-preview`), with optional Scaleway Generative APIs (`https://api.scaleway.ai/5e40a076-f4e5-4328-8052-1a543614ec45/v1`, supporting GLM 5.2, Qwen 3.6 Coder, and Mistral Small 3).
-* **API Key Management**: Dedicated Gemini API key (and optional Scaleway API key) stored encrypted with Ansible Vault in [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml).
+* **LLM Provider**: Anthropic Claude (`anthropic/claude-sonnet-5`), routed through the `claude-cli` agent runtime (reuses a Claude Code login on the host instead of a separate API key — see [6.4](#64-claude-anthropic-model-via-claude-code-cli-reuse)), with optional Scaleway Generative APIs (`https://api.scaleway.ai/5e40a076-f4e5-4328-8052-1a543614ec45/v1`, supporting GLM 5.2, Qwen 3.6 Coder, and Mistral Small 3) available as an alternate provider.
+* **Embeddings Provider**: Google Gemini (`gemini-embedding-001`) is still used for `memorySearch` — unrelated to the chat model, kept for semantic memory indexing (see [4.2](#42-memory-search--background-dreaming-configuration)).
+* **API Key Management**: Dedicated Gemini API key (embeddings only) and optional Scaleway API key stored encrypted with Ansible Vault in [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml). Claude auth uses a long-lived OAuth token (`CLAUDE_CODE_OAUTH_TOKEN`), also vault-encrypted.
 * **Control Channels**:
   - **Telegram**: Stock `@openclaw/telegram` plugin connected in live long-polling mode using an encrypted bot token.
   - **Signal**: Integration using `@openclaw/signal` plugin and native `signal-cli` (`v0.13.12`), enforcing Direct Message pairing policy (`dmPolicy: "pairing"`).
@@ -96,7 +97,7 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 To protect API tokens and sensitive credentials from unauthorized process access or shell environment leaks, OpenClaw isolates credentials into a restricted secrets file and applies Systemd process sandboxing:
 
 #### 1. Secrets File Isolation (`/etc/openclaw/secrets.env`)
-- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`GEMINI_API_KEY`, `GITHUB_TOKEN`, `GH_TOKEN`, `ANSIBLE_VAULT_PASSWORD`, `NOTION_API_TOKEN`, `SCALEWAY_API_KEY`) are templated into `/etc/openclaw/secrets.env`.
+- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`GEMINI_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`, `ANSIBLE_VAULT_PASSWORD`, `NOTION_API_TOKEN`, `SCALEWAY_API_KEY`) are templated into `/etc/openclaw/secrets.env`.
 - Directory `/etc/openclaw` (`root:root`, mode `0700`) and file `/etc/openclaw/secrets.env` (`root:root`, mode `0600`) permissions are strictly locked down to `root`, preventing all unprivileged users (including `claw`) from reading raw tokens.
 - **Ansible Vault Password Injection (`ANSIBLE_VAULT_PASSWORD`)**: The control node dynamically reads the local Ansible Vault key (`~/.ansible-personal-key`) during playbook deployment via Jinja2 file lookup (`{{ lookup('file', '~/.ansible-personal-key') | trim }}`) and injects it as `ANSIBLE_VAULT_PASSWORD` into `/etc/openclaw/secrets.env`. This allows OpenClaw subagents and tasks to execute Ansible operations using the standard Vault environment variable without hardcoding or committing plaintext keys to the repository.
 - **Notion Integration (`NOTION_API_TOKEN` & `NOTION_API_VERSION`)**: Managed securely via Ansible Vault (`openclaw_notion_api_token` in `ansible/vars/openclaw.yml`) and injected into `/etc/openclaw/secrets.env` along with `NOTION_API_VERSION=2026-03-11` for Notion API integrations.
@@ -259,6 +260,73 @@ To allow OpenClaw agents to interact securely with private GitHub repositories:
    uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
    ```
    Ansible automatically authenticates `gh` for user `claw` (`gh auth login --with-token`) and injects `GITHUB_TOKEN` and `GH_TOKEN` into the systemd environment.
+
+---
+
+### 6.4 Claude (Anthropic) Model via Claude Code CLI Reuse
+
+OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `claude-cli` agent runtime (`ansible/roles/openclaw_setup/templates/openclaw.json.j2` → `agents.defaults.models["{{ openclaw_setup_model }}"].agentRuntime.id`). This reuses a Claude Code login on the `claw` host and bills against your Claude subscription (Pro/Max/Team/Enterprise) instead of pay-as-you-go Anthropic API credits. `claude` (the Claude Code CLI) is installed globally via npm by the `openclaw_setup` role, resolving to `/usr/bin/claude` — same PATH pattern as the `openclaw` binary itself, so no systemd `PATH=` override is needed.
+
+1. **Generate a long-lived OAuth token** (on your laptop, where you already have a browser-authenticated `claude` login):
+   ```bash
+   claude setup-token
+   ```
+   This opens a one-time browser authorization flow and prints a token (`claude_oauth_...`) to the terminal. It is **not** saved anywhere by the CLI — copy it immediately.
+
+2. **Encrypt the token with Ansible Vault**:
+   ```bash
+   cd ansible
+   uv run ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key --name openclaw_claude_code_oauth_token "<paste-token-here>"
+   ```
+
+3. **Append to Vault Variables & Deploy**:
+   Append the encrypted block to [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml) and re-deploy:
+   ```bash
+   uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
+   ```
+   The role installs `@anthropic-ai/claude-code` globally and injects `CLAUDE_CODE_OAUTH_TOKEN` into `/etc/openclaw/secrets.env` (root-only, `0600`), loaded by systemd's `EnvironmentFile=` before OpenClaw drops to the `claw` user — same isolation pattern as `GEMINI_API_KEY` and `GITHUB_TOKEN`.
+
+4. **Register the auth profile (required — the env var alone is not enough)**:
+   `agentRuntime.id: "claude-cli"` on its own does **not** give OpenClaw a usable Anthropic credential. OpenClaw's own "CLI reuse" verification path (`openclaw models auth login --provider anthropic --method cli`) needs an interactive TTY to confirm the host's `claude` login — impossible on a systemd-managed headless box, and it fails with `Error: models auth login requires an interactive TTY`. Without a registered profile, `openclaw models auth list` shows `Profiles: (none)` and every request silently falls through the whole fallback chain (Gemini, then Scaleway) — Claude is configured as primary but never actually gets called. Register the same token as a profile instead (headless-safe, reads from stdin so the token never touches shell history):
+   ```bash
+   ssh claw "sudo bash -c '
+     grep ^CLAUDE_CODE_OAUTH_TOKEN= /etc/openclaw/secrets.env | cut -d= -f2- \
+       | sudo -u claw openclaw models auth paste-token --provider anthropic
+   '"
+   ```
+   This writes the actual token only into `~/.openclaw/agents/main/agent/openclaw-agent.sqlite` (never into `openclaw.json`). It also adds a non-secret pointer, `agents` → `auth.profiles.anthropic:manual = {"provider": "anthropic", "mode": "token"}`, to `openclaw.json` itself — that pointer **is** templated (`openclaw.json.j2`, gated on `openclaw_setup_claude_cli_enabled`) specifically so a future `ansible-playbook` run doesn't overwrite it and silently reintroduce this exact bug. The token in the sqlite store is untouched by Ansible either way (it's not a file the role manages).
+
+5. **Whitelist the token through OpenClaw's own subprocess env sanitization (required — steps 1–4 alone still silently fall back to Gemini)**:
+   OpenClaw hard-codes `CLAUDE_CODE_OAUTH_TOKEN` into `CLAUDE_CLI_CLEAR_ENV` (`extensions/anthropic/cli-shared.ts` in the npm package) and strips it — along with every other Anthropic auth env var — before spawning the `claude` CLI subprocess for every `claude-cli` turn. This is deliberate: OpenClaw's docs say it "never forwards a copied token for this path," so the CLI is expected to already be natively logged in on the host via its own persisted credentials. A systemd-managed headless box has no such interactive login to reuse, so without this step every `claude-cli` turn fails with `error=FailoverError` / `detail=Not logged in · Please run /login` (visible in `journalctl -u openclaw`) and falls straight through to Gemini — invisibly, since the gateway logs "model configured, enabled automatically" at startup regardless. There's a documented escape hatch: `OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV`, a comma/space-separated allowlist of env vars to preserve despite `clearEnv`. `secrets.env.j2` sets `OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV=CLAUDE_CODE_OAUTH_TOKEN` whenever the token is defined — no separate action needed beyond deploying.
+
+6. **Verify — with an actual live call, not just a status check**:
+   `openclaw models auth list` (expect `anthropic:manual [anthropic/token]`) and `openclaw models status`'s `Runtime auth: ... status=usable` line both look green even when the subprocess env-stripping bug above is still active — they only confirm a profile *exists*, not that a `claude-cli` turn actually succeeds. Likewise `status --deep`'s "Model selection" table reflects each session's *last actual turn*, so a session shown on a fallback model may just predate a fix. The only real proof is a completed turn with no fallback:
+   ```bash
+   ssh claw "sudo -u claw openclaw agent --session-key agent:main:verify --message 'reply with exactly: OK' --model anthropic/claude-sonnet-5 --json" \
+     | python3 -c "import json,sys; r=json.load(sys.stdin)['result']; print(r['payloads'][0]['text']); print(r['meta']['systemPromptReport']['provider'])"
+   # expect: OK / claude-cli  (not gemini-3.1-pro-preview or scaleway/*)
+   ```
+   Or just send a real message through Telegram/Signal and check which model answered.
+
+**Token lifecycle**: `claude setup-token` tokens are long-lived (weeks to months) but not permanent. If OpenClaw's model calls start failing with auth errors, regenerate with `claude setup-token`, redeploy step 2–3, then re-run step 4 (`paste-token`) with the new token — the profile isn't updated automatically just because `secrets.env` changed. Step 5 (`OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV`) is a static config value and doesn't need repeating on rotation.
+
+**Switching model tier**: `openclaw_setup_model` (`ansible/roles/openclaw_setup/defaults/main.yml`, default `anthropic/claude-sonnet-5`) can be overridden per-inventory to `anthropic/claude-opus-5` for higher-quality/slower responses, or any other `anthropic/claude-*` id — the `claude-cli` `agentRuntime` mapping in the template follows whatever `openclaw_setup_model` is set to, as long as `openclaw_setup_claude_cli_enabled` stays `true`.
+
+**Reverting to Gemini as primary**: set `openclaw_setup_model: "google/gemini-3.1-pro-preview"` and `openclaw_setup_claude_cli_enabled: false`, then redeploy. `GEMINI_API_KEY` and the `google` plugin stay wired regardless (needed for `memorySearch` embeddings).
+
+### 6.5 Model Fallback Chain & Reasoning Config
+
+`agents.defaults.model` failover order and the per-model reasoning tuning are template-driven from `ansible/roles/openclaw_setup/defaults/main.yml`:
+
+* **`openclaw_setup_model_fallbacks`** (default: `["google/gemini-3.1-pro-preview", "scaleway/glm-5.2", "scaleway/qwen3.6-35b-a3b"]`) — ordered failover list rendered into `agents.defaults.model.fallbacks`, tried in order if the primary Claude model errors or rate-limits. Empty list omits the `fallbacks` key entirely.
+* **`agents.defaults.models`** is built in the template (`openclaw.json.j2`, via a Jinja `namespace`/`combine`) rather than hand-authored, so it never has to choose between the Claude `agentRuntime` entry and the Scaleway reasoning params — both are merged in:
+  - The primary model gets `{"agentRuntime": {"id": "claude-cli"}}` when `openclaw_setup_claude_cli_enabled` is `true`.
+  - Every id in **`openclaw_setup_scaleway_reasoning_model_ids`** (default: `glm-5.2`, `qwen3.6-35b-a3b`) gets `{"params": {"extra_body": {"thinking": {"type": "enabled"}, "reasoning_effort": "high"}}}` when `openclaw_setup_scaleway_enabled` is `true`. `mistral-small-3.2-24b-instruct-2506` is deliberately excluded (no extended-thinking support).
+* **`openclaw_setup_reasoning_default`** (default: `"stream"`) — rendered as `agents.defaults.reasoningDefault`.
+* **`openclaw_setup_scaleway_api`** (default: `"openai-responses"`) — rendered as `models.providers.scaleway.api`, alongside the existing `baseUrl`/`apiKey`/`models` fields.
+* **`openclaw_setup_telegram_thread_bindings_enabled`** (default: `true`) — rendered as `channels.telegram.threadBindings.enabled`.
+
+These four settings previously existed only as manual drift on the live server (set outside Ansible) and were wiped by a plain redeploy; they're now first-class template inputs so `ansible-playbook --diff` stays a true no-op when nothing has actually changed.
 
 ---
 

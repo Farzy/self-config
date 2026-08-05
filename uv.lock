@@ -737,7 +737,7 @@ requires-dist = [
     { name = "apache-libcloud", specifier = ">=3.4.1,<4.0.0" },
     { name = "boto", specifier = ">=2.49.0,<3.0.0" },
     { name = "boto3", specifier = ">=1.20.45,<2.0.0" },
-    { name = "cryptography", specifier = ">=48.0.1,<50.0.0" },
+    { name = "cryptography", specifier = ">=48.0.1,<51.0.0" },
     { name = "jmespath", specifier = ">=1.0.1,<2.0.0" },
     { name = "jsonpatch", specifier = ">=1.33,<2.0" },
     { name = "kubernetes", specifier = ">=29.0.0,<37.0.0" },
