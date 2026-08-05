@@ -248,6 +248,12 @@
     version: "{{ openclaw_setup_version }}"
     global: true
 
+- name: Install Claude Code CLI globally via npm
+  community.general.npm:
+    name: "@anthropic-ai/claude-code"
+    global: true
+  when: openclaw_setup_claude_cli_enabled
+
 
 - name: Create OpenClaw compile cache directory
   ansible.builtin.file:
