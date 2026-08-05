@@ -4,6 +4,11 @@
   become: true
   vars_files:
     - ../vars/openclaw.yml
+  vars:
+    iterm2_integration_users:
+      - { name: "root", home_path: "/root", owner: "root", group: "root" }
+      - { name: "debian", home_path: "/home/debian", owner: "debian", group: "debian" }
+      - { name: "claw", home_path: "/home/claw", owner: "claw", group: "claw" }
   roles:
     - role: master_setup
       tags: setup
@@ -11,3 +16,5 @@
       tags: fastmail_mcp
     - role: openclaw_setup
       tags: openclaw
+    - role: iterm2_integration
+      tags: iterm2
