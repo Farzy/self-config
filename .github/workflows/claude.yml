@@ -21,6 +21,14 @@ permissions:
 
 jobs:
   claude:
+    # Passing an explicit `prompt:` below puts claude-code-action in automation mode, where
+    # `trigger_phrase` no longer gates the run. Without this `if:`, *every* comment in the repo
+    # starts a runner and an API call — including bot noise and Claude's own replies, which are
+    # not exempt from re-triggering workflows the way `GITHUB_TOKEN` comments are.
+    if: |-
+      github.event.sender.type != 'Bot' &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association || github.event.review.author_association) &&
+      contains(github.event.comment.body || github.event.review.body || '', '@claude')
     runs-on: 'ubuntu-latest'
     timeout-minutes: 30
     steps:
