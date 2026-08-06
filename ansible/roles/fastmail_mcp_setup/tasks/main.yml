@@ -110,11 +110,97 @@
   when: fastmail_mcp_repo.changed or not fastmail_mcp_dist_stat.stat.exists
   changed_when: true
 
-- name: Install supergateway globally via npm
+- name: Install supergateway globally via npm (registry release)
   community.general.npm:
     name: "supergateway@{{ fastmail_mcp_supergateway_version }}"
     global: true
     state: present
+  when: fastmail_mcp_supergateway_source == "npm"
+  notify: Restart fastmail-mcp
+
+# --- Patched supergateway install (interim fix; drop once upstream ships a release) ---
+#
+# Context: fastmail-mcp crash-loops (systemd Restart=always, observed roughly every
+# 15-90 min) because supergateway shares a single MCP `Server` instance across all SSE
+# connections. The MCP SDK forbids calling `.connect()` twice on one `Server`, so a
+# second concurrent SSE connection (a reconnect, or two sessions hitting the MCP at
+# once) throws "Already connected to a transport" and takes the whole process down.
+# Upstream issue: https://github.com/supercorp-ai/supergateway/issues/112
+#
+# A community PR (#113, by sfasching, unmerged as of 2026-08-06) fixes this by giving
+# each session its own `Server` instance: https://github.com/supercorp-ai/supergateway/pull/113
+# While testing that branch we found a second, related bug: SSEServerTransport.close()
+# invokes onclose() *synchronously* in addition to the async response-close event, so
+# the original cleanupSession() (which called server.close() before deleting the
+# session map entry) re-entered itself and recursed until "Maximum call stack size
+# exceeded". Fixed by deleting the session entry before calling close(); posted as a
+# comment on PR #113, and pushed as a second commit on top of it in Farzad's fork:
+# https://github.com/Farzy/supergateway/tree/fix/sse-reconnection-crash
+#
+# supergateway's `bin` entry points at dist/index.js, which is git-ignored and only
+# produced by `npm run build` (its own `prepare` script only sets up Husky dev git
+# hooks, not a build). So `npm install -g git+<repo>#<branch>` would install a package
+# with no dist/ and fail at runtime — we have to clone, build, and install from that
+# already-built local checkout instead.
+#
+# Revert path: once #113 (or a fix incorporating it) merges and a new version is
+# published to npm, set fastmail_mcp_supergateway_source back to "npm", bump
+# fastmail_mcp_supergateway_version, and optionally remove these tasks plus
+# fastmail_mcp_supergateway_build_dir from the host.
+
+- name: Add safe.directory exception for patched supergateway build directory
+  community.general.git_config:
+    name: safe.directory
+    value: "{{ fastmail_mcp_supergateway_build_dir }}"
+    scope: global
+  when: fastmail_mcp_supergateway_source == "git"
+
+- name: Clone patched supergateway branch
+  ansible.builtin.git:
+    repo: "{{ fastmail_mcp_supergateway_git_repo }}"
+    dest: "{{ fastmail_mcp_supergateway_build_dir }}"
+    version: "{{ fastmail_mcp_supergateway_git_version }}"
+    force: true
+  when: fastmail_mcp_supergateway_source == "git"
+  register: fastmail_mcp_supergateway_repo
+
+- name: Check if patched supergateway dist/index.js exists
+  ansible.builtin.stat:
+    path: "{{ fastmail_mcp_supergateway_build_dir }}/dist/index.js"
+  register: fastmail_mcp_supergateway_dist_stat
+  when: fastmail_mcp_supergateway_source == "git"
+
+- name: Install patched supergateway npm dependencies
+  community.general.npm:
+    path: "{{ fastmail_mcp_supergateway_build_dir }}"
+    state: present
+    # Skip Husky's `prepare` hook (dev-only git commit hooks) — irrelevant and
+    # potentially fragile when installing as root in a non-interactive build.
+    ignore_scripts: true
+  when: >
+    fastmail_mcp_supergateway_source == "git" and
+    (fastmail_mcp_supergateway_repo.changed or not fastmail_mcp_supergateway_dist_stat.stat.exists)
+
+- name: Build patched supergateway
+  ansible.builtin.command:
+    cmd: npm run build
+    chdir: "{{ fastmail_mcp_supergateway_build_dir }}"
+  when: >
+    fastmail_mcp_supergateway_source == "git" and
+    (fastmail_mcp_supergateway_repo.changed or not fastmail_mcp_supergateway_dist_stat.stat.exists)
+  changed_when: true
+
+- name: Install patched supergateway globally from local build
+  # Deliberately not the community.general.npm module: it treats the package as
+  # already "present" once installed once and won't reinstall on a rebuilt dist/,
+  # since it only checks whether the package name is present, not its content. A
+  # plain command keeps the global binary in sync with whatever we just built.
+  ansible.builtin.command:
+    cmd: npm install -g --ignore-scripts .
+    chdir: "{{ fastmail_mcp_supergateway_build_dir }}"
+  when: fastmail_mcp_supergateway_source == "git"
+  changed_when: true
+  notify: Restart fastmail-mcp
 
 - name: Create Fastmail MCP downloads directory
   ansible.builtin.file:
