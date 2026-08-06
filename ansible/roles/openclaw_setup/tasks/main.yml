@@ -25,6 +25,21 @@
     path: "/etc/sudoers.d/{{ openclaw_setup_user }}"
     state: absent
 
+# Deliberate, scoped grant (a documented exception to the privileged-groups
+# deny-list asserted below): lets the openclaw user run `journalctl -u <service>`
+# to debug services like fastmail-mcp without sudo. NOTE: systemd-journal grants
+# read access to the FULL system journal (all units, including sshd/PAM auth
+# events, sudo invocations and kernel messages) — on this journald host that is
+# largely the same content `adm` would expose. Accepted trade-off to avoid
+# granting sudo or `adm`. Placed before the group snapshot so the deny-list
+# assertion validates the state the role actually converges to.
+- name: Add openclaw user to systemd-journal group for read-only journal access
+  ansible.builtin.user:
+    name: "{{ openclaw_setup_user }}"
+    groups: systemd-journal
+    append: true
+  notify: Restart openclaw
+
 - name: Get active groups for openclaw user
   ansible.builtin.command:
     cmd: "id -Gn {{ openclaw_setup_user }}"
