@@ -341,13 +341,19 @@ OpenClaw workspace skills are automatically provisioned via Ansible:
 
 ## 8. Service Management & Troubleshooting
 
+> **Note on the `claw` SSH alias:** The commands below connect through the `ssh claw`
+> host alias, which logs in as the **`debian`** account (an administrator with `sudo`),
+> *not* the unprivileged `claw` service user. That is why `sudo` is used here for
+> system-level operations. The `claw` service user itself has zero sudo; it reads the
+> journal directly via its `systemd-journal` group membership (see §3).
+
 * **Check Systemd Status**:
   ```bash
   ssh claw "sudo systemctl status openclaw"
   ```
-* **View Live Gateway Logs** (no sudo — `claw` is in the `systemd-journal` group):
+* **View Live Gateway Logs**:
   ```bash
-  ssh claw "journalctl -u openclaw -f"
+  ssh claw "sudo journalctl -u openclaw -f"
   ```
 * **Run OpenClaw Deep Diagnostics**:
   ```bash
