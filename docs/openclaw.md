@@ -128,6 +128,7 @@ Ansible automatically asserts system user isolation during playbook execution:
 - **Sudoers Cleanup**: Ensures `/etc/sudoers.d/claw` is absent.
 - **Group Membership Assertion**: Verifies user `claw` is NOT a member of any privileged groups (`sudo`, `root`, `wheel`, `shadow`, `adm`, `disk`).
 - **Sudo Access Check**: Executes `sudo -n -l -U claw` to verify that `claw` has no sudo privileges on the host.
+- **Deliberate `systemd-journal` Exception**: `claw` IS added to the `systemd-journal` group so the agent can run `journalctl -u <service>` (e.g. to debug `openclaw` or `fastmail-mcp`) without sudo. This is an accepted trade-off: `systemd-journal` grants read access to the **full system journal** — all units, including sshd/PAM auth events, sudo invocations and kernel messages — chosen over granting `sudo` or the `adm` group. The grant is applied before the group snapshot so the deny-list assertion above validates the converged state.
 
 
 #### 4.2 Memory Search & Background Dreaming Configuration
@@ -344,9 +345,9 @@ OpenClaw workspace skills are automatically provisioned via Ansible:
   ```bash
   ssh claw "sudo systemctl status openclaw"
   ```
-* **View Live Gateway Logs**:
+* **View Live Gateway Logs** (no sudo — `claw` is in the `systemd-journal` group):
   ```bash
-  ssh claw "sudo journalctl -u openclaw -f"
+  ssh claw "journalctl -u openclaw -f"
   ```
 * **Run OpenClaw Deep Diagnostics**:
   ```bash
