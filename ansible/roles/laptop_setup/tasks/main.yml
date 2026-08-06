@@ -89,33 +89,34 @@
     mode: "0755"
   tags:
     - configuration
-    - gemini
+    - ai
 
 - name: Install personal AGENTS.md to ~/.gemini
   ansible.builtin.template:
-    src: "gemini/AGENTS_personal.md.j2"
+    src: "ai/AGENTS_personal.md.j2"
     dest: "~/.gemini/AGENTS.md"
     mode: "0644"
   tags:
     - configuration
-    - gemini
+    - ai
   when: integration_personal_laptop | default(false)
 
 - name: Install professional AGENTS.md to ~/.gemini
   ansible.builtin.template:
-    src: "gemini/AGENTS_professional.md.j2"
+    src: "ai/AGENTS_professional.md.j2"
     dest: "~/.gemini/AGENTS.md"
     mode: "0644"
   tags:
     - configuration
-    - gemini
+    - ai
   when: integration_market_pay | default(false)
 
-# - name: Create GEMINI.md symlink pointing to AGENTS.md
-#   ansible.builtin.file:
-#     src: "AGENTS.md"
-#     dest: "~/.gemini/GEMINI.md"
-#     state: link
-#   tags:
-#     - configuration
-#     - gemini
+- name: Install professional CLAUDE.md to ~/.claude
+  ansible.builtin.template:
+    src: "ai/CLAUDE_professional.md.j2"
+    dest: "~/.claude/CLAUDE.md"
+    mode: "0644"
+  tags:
+    - configuration
+    - ai
+  when: integration_market_pay | default(false)
