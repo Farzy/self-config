@@ -63,6 +63,15 @@
     fail_msg: "SECURITY VIOLATION: User {{ openclaw_setup_user }} has sudo privileges on this system!"
     success_msg: "Security assertion passed: User {{ openclaw_setup_user }} has no sudo privileges."
 
+# Deliberate, scoped grant (not part of the privileged-groups deny-list above):
+# lets the openclaw user run `journalctl -u <service>` to debug services like
+# fastmail-mcp without full log access (adm) or sudo.
+- name: Add openclaw user to systemd-journal group for read-only journal access
+  ansible.builtin.user:
+    name: "{{ openclaw_setup_user }}"
+    groups: systemd-journal
+    append: true
+
 - name: Test existence of Oh My Zsh for openclaw user
 
   ansible.builtin.stat:
