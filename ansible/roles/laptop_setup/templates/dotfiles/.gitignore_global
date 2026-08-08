@@ -6,3 +6,4 @@
 .fleet
 *.iml
 .antigravitycli
+**/.claude/settings.local.json
