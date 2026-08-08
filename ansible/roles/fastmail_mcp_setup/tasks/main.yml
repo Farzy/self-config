@@ -78,11 +78,18 @@
     group: "{{ fastmail_mcp_group }}"
     mode: '0755'
 
-- name: Add safe.directory exception for Fastmail MCP application directory
-  community.general.git_config:
-    name: safe.directory
-    value: "{{ fastmail_mcp_app_dir }}"
-    scope: global
+# Clone/npm/build below run as fastmail_mcp_user (via become_user) so the directory
+# owner declared above actually matches who writes to it - no root-vs-service-account
+# mismatch, so no git safe.directory exception is needed for this path. This also
+# recursively fixes ownership of any files left root-owned by earlier versions of this
+# role that built as root; a no-op once ownership is consistent.
+- name: Ensure Fastmail MCP application files are owned by the service account
+  ansible.builtin.file:
+    path: "{{ fastmail_mcp_app_dir }}"
+    state: directory
+    owner: "{{ fastmail_mcp_user }}"
+    group: "{{ fastmail_mcp_group }}"
+    recurse: true
 
 - name: Clone Fastmail MCP repository
   ansible.builtin.git:
@@ -90,6 +97,8 @@
     dest: "{{ fastmail_mcp_app_dir }}"
     version: "{{ fastmail_mcp_version }}"
     force: true
+  become: true
+  become_user: "{{ fastmail_mcp_user }}"
   register: fastmail_mcp_repo
 
 - name: Check if dist/index.js exists
@@ -101,12 +110,16 @@
   community.general.npm:
     path: "{{ fastmail_mcp_app_dir }}"
     state: present
+  become: true
+  become_user: "{{ fastmail_mcp_user }}"
   when: fastmail_mcp_repo.changed or not fastmail_mcp_dist_stat.stat.exists
 
 - name: Build Fastmail MCP server
   ansible.builtin.command:
     cmd: npm run build
     chdir: "{{ fastmail_mcp_app_dir }}"
+  become: true
+  become_user: "{{ fastmail_mcp_user }}"
   when: fastmail_mcp_repo.changed or not fastmail_mcp_dist_stat.stat.exists
   changed_when: true
 
@@ -153,6 +166,11 @@
     name: safe.directory
     value: "{{ fastmail_mcp_supergateway_build_dir }}"
     scope: global
+    # safe.directory is a multi-valued git key, and git_config's default add_mode
+    # (replace-all) overwrites *all* existing safe.directory entries instead of
+    # appending. Without this, running this task wipes out any safe.directory
+    # value set elsewhere in the play (and vice versa).
+    add_mode: add
   when: fastmail_mcp_supergateway_source == "git"
 
 - name: Clone patched supergateway branch
@@ -195,10 +213,15 @@
   # already "present" once installed once and won't reinstall on a rebuilt dist/,
   # since it only checks whether the package name is present, not its content. A
   # plain command keeps the global binary in sync with whatever we just built.
+  # Gated on the same condition as the build step above it - only needs to re-run
+  # (and only really "changes" anything) when the local build was actually
+  # refreshed, otherwise the global package is already in sync.
   ansible.builtin.command:
     cmd: npm install -g --ignore-scripts .
     chdir: "{{ fastmail_mcp_supergateway_build_dir }}"
-  when: fastmail_mcp_supergateway_source == "git"
+  when: >
+    fastmail_mcp_supergateway_source == "git" and
+    (fastmail_mcp_supergateway_repo.changed or not fastmail_mcp_supergateway_dist_stat.stat.exists)
   changed_when: true
   notify: Restart fastmail-mcp
 
