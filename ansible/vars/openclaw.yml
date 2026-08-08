@@ -100,3 +100,12 @@ openclaw_claude_code_oauth_token: !vault |
           34323736373662646134653162343964623932653431646364326462663336623230653264306566
           63656662366438393337623065356138633862363265626166343064633837313630303235316332
           30653933343131616333396337626365626162373761666265663238333964373631
+
+# supergateway crash-loops on a second concurrent SSE connection
+# ("Already connected to a transport"; https://github.com/supercorp-ai/supergateway/issues/112).
+# No fixed release exists on npm yet, so this lets us install a patched build instead of
+# the registry version while we wait on upstream. Set to "npm" (default) to install
+# fastmail_mcp_supergateway_version from the registry as before, or "git" to build and
+# install fastmail_mcp_supergateway_git_version from fastmail_mcp_supergateway_git_repo.
+# Revert to "npm" once a fixed release ships, then bump fastmail_mcp_supergateway_version.
+fastmail_mcp_supergateway_source: "git"
