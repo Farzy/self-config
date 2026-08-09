@@ -148,6 +148,9 @@ To leverage semantic search and automatic long-term memory consolidation, OpenCl
   - Dreaming moves highly reinforced, short-term conversational signals into durable long-term memory (`MEMORY.md`) automatically on a background cron schedule.
   - Managed in Ansible via `openclaw_setup_dreaming_enabled` (default: `true`).
 
+* **Memory Wiki (`plugins.entries.memory-wiki`)**:
+  - Enables OpenClaw's structured memory wiki plugin, unconditionally set to `enabled: true` in `openclaw.json.j2` alongside `signal` and `google`.
+
 ---
 
 
