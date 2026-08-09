@@ -149,7 +149,8 @@ To leverage semantic search and automatic long-term memory consolidation, OpenCl
   - Managed in Ansible via `openclaw_setup_dreaming_enabled` (default: `true`).
 
 * **Memory Wiki (`plugins.entries.memory-wiki`)**:
-  - Enables OpenClaw's structured memory wiki plugin, unconditionally set to `enabled: true` in `openclaw.json.j2` alongside `signal` and `google`.
+  - Enables OpenClaw's structured memory wiki plugin, which maintains cross-linked long-term memory pages alongside `MEMORY.md`.
+  - Managed in Ansible via `openclaw_setup_memory_wiki_enabled` (default: `true`).
 
 ---
 

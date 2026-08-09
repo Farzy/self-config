@@ -50,5 +50,6 @@ openclaw_setup_memory_search_model: "gemini-embedding-001"
 openclaw_setup_memory_search_extra_paths:
   - "{{ openclaw_setup_home }}/.openclaw/workspace/farzad-wiki"
 openclaw_setup_dreaming_enabled: true
+openclaw_setup_memory_wiki_enabled: true
 
 openclaw_setup_version: "2026.7.1-2"
