@@ -58,6 +58,10 @@
 [push]
     default = simple
     autoSetupRemote = true
+[branch]
+    # Don't track a differently-named upstream (e.g. origin/main) for new
+    # branches, so autoSetupRemote can create a same-named remote branch.
+    autoSetupMerge = simple
 {| if is_macos |}
 [credential]
 #    helper = osxkeychain
