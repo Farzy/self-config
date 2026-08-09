@@ -56,7 +56,7 @@
 [gist]
     browse = no
 [push]
-    default = upstream
+    default = simple
     autoSetupRemote = true
 {| if is_macos |}
 [credential]
