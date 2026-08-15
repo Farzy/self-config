@@ -29,8 +29,18 @@ jobs:
         uses: 'anthropics/claude-code-action@v1' # ratchet:exclude
         with:
           anthropic_api_key: '${{ secrets.ANTHROPIC_API_KEY }}'
+          # `claude_args` is split into CLI arguments, so it takes no inline
+          # comments — the rationale lives here instead.
+          #
+          # Reviewing a multi-file infrastructure diff routinely needs more than
+          # the old 25 turns. Run 31888776672 finished its review and posted the
+          # comment, then failed the job anyway with "Claude reported a
+          # successful result after 40 turns, exceeding the configured maximum of
+          # 25" — four of the last eight runs went red that way, all after the
+          # review had already been delivered. The cap is a runaway-loop ceiling,
+          # not a budget to tune, so it is set well clear of normal usage.
           claude_args: |-
-            --max-turns 25
+            --max-turns 80
             --allowedTools "Read,Grep,Glob,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh pr diff:*)"
           prompt: |-
             Review pull request #${{ github.event.pull_request.number }} in ${{ github.repository }}.
