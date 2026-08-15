@@ -528,12 +528,53 @@
     file_type: directory
   register: openclaw_setup_agent_skills_dirs
 
-- name: Symlink skills to OpenClaw workspace skills directory
-  ansible.builtin.file:
-    src: "{{ item.path }}"
-    dest: "{{ openclaw_setup_home }}/.openclaw/workspace/skills/{{ item.path | basename }}"
-    state: link
-    owner: "{{ openclaw_setup_user }}"
-    group: "{{ openclaw_setup_group }}"
-  loop: "{{ openclaw_setup_agent_skills_dirs.files }}"
+# These links are entirely remote-to-remote — nothing is transferred — so the
+# old `file: state=link` loop was pure round-trip overhead: ~20 skills at ~0.7s
+# each, 14.65s from a GitHub runner to create links that already existed.
+#
+# Ansible has no bulk-symlink module, so this is split into a read-only
+# detection pass and a fix pass: two round trips instead of twenty. Replacing
+# the whole directory with a single symlink to the checkout would be simpler
+# still, but any skill OpenClaw created at runtime would then land inside the
+# git clone, so the per-skill layout is kept exactly as before.
+- name: Detect skills symlinks that are missing or point elsewhere
+  ansible.builtin.shell:
+    cmd: |
+      set -euo pipefail
+      dest_dir={{ (openclaw_setup_home ~ '/.openclaw/workspace/skills') | quote }}
+      for src in {{ openclaw_setup_agent_skills_dirs.files
+                    | map(attribute='path') | map('quote') | join(' ') }}; do
+        target="${dest_dir}/$(basename -- "${src}")"
+        if [ "$(readlink -- "${target}" 2>/dev/null || true)" != "${src}" ]; then
+          printf '%s\n' "${src}"
+        fi
+      done
+    # Ansible's `shell` runs /bin/sh, which on Debian is dash and has no
+    # `pipefail`. Without this the task dies with "Illegal option -o pipefail".
+    executable: /bin/bash
+  register: openclaw_setup_skills_link_drift
+  # Read-only, so it is safe — and necessary — to run during a --check run:
+  # without it the fix task below has nothing to report and drift would be
+  # invisible. The `changed_when` is what surfaces that drift in check mode.
+  check_mode: false
+  changed_when: openclaw_setup_skills_link_drift.stdout | length > 0
   when: openclaw_setup_agent_skills_dirs.matched > 0
+
+- name: Symlink skills to OpenClaw workspace skills directory
+  ansible.builtin.shell:
+    cmd: |
+      set -euo pipefail
+      dest_dir={{ (openclaw_setup_home ~ '/.openclaw/workspace/skills') | quote }}
+      printf '%s\n' {{ openclaw_setup_skills_link_drift.stdout_lines
+                       | map('quote') | join(' ') }} | while read -r src; do
+        ln -sfn -- "${src}" "${dest_dir}/$(basename -- "${src}")"
+      done
+    executable: /bin/bash
+  # Explicit `become` alongside `become_user` so the links are owned by the
+  # openclaw user, matching what the old `file` task set via owner/group.
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  changed_when: true
+  when:
+    - openclaw_setup_agent_skills_dirs.matched > 0
+    - openclaw_setup_skills_link_drift.stdout_lines | default([]) | length > 0

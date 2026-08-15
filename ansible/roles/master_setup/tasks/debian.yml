@@ -44,14 +44,36 @@
   tags: packages
   when: master_setup_is_debian_lower_12
 
+# One rsync instead of one `copy` per file, for the same reason as
+# iterm2_integration: each module call costs a full round trip (~2.25s from a
+# GitHub runner), so a five-item loop spent ~10s doing nothing.
+#
+# Faithful conversion: files/etcfiles/ mirrors /etc/ exactly, contains precisely
+# the five files the old loop listed, and every one of them is 0644 root:root —
+# so `perms: true` reproduces the old `mode` and rsync running as root under
+# sudo reproduces the old `owner`/`group`. There is no `--delete`, so nothing
+# else in /etc is touched.
 - name: Install global /etc files
-  ansible.builtin.copy:
-    src: "etcfiles/{{ item.name }}"
-    dest: "/etc/{{ item.name }}"
-    mode: "{{ item.mode | default('0644') }}"
-    owner: root
-    group: root
-  loop: "{{ master_setup_global_etcfiles }}"
+  ansible.posix.synchronize:
+    src: "{{ role_path }}/files/etcfiles/"
+    dest: /etc/
+    # `archive` would add -og and push the controller's owner/group, which never
+    # match and would make every run report `changed`. See iterm2_files.yml.
+    archive: false
+    recursive: true
+    links: true
+    times: true
+    perms: true
+    owner: false
+    group: false
+    rsync_path: "sudo rsync"
+    # rsync spawns its own ssh; without this it ignores ssh_common_args, which
+    # is where ansible-deploy.yml puts the pinned UserKnownHostsFile and
+    # StrictHostKeyChecking=yes.
+    use_ssh_args: true
+  # synchronize runs rsync on the controller, so play-level become would
+  # escalate on the wrong side; rsync_path handles the remote side.
+  become: false
   tags: configuration
 
 - name: Install global gitconfig for all users
