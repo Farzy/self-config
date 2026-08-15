@@ -65,6 +65,12 @@ The port lives in `minecraft_server_instances` (Ansible) and in the SRV rrdata
 
 ## 3. What is and is not under IaC
 
+Docker itself is managed by [`roles/docker`](../ansible/roles/docker), which
+`playbooks/minecraft.yml` runs first: the Docker CE repository, the daemon and
+its packages — including `docker-compose-plugin`, which is not a dependency of
+`docker-ce` and which this whole deployment depends on. The kernel tuning that
+role applies by default is for `kind`/`microk8s` and is switched off here.
+
 Managed by [`roles/minecraft_server`](../ansible/roles/minecraft_server):
 
 * `/srv/minecraft/docker-compose.yml` — rendered from the role's template.

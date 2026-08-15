@@ -46,22 +46,9 @@
     minecraft_server_uid: "{{ ansible_facts['getent_passwd'][minecraft_server_user][1] }}"
     minecraft_server_gid: "{{ ansible_facts['getent_passwd'][minecraft_server_user][2] }}"
 
-- name: Ensure Docker and the compose plugin are present
-  ansible.builtin.apt:
-    name:
-      - docker.io
-      - docker-compose-plugin
-    state: present
-  # The host was built by hand with Docker's own repository, so these are
-  # already installed and this is an assertion in practice. It is here so a
-  # rebuild does not silently produce a host with no container runtime.
-  when: minecraft_server_manage_packages | default(false)
-
-- name: Ensure the Docker service is enabled and running
-  ansible.builtin.systemd_service:
-    name: docker
-    enabled: true
-    state: started
+# Docker itself is installed by the `docker` role, which playbooks/minecraft.yml
+# runs first. This role assumes a working daemon and manages only the compose
+# project on top of it.
 
 - name: Create the deployment root
   ansible.builtin.file:

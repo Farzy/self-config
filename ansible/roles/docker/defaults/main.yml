@@ -1,0 +1,27 @@
+---
+
+# Kernel tuning applied alongside Docker. The defaults are the values
+# k8s-server.yml has always set — kind/microk8s run many containers and exhaust
+# the stock inotify limits. Hosts that just run a couple of containers can set
+# this to [] and leave the kernel alone.
+docker_sysctl_settings:
+  - name: fs.inotify.max_user_watches
+    value: "524288"
+  - name: fs.inotify.max_user_instances
+    value: "512"
+
+# Docker packages to install. Kept to docker-ce by default, which is what this
+# role installed before it was parameterised; docker-ce-cli and containerd.io
+# come in as dependencies. Add the plugins explicitly where they are needed —
+# docker-compose-plugin in particular is not pulled in automatically.
+docker_packages:
+  - docker-ce
+
+# Accounts to add to the `docker` group, i.e. accounts allowed to talk to the
+# daemon without sudo.
+#
+# This used to be a single hardcoded `{{ user_owner }}`, a variable defined
+# nowhere in the repository — so the task failed with "'user_owner' is
+# undefined" on the only playbook that uses this role. Empty by default so a
+# consumer has to name the accounts deliberately.
+docker_admin_users: []

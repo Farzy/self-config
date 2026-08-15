@@ -5,7 +5,7 @@ metadata:
   name: nfs-csi
 provisioner: nfs.csi.k8s.io
 parameters:
-  server: {{ ansible_default_ipv4.address }}
+  server: {{ ansible_facts['default_ipv4']['address'] }}
   share: /srv/nfs
 reclaimPolicy: Delete
 volumeBindingMode: Immediate

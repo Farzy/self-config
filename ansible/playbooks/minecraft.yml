@@ -28,5 +28,27 @@
         ops: "{{ minecraft_mc02_ops }}"
 
   roles:
+    # Docker itself is IaC too: the host was built by hand with Docker's own
+    # repository, and without this the container runtime was the one part of
+    # the stack a rebuild would not reproduce.
+    #
+    # `docker_sysctl_settings: []` because the defaults raise inotify limits for
+    # kind/microk8s, which two Minecraft servers do not need — no reason to
+    # retune the kernel of a running game host.
+    - role: docker
+      tags: docker
+      vars:
+        docker_sysctl_settings: []
+        docker_packages:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          # Not a dependency of docker-ce, and this deployment is entirely
+          # `docker compose`.
+          - docker-compose-plugin
+        docker_admin_users:
+          - "{{ minecraft_server_user }}"
+
     - role: minecraft_server
       tags: minecraft

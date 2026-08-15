@@ -1,16 +1,14 @@
 ---
-- name: Sysctl settings for Kubernetes
+- name: Apply kernel tuning for container workloads
   ansible.posix.sysctl:
     name: "{{ item.name }}"
     value: "{{ item.value }}"
     sysctl_set: true
     state: present
     reload: true
-  loop:
-    - name: fs.inotify.max_user_watches
-      value: 524288
-    - name: fs.inotify.max_user_instances
-      value: 512
+  loop: "{{ docker_sysctl_settings }}"
+  loop_control:
+    label: "{{ item.name }}"
 
 - name: Install required system packages
   ansible.builtin.apt:
@@ -42,7 +40,7 @@
     name: docker
     types: [deb]
     uris: https://download.docker.com/linux/debian
-    suites: ["{{ ansible_distribution_release }}"]
+    suites: ["{{ ansible_facts['distribution_release'] }}"]
     components: [stable]
     architectures: [amd64]
     signed_by: https://download.docker.com/linux/debian/gpg
@@ -79,15 +77,24 @@
 # `apt-key list` and remove the specific key by fingerprint if you want the
 # cleanup.
 
-- name: Update apt and install docker-ce
+- name: Update apt and install Docker
   ansible.builtin.apt:
-    name: docker-ce
+    name: "{{ docker_packages }}"
     state: present
     update_cache: true
 
-- name: Make main user Docker admin
+- name: Ensure the Docker service is enabled and running
+  ansible.builtin.systemd_service:
+    name: docker
+    enabled: true
+    state: started
+
+# Membership of the `docker` group is equivalent to root on the host, so this is
+# deliberately opt-in per playbook rather than a default.
+- name: Allow the named accounts to use Docker without sudo
   ansible.builtin.user:
     append: true
-    name: "{{ user_owner }}"
+    name: "{{ item }}"
     groups:
       - docker
+  loop: "{{ docker_admin_users }}"
