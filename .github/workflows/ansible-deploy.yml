@@ -139,9 +139,9 @@ jobs:
       # Per-task timings make a slow converge diagnosable from the log alone.
       ANSIBLE_CALLBACKS_ENABLED: 'ansible.posix.profile_tasks'
 
-      # ANSIBLE_VAULT_PASSWORD_FILE / ANSIBLE_VAULT_IDENTITY_LIST cannot be set
-      # here — the `runner` context is not available in a job-level `env:` — so
-      # the 'Materialise credentials' step exports them via $GITHUB_ENV instead.
+      # No ANSIBLE_VAULT_PASSWORD_FILE / ANSIBLE_VAULT_IDENTITY_LIST anywhere in
+      # this workflow: 'Materialise credentials' writes the password to the exact
+      # path ansible.cfg already names, so no override is needed.
 
     steps:
       - name: 'Checkout repository'
@@ -222,6 +222,15 @@ jobs:
           fi
 
           printf '%s\n' "${CI_SSH_PRIVATE_KEY}" > "${RUNNER_TEMP}/ci_ssh_key"
+
+          # $RUNNER_TEMP is guaranteed job-scoped; $HOME is not. On a self-hosted
+          # or reused runner the 'Shred credentials' step would otherwise destroy
+          # the real vault key of whoever owns that machine, unrecoverably. Fail
+          # instead of overwriting — a no-op on ubuntu-latest.
+          if [ -e "${HOME}/.ansible-personal-key" ]; then
+            echo "::error::${HOME}/.ansible-personal-key already exists; this job shreds that path and will not overwrite a pre-existing key."
+            exit 1
+          fi
           printf '%s\n' "${ANSIBLE_VAULT_PASSWORD}" > "${HOME}/.ansible-personal-key"
           chmod 600 "${RUNNER_TEMP}/ci_ssh_key" "${HOME}/.ansible-personal-key"
 
@@ -326,6 +335,11 @@ jobs:
             -o ConnectTimeout=15
         run: |
           set -euo pipefail
+          # umask does not carry across steps. Without it the tee'd log and
+          # ansible's own log land at 0644 while holding full task output —
+          # which is exactly what carries rendered template contents when diff
+          # is on.
+          umask 077
 
           args=( "playbooks/${PLAYBOOK}" --limit "${LIMIT}" )
 
@@ -384,16 +398,22 @@ jobs:
               echo "### Applied"
             fi
             echo
-            echo "| Host | ok | changed | unreachable | failed | skipped |"
-            echo "|---|---|---|---|---|---|"
-            echo "${recap}" | while read -r line; do
-              host="${line%%:*}"
-              field() { printf '%s' "${line}" | grep -oE "$1=[0-9]+" | cut -d= -f2; }
-              printf '| `%s` | %s | **%s** | %s | %s | %s |\n' \
-                "$(printf '%s' "${host}" | tr -d '[:space:]')" \
-                "$(field ok)" "$(field changed)" "$(field unreachable)" \
-                "$(field failed)" "$(field skipped)"
-            done
+            echo "| Host | ok | changed | unreachable | failed | skipped | rescued | ignored |"
+            echo "|---|---|---|---|---|---|---|---|"
+            # The ANSI-stripped recap is whitespace-separated (ansible's
+            # colorize() emits '%s=%-4s'), so `read` splits it directly — no
+            # per-field subprocesses, and a here-string avoids the pipeline
+            # subshell. The bare `_` swallows the ':' separator.
+            #
+            # `ignored` is carried because a non-zero value is precisely the
+            # "green run that was not actually clean" case, which the summary is
+            # meant to answer on its own.
+            while read -r host _ ok changed unreachable failed skipped rescued ignored; do
+              printf '| `%s` | %s | **%s** | %s | %s | %s | %s | %s |\n' \
+                "${host}" "${ok#ok=}" "${changed#changed=}" \
+                "${unreachable#unreachable=}" "${failed#failed=}" \
+                "${skipped#skipped=}" "${rescued#rescued=}" "${ignored#ignored=}"
+            done <<< "${recap}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: 'Record success'
@@ -407,8 +427,10 @@ jobs:
               echo "the repository and the server have diverged. Nothing was applied."
             } >> "${GITHUB_STEP_SUMMARY}"
           else
-            echo "" >> "${GITHUB_STEP_SUMMARY}"
-            echo "✅ Applied to \`${LIMIT}\`." >> "${GITHUB_STEP_SUMMARY}"
+            {
+              echo
+              echo "✅ Applied to \`${LIMIT}\`."
+            } >> "${GITHUB_STEP_SUMMARY}"
           fi
 
       - name: 'Record failure'
