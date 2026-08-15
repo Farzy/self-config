@@ -133,6 +133,11 @@ there later.
 
 ### 4.6 Smoke test
 
+> [!NOTE]
+> GitHub only offers the *Run workflow* button once the workflow file exists on
+> the **default branch**. `🚀 Ansible Deploy` therefore does not appear in the
+> Actions UI until the pull request adding it has been merged to `main`.
+
 Actions → **🚀 Ansible Deploy** → *Run workflow*, leaving the defaults
 (`openclaw.yml`, `check`, `openclaw`). It should complete without an approval
 prompt. Then run the same thing with `mode: apply` and confirm you are asked to
