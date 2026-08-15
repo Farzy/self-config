@@ -25,6 +25,9 @@
       - python3-setuptools
       # Required on the managed node by ansible.builtin.deb822_repository,
       # which replaces the deprecated apt_key/apt_repository below.
+      # A first `--check` run on a host without it fails at the repository task
+      # below: check mode only simulates this install, so deb822_repository
+      # still finds the library missing. Expected, not a regression.
       - python3-debian
     state: present
     update_cache: true

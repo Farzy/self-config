@@ -1,4 +1,8 @@
 ---
+# A first `--check` run on a host without python3-debian fails at the repository
+# task below: check mode only simulates this install, so deb822_repository still
+# finds the library missing. Expected, not a regression — apply once, then
+# --check works.
 - name: Install deb822 repository support
   ansible.builtin.apt:
     name: python3-debian

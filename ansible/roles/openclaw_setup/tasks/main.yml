@@ -146,7 +146,11 @@
       - ca-certificates
       - acl
       # Required on the managed node by ansible.builtin.deb822_repository,
-      # which replaces the deprecated apt_key/apt_repository below.
+      # which replaces the deprecated apt_key/apt_repository below. Note that on
+      # a host that does not have it yet, a first `--check` run fails at the
+      # repository tasks: check mode only simulates this install, so the module
+      # still finds the library missing. That is expected, not a regression —
+      # apply once, then --check works.
       - python3-debian
     state: present
     update_cache: true
@@ -160,48 +164,86 @@
     - "80"
     - "443"
 
-# apt_key and apt_repository are both deprecated and removed in ansible-core
-# 2.25. deb822_repository replaces the pair: it carries the signing key with the
-# repository definition, so the key is scoped to this one source instead of
-# being trusted for every repository on the host — which is the actual reason
-# apt_key is going away.
-- name: Add NodeSource repository
-  ansible.builtin.deb822_repository:
-    name: nodesource
-    types: [deb]
-    uris: "https://deb.nodesource.com/node_26.x"
-    suites: [nodistro]
-    components: [main]
-    signed_by: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
-    state: present
+# --- One-shot migration cleanups -------------------------------------------
+#
+# These run *before* deb822_repository, not after. The module derives its
+# keyring filename from `name` plus the fetched key's encoding — armored gives
+# nodesource.asc, binary gives nodesource.gpg — so the orphan removal below
+# targets a name the module itself can legitimately produce. Ordered after the
+# module, the play would delete the keyring it had just installed the moment
+# NodeSource served that key dearmored, and `Install Node.js` (update_cache)
+# would fail with NO_PUBKEY, flapping on every run. A --check run cannot catch
+# that, since nothing is written.
 
-# deb822_repository writes nodesource.sources; the old module wrote
-# nodesource.list. Both would be read, so the stale one has to go — and it is
-# worth going anyway: apt_repository appends rather than replaces, so bumping
-# the Node major left the previous release's line behind. On claw the file held
-# both node_24.x and node_26.x, meaning apt could resolve nodejs from either.
+# apt_repository appends rather than replaces, so bumping the Node major left
+# the previous release's line behind: on claw this file held both node_24.x and
+# node_26.x, meaning apt could resolve nodejs from either. deb822_repository
+# writes nodesource.sources instead, and apt would read both.
 - name: Remove the superseded NodeSource .list definition
   ansible.builtin.file:
     path: /etc/apt/sources.list.d/nodesource.list
     state: absent
 
-# apt_key put the NodeSource key in /etc/apt/trusted.gpg, where it is trusted to
-# sign *any* repository. The same key is already present, scoped, via the
-# Signed-By above. Verified on claw that this legacy keyring holds nothing else:
-# only NSolid <nsolid-gpg@nodesource.com>, fingerprint 6F71F525282841EEDAF851B4
-# 2F59B5F99B1BE0B4.
-- name: Remove the legacy globally-trusted apt keyring
-  ansible.builtin.file:
-    path: /etc/apt/trusted.gpg
-    state: absent
-
-# deb822_repository derives the keyring name from `name` plus the key's armour
-# (nodesource.asc here), so the .gpg left by the old flow is superseded rather
-# than reused. Verified on claw that nothing under /etc/apt references it.
 - name: Remove the orphaned NodeSource keyring left by the old flow
   ansible.builtin.file:
     path: /etc/apt/keyrings/nodesource.gpg
     state: absent
+
+# apt_key put the NodeSource key in /etc/apt/trusted.gpg, where it is trusted to
+# sign *any* repository. That file is host-wide rather than role-scoped, so
+# deleting it unconditionally would untrust whatever else has landed there —
+# another host in this group, or an `apt-key add` between converges — and the
+# damage would surface later as an apt signature error on an unrelated
+# repository. The evidence is therefore re-checked on every run instead of being
+# recorded in a comment.
+#
+# Matching on `pub:` records, not `fpr:`: gpg emits an fpr line per subkey too,
+# so filtering fingerprints would leave the NodeSource *subkey*
+# (0FA5ECC8C0CA58863C0AC5867E9656125E955B26) behind and the condition could
+# never hold.
+- name: Inspect the legacy globally-trusted apt keyring
+  ansible.builtin.command:
+    cmd: gpg --no-default-keyring --keyring /etc/apt/trusted.gpg --list-keys --with-colons
+  register: openclaw_setup_legacy_trusted
+  changed_when: false
+  # Absent keyring, or no gpg, exits non-zero; that is a reason to leave the
+  # file alone, not to fail the play.
+  failed_when: false
+  # Read-only, and it has to run during --check or the guard below would compare
+  # against an empty stdout and delete on the strength of no evidence at all.
+  check_mode: false
+
+- name: Remove the legacy globally-trusted apt keyring
+  ansible.builtin.file:
+    path: /etc/apt/trusted.gpg
+    state: absent
+  when:
+    - openclaw_setup_legacy_trusted.rc | default(1) == 0
+    - openclaw_setup_legacy_trusted.stdout_lines | default([])
+      | select('match', '^pub:')
+      | reject('search', '2F59B5F99B1BE0B4')
+      | list | length == 0
+
+# --- End of one-shot migration cleanups ------------------------------------
+
+# apt_key and apt_repository are both deprecated and removed in ansible-core
+# 2.25. deb822_repository replaces the pair: it carries the signing key with the
+# repository definition, so the key is scoped to this one source instead of
+# being trusted for every repository on the host — which is the actual reason
+# apt_key is going away.
+#
+# The module creates /etc/apt/keyrings itself when it needs to store a key
+# (ensure_keyrings_dir), so it does not depend on the task further down that
+# also creates it.
+- name: Add NodeSource repository
+  ansible.builtin.deb822_repository:
+    name: nodesource
+    types: [deb]
+    uris: https://deb.nodesource.com/node_26.x
+    suites: [nodistro]
+    components: [main]
+    signed_by: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    state: present
 
 - name: Install Node.js
   ansible.builtin.apt:
