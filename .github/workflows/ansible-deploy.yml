@@ -86,6 +86,14 @@ permissions:
 
 # Never let two Ansible runs hit the same host at once, and never cancel one
 # mid-flight — a half-applied converge is worse than a queued one.
+#
+# A single group for check and apply is intentional: separate groups would let a
+# drift check and a converge run against the same host simultaneously, which is
+# the thing this exists to prevent. The cost is that GitHub keeps at most one
+# *pending* run per group, so a newly queued run can cancel an apply that is
+# still sitting at the claw-production approval prompt. That is annoying but
+# fail-safe — the cancelled run is one that had not been approved and therefore
+# never touched the server. Re-dispatch it. See docs/ci-ansible.md §5.
 concurrency:
   group: 'ansible-deploy'
   cancel-in-progress: false
@@ -140,6 +148,16 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: 'Redirect the Ansible log out of the workspace'
+        # ansible/ansible.cfg sets `log_path = ../log/ansible.log`, which every
+        # ansible command honours — not just ansible-playbook. Setting this on
+        # the 'Run Ansible' step alone left the host-pinning gate's
+        # `ansible-inventory` call writing $GITHUB_WORKSPACE/log/ansible.log,
+        # contradicting the "nothing is written into the workspace" invariant
+        # and quietly becoming a real leak the moment a group_vars file with
+        # !vault values exists. Exported here so it covers every later step.
+        run: 'echo "ANSIBLE_LOG_PATH=${RUNNER_TEMP}/ansible.log" >> "${GITHUB_ENV}"'
+
       - name: 'Set up uv'
         uses: 'astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d' # ratchet:astral-sh/setup-uv@v10
         with:
@@ -153,8 +171,14 @@ jobs:
         uses: 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9' # ratchet:actions/cache@v6
         with:
           path: '~/.ansible/collections'
+          # No `restore-keys:` on purpose. A prefix fallback would restore an
+          # older cache on a key miss, and `ansible-galaxy collection install`
+          # then reports "already installed" and does nothing — so the effective
+          # collection versions would be whatever was resolved when the cache
+          # was first populated, and editing requirements.yml would not change
+          # them. An exact-key-only cache means a requirements change is a cache
+          # miss and a genuine reinstall.
           key: "ansible-collections-${{ runner.os }}-${{ hashFiles('ansible/requirements.yml', 'uv.lock') }}"
-          restore-keys: 'ansible-collections-${{ runner.os }}-'
 
       - name: 'Install Ansible collections'
         run: 'uv run ansible-galaxy collection install --requirements-file ansible/requirements.yml'
@@ -285,9 +309,6 @@ jobs:
             -o IdentitiesOnly=yes
             -o PreferredAuthentications=publickey
             -o ConnectTimeout=15
-          # ansible.cfg logs to ../log/ansible.log. That file records task
-          # results verbatim, so keep it out of the workspace and shred it below.
-          ANSIBLE_LOG_PATH: '${{ runner.temp }}/ansible.log'
         run: |
           set -euo pipefail
 

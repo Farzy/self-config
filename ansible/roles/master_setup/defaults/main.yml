@@ -106,9 +106,16 @@ master_setup_install_microk8s: false
 # installed by hand, because CI cannot log in to install its own key.
 master_setup_ci_authorized_keys: []
 
-# Account the CI keys above are installed for. Defaults to the inventory's
-# `ansible_user`, which is exactly the account CI authenticates as.
-master_setup_ci_authorized_keys_user: "{{ ansible_user | default('root') }}"
+# Account the CI keys above are installed for: the inventory's `ansible_user`,
+# which is exactly the account CI authenticates as.
+#
+# `| mandatory` rather than `| default('root')` on purpose. A host added to the
+# inventory without an explicit `ansible_user` would otherwise silently
+# authorise the CI key for *root* — the inverse of the least-privilege intent,
+# with nothing in the output to notice. Failing loudly is the safer default.
+# Only templated when master_setup_ci_authorized_keys is non-empty, so hosts
+# that are not CI-managed are unaffected.
+master_setup_ci_authorized_keys_user: "{{ ansible_user | mandatory }}"
 
 # Set to true to make the CI account's authorized_keys file *exactly*
 # `master_setup_ci_authorized_keys`, purging any key added out of band. Left

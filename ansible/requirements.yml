@@ -1,3 +1,16 @@
+---
+# Versions are pinned deliberately. These collections execute against live
+# servers from CI, so leaving them unpinned would let a new upstream release
+# reach production without anyone reviewing it — out of step with the rest of
+# the supply-chain posture here (SHA-pinned actions, `uv sync --locked`,
+# Dependabot cooldown).
+#
+# Dependabot has no ansible-galaxy ecosystem, so bump these by hand after
+# reading the changelog:
+#   ansible-galaxy collection list
+#   ansible-galaxy collection install --requirements-file requirements.yml --force
 collections:
   - name: community.docker
+    version: "3.4.6"
   - name: nginxinc.nginx_core
+    version: "0.8.0"

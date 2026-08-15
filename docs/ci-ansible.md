@@ -39,7 +39,7 @@ triggered by pull request content.
 | **Least-privilege credentials** | A dedicated ed25519 key used only by CI, revocable without touching your personal key. |
 | **No secret spillage into logs** | `--diff` is **off by default**, overriding `[diff] always = True` in `ansible.cfg`, because rendered templates can contain vault-decrypted secrets. `ANSIBLE_LOG_PATH` is redirected to `$RUNNER_TEMP` and shredded. |
 | **Credential hygiene** | Secrets are written under `$RUNNER_TEMP` with `umask 077`, never into the workspace, and shredded in an `always()` step. `actions/checkout` runs with `persist-credentials: false`. |
-| **Supply chain** | All third-party actions pinned to commit SHAs; Python toolchain installed with `uv sync --locked`; `zizmor` and `actionlint` enforce workflow hygiene via `pre-commit`. |
+| **Supply chain** | All third-party actions pinned to commit SHAs; Python toolchain installed with `uv sync --locked`; Galaxy collections pinned in `ansible/requirements.yml`; `zizmor` and `actionlint` enforce workflow hygiene via `pre-commit`. |
 | **No concurrent converges** | `concurrency: ansible-deploy` with `cancel-in-progress: false` — a queued run is better than a half-applied one. |
 
 ---
@@ -165,6 +165,19 @@ against `openclaw`. A green run with non-zero `changed` counts means the
 repository and the server have diverged — check mode reports *pending* changes,
 not applied ones.
 
+### A pending apply can be cancelled by a newer run
+
+`check` and `apply` share one `ansible-deploy` concurrency group, so that a
+drift check can never run against a host at the same time as a converge. GitHub
+keeps at most one *pending* run per group, so an apply left sitting at the
+`claw-production` approval prompt can be cancelled when a newer run queues —
+typically a push-to-`main` check run.
+
+This is fail-safe rather than dangerous: the cancelled run had not been
+approved, so it never reached the server. Just re-dispatch it. Splitting the
+group would remove the annoyance but reintroduce concurrent access to the same
+host, which is the worse trade.
+
 > [!WARNING]
 > Not every Ansible task is check-mode safe. Tasks using `command`/`shell`
 > without `check_mode`, or that depend on a file an earlier task would have
@@ -215,8 +228,8 @@ three reviewed changes:
    ssh-keyscan -t ed25519,ecdsa,rsa <hostname> >> ansible/known_hosts
    ```
 
-   `Ansible CI` emits a warning for every inventory host without a pin, so this
-   step announces itself.
+   `Ansible CI` warns for every host in `$CI_MANAGED_GROUPS` without a pin, so
+   step 4 below makes this one announce itself.
 
 2. **Authorise the CI key** by setting `master_setup_ci_authorized_keys` in that
    host's vars file, then bootstrapping it from your laptop as in §4.3.
@@ -224,6 +237,14 @@ three reviewed changes:
 3. **Add the playbook** to the `playbook` input's `options:` list in
    `ansible-deploy.yml`, and — if the new host should have its own approval gate
    — give it a dedicated environment.
+
+4. **Add its inventory group** to `CI_MANAGED_GROUPS` in `ansible-ci.yml`, which
+   is what makes step 1 enforce itself for that host.
+
+Servers absent from `CI_MANAGED_GROUPS` — currently `farzad-01.farzy.org`,
+`k8S.farzad.tech`, `quassel.farzy.org`, `minecraft-01.farzad.tech` — are not
+deployable from CI and are not expected to have pinned host keys. They are not
+warned about, so the warning stays worth reading.
 
 ---
 
@@ -236,6 +257,14 @@ means a green CI run:
 uv sync --group lint
 uv run pre-commit run --all-files
 ```
+
+That equivalence is enforced, not just intended: `yamllint` and `ansible-lint`
+are `repo: local` hooks running `uv run --group lint …`, so both sides take
+their versions from `uv.lock`. They were previously upstream hooks carrying
+their own `rev:` and `additional_dependencies:`, which silently drifted — the
+hook pinned `ansible-lint` v26.6.0 and `ansible` 14.2.0 while `uv.lock` resolved
+26.8.0 and 13.7.0. Bump them by editing `pyproject.toml` and re-running
+`uv lock`; there is no `rev:` to keep in step any more.
 
 `yamllint`'s ruleset lives in [`.github/yamllint.yml`](../.github/yamllint.yml)
 rather than at the repository root: `ansible-lint` embeds its own `yamllint` and

@@ -15,10 +15,15 @@ rules:
     max: 120
 
 # CI runs yamllint across the whole repository, which would otherwise walk into
-# vendored and generated trees — .venv alone holds ~5000 YAML files.
+# vendored and generated trees — .venv alone holds ~5000 YAML files. These are
+# all git-ignored, so pre-commit never passed them to yamllint either and this
+# list costs no local coverage.
+#
+# `ansible/roles/microk8s/files/` is deliberately NOT ignored here even though
+# .ansible-lint excludes it: those files are tracked, pre-commit was linting
+# them before, and they pass.
 ignore: |
   .venv/
   .idea/
   **/.terraform/
   log/
-  ansible/roles/microk8s/files/

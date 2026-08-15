@@ -28,6 +28,12 @@ env:
   PY_COLORS: '1'
   FORCE_COLOR: '1'
 
+  # Inventory groups that ansible-deploy.yml can actually target, i.e. the ones
+  # covered by its `playbook` input. Only these are required to have a pinned
+  # SSH host key. Keep in step with that input's `options:` list when adding a
+  # server (docs/ci-ansible.md §7).
+  CI_MANAGED_GROUPS: 'openclaw'
+
 jobs:
   lint:
     name: 'Lint & syntax check'
@@ -41,6 +47,12 @@ jobs:
           # No step here pushes anything; leaving the token in .git/config would
           # only widen what a compromised linter dependency could reach.
           persist-credentials: false
+
+      - name: 'Redirect the Ansible log out of the workspace'
+        # ansible/ansible.cfg sets `log_path = ../log/ansible.log`. Nothing here
+        # holds a credential so there is nothing to leak, but keeping the
+        # workspace clean matches ansible-deploy.yml, where it does matter.
+        run: 'echo "ANSIBLE_LOG_PATH=${RUNNER_TEMP}/ansible.log" >> "${GITHUB_ENV}"'
 
       - name: 'Set up uv'
         uses: 'astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d' # ratchet:astral-sh/setup-uv@v10
@@ -57,8 +69,14 @@ jobs:
         uses: 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9' # ratchet:actions/cache@v6
         with:
           path: '~/.ansible/collections'
+          # No `restore-keys:` on purpose. A prefix fallback would restore an
+          # older cache on a key miss, and `ansible-galaxy collection install`
+          # then reports "already installed" and does nothing — so the effective
+          # collection versions would be whatever was resolved when the cache
+          # was first populated, and editing requirements.yml would not change
+          # them. An exact-key-only cache means a requirements change is a cache
+          # miss and a genuine reinstall.
           key: "ansible-collections-${{ runner.os }}-${{ hashFiles('ansible/requirements.yml', 'uv.lock') }}"
-          restore-keys: 'ansible-collections-${{ runner.os }}-'
 
       - name: 'Install Ansible collections'
         run: 'uv run ansible-galaxy collection install --requirements-file ansible/requirements.yml'
@@ -107,24 +125,34 @@ jobs:
         working-directory: 'ansible'
         run: 'uv run ansible-inventory --list > /dev/null'
 
-      - name: 'Verify every inventory host has a pinned SSH host key'
+      - name: 'Verify CI-managed hosts have a pinned SSH host key'
         working-directory: 'ansible'
         # The deploy workflow refuses to target a host that is absent from
         # ansible/known_hosts. Surfacing that here as a *warning* means adding a
-        # host to the inventory reminds you to pin its key, without turning an
+        # CI-managed host reminds you to pin its key, without turning an
         # unrelated pull request red.
+        #
+        # Scoped to $CI_MANAGED_GROUPS rather than the whole inventory: the
+        # other servers are not deployable from CI at all, so warning about them
+        # would emit the same four annotations on every pull request forever and
+        # train everyone to ignore this check.
         run: |
           set -euo pipefail
 
           # Hosts with ansible_connection=local (the laptops) are never reached
           # over SSH, so they need no host key pin.
           remote_hosts="$(
-            uv run ansible-inventory --list |
+            uv run ansible-inventory --list --limit "${CI_MANAGED_GROUPS}" |
               jq -r '._meta.hostvars
                      | to_entries[]
                      | select(.value.ansible_connection != "local")
                      | .key'
           )"
+
+          if [ -z "${remote_hosts}" ]; then
+            echo "::error::CI_MANAGED_GROUPS ('${CI_MANAGED_GROUPS}') matches no inventory hosts."
+            exit 1
+          fi
 
           while read -r host; do
             [ -n "${host}" ] || continue

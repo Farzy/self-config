@@ -15,20 +15,35 @@ repos:
     hooks:
       - id: gitleaks
 
-  - repo: https://github.com/adrienverge/yamllint
-    rev: v1.38.0
+  # yamllint and ansible-lint run out of the project venv rather than a
+  # pre-commit-managed one, so their versions come from uv.lock — the same
+  # source the CI workflow installs from. Previously these were upstream hooks
+  # with their own `rev:` and `additional_dependencies:`, which drifted: the
+  # hook pinned ansible-lint v26.6.0 and ansible 14.2.0 while uv.lock resolved
+  # ansible-lint 26.8.0 and ansible 13.7.0. CI and pre-commit then ran different
+  # linters, so a locally-green branch could go red on the PR.
+  #
+  # `--group lint` matches the group CI syncs; `[tool.uv] default-groups = []`
+  # means a plain `uv sync` still leaves these out.
+  - repo: local
     hooks:
-      # Ruleset lives in .github/yamllint.yml so the CI workflow can run the
-      # exact same checks instead of duplicating an inline `-d` argument.
       - id: yamllint
-        args: ["-c", ".github/yamllint.yml"]
+        name: yamllint
+        description: Lint YAML using the ruleset shared with the CI workflow.
+        entry: uv run --group lint yamllint -c .github/yamllint.yml
+        language: system
+        types: [yaml]
 
-  - repo: https://github.com/ansible/ansible-lint
-    rev: v26.6.0
-    hooks:
       - id: ansible-lint
-        additional_dependencies:
-          - "ansible==14.2.0"
+        name: ansible-lint
+        description: Lint the Ansible tree.
+        # Mirrors the upstream hook: ansible-lint discovers its own file set, so
+        # passing changed filenames makes it lint the wrong thing.
+        # https://github.com/ansible/ansible-lint/issues/611
+        entry: uv run --group lint ansible-lint --force-color
+        language: system
+        pass_filenames: false
+        always_run: true
 
   - repo: https://github.com/antonbabenko/pre-commit-terraform
     rev: v1.108.1
