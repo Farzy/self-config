@@ -232,6 +232,6 @@ fastmail_mcp_supergateway_source: "git"
 # secret CI_SSH_PRIVATE_KEY. See docs/ci-ansible.md for the bootstrap and
 # rotation procedure.
 #
-# Paste the contents of the CI key's `.pub` file below, e.g.:
-#   - "ssh-ed25519 AAAAC3Nz... github-actions@self-config"
-master_setup_ci_authorized_keys: []
+# Fingerprint: SHA256:DMb6MJpuE2Yumm52pGtydezEffHjNe7RALZL/CfwGTI (ED25519)
+master_setup_ci_authorized_keys:
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF9YfG+nqsaWqTXsGA39w48vSgaoSeu7rRS7TL80e4vF github-actions@self-config"
