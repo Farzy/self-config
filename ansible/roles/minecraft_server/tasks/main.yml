@@ -38,11 +38,20 @@
       - item.whitelist | from_json is not string
       - item.ops | from_json is sequence
       - item.ops | from_json is not string
+      # These are written verbatim, so the end-of-file byte comes from the vault
+      # too, and the server (Gson) writes no trailing newline. A value that
+      # disagrees byte for byte reports `changed` on every run — and since both
+      # write tasks are no_log, it surfaces as a bare `changed` with no diff to
+      # explain it. Cheaper to fail loudly here.
+      - item.whitelist == item.whitelist | trim
+      - item.ops == item.ops | trim
     fail_msg: >-
-      A whitelist/ops value in vars/minecraft.yml is not a JSON array. It must
-      be the file's JSON text, e.g. '[{"uuid": "...", "name": "..."}]'; a
-      double-encoded string passes from_json but yields a string, which would be
-      written to disk quoted and lock every player out.
+      A whitelist/ops value in vars/minecraft.yml is not usable. It must be the
+      file's own JSON text with no surrounding whitespace, e.g.
+      '[{"uuid": "...", "name": "..."}]'. A double-encoded string passes
+      from_json but yields a string, which would be written to disk quoted and
+      lock every player out; a stray leading or trailing newline makes the task
+      report `changed` on every run.
     quiet: true
   loop: "{{ minecraft_server_instances }}"
   loop_control:
@@ -158,3 +167,8 @@
   loop_control:
     label: "{{ item.name }}"
   no_log: true
+  # This task used to report `changed` on every run, so the signal meant
+  # nothing. Now that it only fires on a real change, and unlike the whitelist
+  # there is no `op reload`, notify makes the one case needing human action
+  # explicit rather than a line in the recap someone has to notice.
+  notify: "Report that a Minecraft restart is required"
