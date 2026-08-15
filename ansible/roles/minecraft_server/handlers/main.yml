@@ -30,3 +30,13 @@
   # must not fail the play.
   failed_when: false
   listen: "Reload minecraft whitelist"
+
+# Reports only. Restarting automatically would disconnect whoever is playing,
+# for a change that is not urgent.
+- name: Report that a Minecraft restart is required
+  ansible.builtin.debug:
+    msg: >-
+      The operator list changed. Minecraft has no `op reload`, so it does not
+      take effect until the server restarts:
+      cd {{ minecraft_server_root }} && docker compose restart <instance>
+  listen: "Report that a Minecraft restart is required"

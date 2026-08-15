@@ -144,13 +144,26 @@ vault-encrypted, for two distinct reasons:
   repository is public, so they are encrypted too.
 
 Because `ansible-vault encrypt_string` only handles scalars, both lists are
-stored as JSON *text*, and the role parses them with `from_json` before writing.
+stored as JSON *text*, and the role writes that text to disk **verbatim**.
 
 > [!WARNING]
-> Do not pass those variables straight to `to_nice_json` — that serialises the
-> *string*, producing a quoted JSON document. With `enforce-whitelist=true`,
-> a malformed `whitelist.json` locks every player out. The role asserts they
-> parse before writing anything.
+> The value must be the file's own bytes, exactly as the server writes them —
+> not a re-indented or re-ordered equivalent, and with no trailing newline.
+> Minecraft rewrites `ops.json` on every startup in its own layout, so any
+> normalisation on our side makes the task report `changed` forever, and
+> `no_log` hides the diff that would explain it. Take the value from the
+> running server:
+>
+> ```bash
+> docker exec minecraft-mc01-1 cat /data/ops.json
+> ```
+>
+> It must also be the JSON array itself, not a double-encoded string: that would
+> land on disk as a quoted JSON document and, with `enforce-whitelist=true`, lock
+> every player out.
+>
+> The role asserts all of this — parses as an array, is not a string, has no
+> surrounding whitespace — before writing anything.
 
 Edit them with:
 

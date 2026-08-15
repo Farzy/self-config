@@ -38,11 +38,20 @@
       - item.whitelist | from_json is not string
       - item.ops | from_json is sequence
       - item.ops | from_json is not string
+      # These are written verbatim, so the end-of-file byte comes from the vault
+      # too, and the server (Gson) writes no trailing newline. A value that
+      # disagrees byte for byte reports `changed` on every run — and since both
+      # write tasks are no_log, it surfaces as a bare `changed` with no diff to
+      # explain it. Cheaper to fail loudly here.
+      - item.whitelist == item.whitelist | trim
+      - item.ops == item.ops | trim
     fail_msg: >-
-      A whitelist/ops value in vars/minecraft.yml is not a JSON array. It must
-      be the file's JSON text, e.g. '[{"uuid": "...", "name": "..."}]'; a
-      double-encoded string passes from_json but yields a string, which would be
-      written to disk quoted and lock every player out.
+      A whitelist/ops value in vars/minecraft.yml is not usable. It must be the
+      file's own JSON text with no surrounding whitespace, e.g.
+      '[{"uuid": "...", "name": "..."}]'. A double-encoded string passes
+      from_json but yields a string, which would be written to disk quoted and
+      lock every player out; a stray leading or trailing newline makes the task
+      report `changed` on every run.
     quiet: true
   loop: "{{ minecraft_server_instances }}"
   loop_control:
@@ -117,9 +126,21 @@
 # has operator rights. The server rewrites them in place when the in-game
 # /whitelist and /op commands are used, so managing them here makes the
 # repository the source of truth and surfaces in-game edits as drift.
+#
+# Written verbatim rather than re-serialised. Minecraft rewrites ops.json on
+# every startup in its own layout — 2-space indent, uuid/name/level/
+# bypassesPlayerLimit order — while `to_nice_json` emits 4-space, alphabetised
+# keys. That is two writers with different formatters over one file, so the task
+# reported `changed` on every run forever, and drift detection could never reach
+# a clean baseline. The vaulted values are the files' own text, so writing them
+# unchanged agrees with the server byte for byte (verified: sha256 of the
+# vaulted value equals sha256 of the file the server wrote).
+#
+# The assert above is what makes this safe: it is the only thing standing
+# between a double-encoded vault value and a quoted JSON document landing here.
 - name: Deploy the player whitelist
   ansible.builtin.copy:
-    content: "{{ item.whitelist | from_json | to_nice_json }}\n"
+    content: "{{ item.whitelist }}"
     dest: "{{ minecraft_server_root }}/{{ item.name }}/whitelist.json"
     owner: "{{ minecraft_server_user }}"
     group: "{{ minecraft_server_group }}"
@@ -137,7 +158,7 @@
 
 - name: Deploy the operator list
   ansible.builtin.copy:
-    content: "{{ item.ops | from_json | to_nice_json }}\n"
+    content: "{{ item.ops }}"
     dest: "{{ minecraft_server_root }}/{{ item.name }}/ops.json"
     owner: "{{ minecraft_server_user }}"
     group: "{{ minecraft_server_group }}"
@@ -146,3 +167,8 @@
   loop_control:
     label: "{{ item.name }}"
   no_log: true
+  # This task used to report `changed` on every run, so the signal meant
+  # nothing. Now that it only fires on a real change, and unlike the whitelist
+  # there is no `op reload`, notify makes the one case needing human action
+  # explicit rather than a line in the recap someone has to notice.
+  notify: "Report that a Minecraft restart is required"
