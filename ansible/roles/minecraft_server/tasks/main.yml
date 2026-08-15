@@ -117,9 +117,21 @@
 # has operator rights. The server rewrites them in place when the in-game
 # /whitelist and /op commands are used, so managing them here makes the
 # repository the source of truth and surfaces in-game edits as drift.
+#
+# Written verbatim rather than re-serialised. Minecraft rewrites ops.json on
+# every startup in its own layout — 2-space indent, uuid/name/level/
+# bypassesPlayerLimit order — while `to_nice_json` emits 4-space, alphabetised
+# keys. That is two writers with different formatters over one file, so the task
+# reported `changed` on every run forever, and drift detection could never reach
+# a clean baseline. The vaulted values are the files' own text, so writing them
+# unchanged agrees with the server byte for byte (verified: sha256 of the
+# vaulted value equals sha256 of the file the server wrote).
+#
+# The assert above is what makes this safe: it is the only thing standing
+# between a double-encoded vault value and a quoted JSON document landing here.
 - name: Deploy the player whitelist
   ansible.builtin.copy:
-    content: "{{ item.whitelist | from_json | to_nice_json }}\n"
+    content: "{{ item.whitelist }}"
     dest: "{{ minecraft_server_root }}/{{ item.name }}/whitelist.json"
     owner: "{{ minecraft_server_user }}"
     group: "{{ minecraft_server_group }}"
@@ -137,7 +149,7 @@
 
 - name: Deploy the operator list
   ansible.builtin.copy:
-    content: "{{ item.ops | from_json | to_nice_json }}\n"
+    content: "{{ item.ops }}"
     dest: "{{ minecraft_server_root }}/{{ item.name }}/ops.json"
     owner: "{{ minecraft_server_user }}"
     group: "{{ minecraft_server_group }}"
