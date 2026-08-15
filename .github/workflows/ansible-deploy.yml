@@ -31,6 +31,7 @@ on:
         options:
           - 'openclaw.yml'
           - 'linux.yml'
+          - 'minecraft.yml'
       mode:
         description: 'check = dry run (no changes), apply = converge for real'
         type: 'choice'
@@ -115,8 +116,9 @@ jobs:
             matrix="$(jq -cn --arg p "${PLAYBOOK}" --arg l "${LIMIT}" '[{playbook: $p, limit: $l}]')"
           else
             matrix="$(jq -cn '[
-              {playbook: "openclaw.yml", limit: "openclaw"},
-              {playbook: "linux.yml",    limit: "linux_servers"}
+              {playbook: "openclaw.yml",  limit: "openclaw"},
+              {playbook: "linux.yml",     limit: "linux_servers"},
+              {playbook: "minecraft.yml", limit: "minecraft"}
             ]')"
           fi
           echo "matrix=${matrix}" >> "${GITHUB_OUTPUT}"

@@ -1,0 +1,125 @@
+---
+
+# This role adopts an existing, hand-built deployment rather than creating one
+# from scratch: /srv/minecraft, both worlds and their settings already existed
+# and are in active use. It therefore describes what is there, and deliberately
+# does not touch world data — see docs/minecraft.md for what is and is not
+# under IaC.
+
+# `ansible-vault encrypt_string` can only encrypt scalars, so the player lists
+# come back as JSON *text*, not as parsed lists. Feeding that straight to
+# `to_nice_json` would serialise the string itself — writing a quoted JSON
+# document into whitelist.json and, with enforce-whitelist on, locking every
+# player out. The tasks below parse before re-serialising; this assert makes a
+# malformed list fail loudly here rather than silently produce that.
+- name: Assert every player list is valid JSON
+  ansible.builtin.assert:
+    that:
+      - item.whitelist | from_json is iterable
+      - item.ops | from_json is iterable
+    fail_msg: "whitelist/ops for {{ item.name }} is not parseable JSON"
+    quiet: true
+  loop: "{{ minecraft_server_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Assert the instance list is configured
+  ansible.builtin.assert:
+    that:
+      - minecraft_server_instances | length > 0
+    fail_msg: >-
+      minecraft_server_instances is empty. Set it in vars/minecraft.yml,
+      otherwise this role would render a compose file with no services and
+      `docker compose up -d --remove-orphans` would stop both game servers.
+    success_msg: "{{ minecraft_server_instances | length }} Minecraft instance(s) configured."
+
+- name: Resolve the owning account's uid and gid
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ minecraft_server_user }}"
+
+# Read through ansible_facts rather than the bare `getent_passwd` top-level
+# variable: INJECT_FACTS_AS_VARS is deprecated and stops injecting those in
+# ansible-core 2.24.
+- name: Record the uid and gid for the container runtime
+  ansible.builtin.set_fact:
+    minecraft_server_uid: "{{ ansible_facts['getent_passwd'][minecraft_server_user][1] }}"
+    minecraft_server_gid: "{{ ansible_facts['getent_passwd'][minecraft_server_user][2] }}"
+
+- name: Ensure Docker and the compose plugin are present
+  ansible.builtin.apt:
+    name:
+      - docker.io
+      - docker-compose-plugin
+    state: present
+  # The host was built by hand with Docker's own repository, so these are
+  # already installed and this is an assertion in practice. It is here so a
+  # rebuild does not silently produce a host with no container runtime.
+  when: minecraft_server_manage_packages | default(false)
+
+- name: Ensure the Docker service is enabled and running
+  ansible.builtin.systemd_service:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Create the deployment root
+  ansible.builtin.file:
+    path: "{{ minecraft_server_root }}"
+    state: directory
+    owner: "{{ minecraft_server_user }}"
+    group: "{{ minecraft_server_group }}"
+    mode: '0755'
+
+# Only the directory itself — never `recurse`, which would walk hundreds of
+# megabytes of world data on every run and rewrite ownership the server sets.
+- name: Create a data directory per instance
+  ansible.builtin.file:
+    path: "{{ minecraft_server_root }}/{{ item.name }}"
+    state: directory
+    owner: "{{ minecraft_server_user }}"
+    group: "{{ minecraft_server_group }}"
+    mode: '0755'
+  loop: "{{ minecraft_server_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Deploy the compose project
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ minecraft_server_root }}/docker-compose.yml"
+    owner: "{{ minecraft_server_user }}"
+    group: "{{ minecraft_server_group }}"
+    mode: '0640'
+  # Contains the RCON passwords.
+  no_log: true
+  notify: "Restart minecraft compose project"
+
+# whitelist.json and ops.json are the "personal setup": who may join, and who
+# has operator rights. The server rewrites them in place when the in-game
+# /whitelist and /op commands are used, so managing them here makes the
+# repository the source of truth and surfaces in-game edits as drift.
+- name: Deploy the player whitelist
+  ansible.builtin.copy:
+    content: "{{ item.whitelist | from_json | to_nice_json }}\n"
+    dest: "{{ minecraft_server_root }}/{{ item.name }}/whitelist.json"
+    owner: "{{ minecraft_server_user }}"
+    group: "{{ minecraft_server_group }}"
+    mode: '0644'
+  loop: "{{ minecraft_server_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+  # Real player names and Mojang UUIDs; the repository is public.
+  no_log: true
+
+- name: Deploy the operator list
+  ansible.builtin.copy:
+    content: "{{ item.ops | from_json | to_nice_json }}\n"
+    dest: "{{ minecraft_server_root }}/{{ item.name }}/ops.json"
+    owner: "{{ minecraft_server_user }}"
+    group: "{{ minecraft_server_group }}"
+    mode: '0644'
+  loop: "{{ minecraft_server_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true

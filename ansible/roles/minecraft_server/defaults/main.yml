@@ -1,0 +1,52 @@
+---
+
+# Root of the Minecraft deployment. Holds the compose file and one data
+# directory per instance; the data directories are the game worlds and are NOT
+# managed by Ansible beyond their existence and ownership.
+minecraft_server_root: /srv/minecraft
+
+# The compose project runs as this account, and the containers run with its
+# uid/gid so the bind-mounted world data is owned by a real user rather than
+# root. Matches the inventory's ansible_user.
+minecraft_server_user: debian
+minecraft_server_group: debian
+
+# itzg/minecraft-server is the de facto standard image for this. The tag pins
+# the *Java* runtime, not the game: VERSION below selects the game version.
+minecraft_server_image: "itzg/minecraft-server:java25"
+
+# LATEST tracks upstream Minecraft releases. Pin to a version string (e.g.
+# "1.21.4") if you would rather a world not move under you.
+minecraft_server_version: "LATEST"
+
+# The host has 3 vCPU and 3.8 GB RAM shared between both servers plus the OS,
+# so the JVMs are deliberately modest. Raise only alongside the instance count.
+minecraft_server_memory: "1G"
+
+minecraft_server_timezone: "Europe/Paris"
+
+# Settings shared by every instance. Anything an instance needs to differ on
+# goes in `minecraft_server_instances` instead.
+#
+# Names are the itzg image's own environment variables, taken from its
+# /image/property-definitions.json rather than guessed — note `white-list` maps
+# to WHITELIST_PROP, since WHITELIST means the *list of players*.
+minecraft_server_common_env:
+  DIFFICULTY: "easy"
+  MODE: "survival"
+  MAX_PLAYERS: "20"
+  ONLINE_MODE: "true"
+  VIEW_DISTANCE: "10"
+  WHITELIST_PROP: "true"
+  ENFORCE_WHITELIST: "true"
+  ENABLE_RCON: "true"
+  RCON_PORT: "25575"
+  LEVEL: "world"
+  PAUSE_WHEN_EMPTY_SECONDS: "60"
+
+# One entry per Minecraft server. `port` is used for BOTH the host mapping and
+# the in-container server-port, which is what keeps the image's healthcheck
+# pointed at the right place — see tasks/main.yml.
+#
+# Set per-instance secrets and player lists in vars/minecraft.yml.
+minecraft_server_instances: []

@@ -33,7 +33,7 @@ env:
   # required to have a pinned SSH host key. Keep in step with that workflow when
   # adding a server (docs/ci-ansible.md §7). Colon-separated: this is an Ansible
   # host pattern, not a list.
-  CI_MANAGED_GROUPS: 'openclaw:linux_servers'
+  CI_MANAGED_GROUPS: 'openclaw:linux_servers:minecraft'
 
 jobs:
   lint:

@@ -1,0 +1,32 @@
+---
+
+# The Minecraft game servers on minecraft-01.farzad.tech.
+#
+# Base OS configuration for this host comes from playbooks/linux.yml, which
+# targets it as a member of linux_servers. This playbook layers only the game
+# servers on top, so the two can be run independently.
+- name: "Deploy Minecraft servers"
+  hosts: minecraft
+  become: true
+
+  vars_files:
+    - ../vars/minecraft.yml
+
+  vars:
+    minecraft_server_instances:
+      - name: mc01
+        port: 25565
+        motd: "Serveur Minecraft de Farzad"
+        rcon_password: "{{ minecraft_mc01_rcon_password }}"
+        whitelist: "{{ minecraft_mc01_whitelist }}"
+        ops: "{{ minecraft_mc01_ops }}"
+      - name: mc02
+        port: 25566
+        motd: "Faustine's own Minecraft world"
+        rcon_password: "{{ minecraft_mc02_rcon_password }}"
+        whitelist: "{{ minecraft_mc02_whitelist }}"
+        ops: "{{ minecraft_mc02_ops }}"
+
+  roles:
+    - role: minecraft_server
+      tags: minecraft
