@@ -55,6 +55,28 @@ cd ansible
 ansible-playbook playbooks/laptop.yml
 ```
 
+### GitHub Actions
+
+Ansible also runs from CI. See [docs/ci-ansible.md](docs/ci-ansible.md) for the
+full design; the essentials for making changes:
+
+*   `.github/workflows/ansible-ci.yml` — lint and syntax validation. Runs on
+    every pull request **including forks**, so it must never be given a secret
+    or made to contact a managed host.
+*   `.github/workflows/ansible-deploy.yml` — the only workflow with server
+    access. Manually dispatched; `apply` runs are gated by the
+    `claw-production` environment. `push`/`schedule` runs are check-mode only.
+*   Deploys are refused unless every host matched by `--limit` has a pinned SSH
+    host key in `ansible/known_hosts`. Adding a server means adding its host key
+    there first.
+*   **This repository is public**: workflow logs are world-readable. `--diff` is
+    off by default in CI (overriding `ansible.cfg`) because rendered templates
+    can contain vault-decrypted secrets. Never echo a secret into a log or a job
+    summary.
+*   Workflows are linted by `actionlint` and audited by `zizmor` via
+    `pre-commit`. Pin third-party actions to a commit SHA with a
+    `# ratchet:owner/repo@vX` comment.
+
 ### Terraform
 
 The Terraform configuration is in the `terraform/` directory.

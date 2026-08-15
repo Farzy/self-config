@@ -18,8 +18,10 @@ repos:
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.38.0
     hooks:
+      # Ruleset lives in .github/yamllint.yml so the CI workflow can run the
+      # exact same checks instead of duplicating an inline `-d` argument.
       - id: yamllint
-        args: ["-d", "{extends: relaxed, rules: {line-length: {max: 120}}}"]
+        args: ["-c", ".github/yamllint.yml"]
 
   - repo: https://github.com/ansible/ansible-lint
     rev: v26.6.0
@@ -33,6 +35,20 @@ repos:
     hooks:
       - id: terraform_fmt
       - id: terraform_tflint
+
+  # GitHub Actions workflows: actionlint catches shell and expression errors,
+  # zizmor audits them for security issues (template injection, over-broad
+  # permissions, unpinned actions). Both matter more than usual here because
+  # this repository is public and one workflow holds SSH access to a server.
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.29.0
+    hooks:
+      - id: zizmor
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.2

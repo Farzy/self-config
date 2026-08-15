@@ -225,3 +225,13 @@ openclaw_gog_keyring_password: !vault |
 # install fastmail_mcp_supergateway_git_version from fastmail_mcp_supergateway_git_repo.
 # Revert to "npm" once a fixed release ships, then bump fastmail_mcp_supergateway_version.
 fastmail_mcp_supergateway_source: "git"
+
+# Public SSH key GitHub Actions authenticates with, installed for the `debian`
+# account (the inventory's `ansible_user`). Public keys are not secrets, so this
+# is deliberately unencrypted — the private half lives only in the repository
+# secret CI_SSH_PRIVATE_KEY. See docs/ci-ansible.md for the bootstrap and
+# rotation procedure.
+#
+# Paste the contents of the CI key's `.pub` file below, e.g.:
+#   - "ssh-ed25519 AAAAC3Nz... github-actions@self-config"
+master_setup_ci_authorized_keys: []

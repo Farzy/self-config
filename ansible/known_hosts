@@ -1,0 +1,20 @@
+# SSH host key pins for hosts managed from CI.
+#
+# These are PUBLIC keys — committing them is deliberate. Pinning them in the
+# repository is what lets GitHub Actions keep `host_key_checking` enabled: an
+# ephemeral runner has no ~/.ssh/known_hosts of its own, so without this file
+# the only alternatives are trust-on-first-use (accepts any key, i.e. accepts a
+# MITM) or disabling host key checking entirely.
+#
+# Regenerate / add a host with:
+#
+#     ssh-keyscan -t ed25519,ecdsa,rsa <hostname> | sort >> ansible/known_hosts
+#
+# and review the diff before committing. A changed key here means either you
+# rebuilt the server or someone is intercepting the connection — never update
+# it blindly.
+#
+# Last verified: 2026-08-15
+claw.farzad.tech ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBI/QhGfXvvBuZNLwY84QrRDQVRnhBftKZXBPaK+0ttnt0iKSwG0AfruECHBmDhUx3KB6oOY7ZxBQZvbLlZjgK7g=
+claw.farzad.tech ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPte2klfmLymBmPFXS1PhmzxGvpFRJ3qcLKopY9n1x/o
+claw.farzad.tech ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCcqe42WLTFDOmU5s2YSqR+H/tShhELCCmzqW9pV8SUtrPzi6AN9fIHrBu1/lkD99A1Hy5svkZD+ZN0aRR4VO8EopQjyvTCXx4GmdS41RuB9+9KVoXmsAgqmqgJhdf9hIEczNBcN2n8tFavF4Id8UU127z+dkiXKmdjSn6xTK63zCCJ/7piPGc/RGQxxJ/KkkZ1eSPTJxX5sjDhXg72Kw2zEhTolNDoDBUudbQnr+pYK2lr4RHvR0Sql2KDRNbuNr58HieY+ezbpCRGY/BPP0uOCgUKSSWoFoJlglrtI0YeyHRT+nPxS+VFK246RWBrcKrFB/S+QgVzt/IlaN9tQ5i9ybKpKwT+ZSwxtueIvDf8R5To27Hu2HWfyAuyZVJGQCibcWcpVD9FXXgbeOZs6e1mSgSmlq9TxOUaNfbroowr1LmyfVADL5Gd9Rr69ta0ZVVF8WbwGP3wxhOOMPbIBj5IVVBqTQ7u5WSBRaCfVawYLGk65aBxSG3FTAgPt4IK9a8=

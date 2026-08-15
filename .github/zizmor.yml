@@ -1,0 +1,42 @@
+# zizmor — GitHub Actions security audit. Run via pre-commit.
+#
+# Every suppression below is a decision with a reason. Do not add a blanket
+# ignore here to make a finding go away; the workflows in this repository are
+# public and one of them holds SSH access to a live server.
+
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # anthropics/claude-code-action is deliberately tracked at the floating
+        # `v1` tag (note the `# ratchet:exclude` markers) so that upstream fixes
+        # land without a dependency bump. Accepted: it is a first-party action
+        # from the vendor whose API key the workflow already holds, so hash
+        # pinning would not meaningfully reduce what a compromise could do.
+        'anthropics/*': 'ref-pin'
+        # Everything else must be pinned to a full commit SHA.
+        '*': 'hash-pin'
+
+  ref-version-mismatch:
+    ignore:
+      # Not a real disagreement: this repository annotates hash pins in the
+      # `# ratchet:owner/repo@vX` format (which is what keeps Dependabot able to
+      # bump them), and zizmor reads the entire `ratchet:owner/repo@vX` string
+      # as the version, so it can never resolve it. The pins themselves are full
+      # commit SHAs and are still enforced by `unpinned-uses` above.
+      # (zizmor requires literal filenames here; globs are rejected.)
+      - 'ansible-ci.yml'
+      - 'ansible-deploy.yml'
+      - 'claude.yml'
+      - 'claude-review.yml'
+      - 'claude-triage.yml'
+
+  artipacked:
+    ignore:
+      # These workflows exist so Claude can push branches and open pull
+      # requests; the checkout credentials are the point, not an oversight.
+      # ansible-ci.yml and ansible-deploy.yml both set persist-credentials:
+      # false and are *not* exempted here.
+      - 'claude.yml'
+      - 'claude-review.yml'
+      - 'claude-triage.yml'

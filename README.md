@@ -118,6 +118,30 @@ Here are some sample ansible commands:
 is set in `ansible.cfg`, there is no need to use `--vault-id` or `--encrypt-vault-id`
 on the command line.
 
+### Running Ansible from GitHub Actions
+
+Ansible can also be run against remote servers from CI, currently for the
+OpenClaw server (`claw.farzad.tech`). Two workflows are involved:
+
+* **`✅ Ansible CI`** — runs on every pull request and push to `main`. Holds no
+  secrets and never contacts a server: `yamllint`, `ansible-lint`,
+  `--syntax-check` on every playbook, and an inventory parse.
+* **`🚀 Ansible Deploy`** — the only workflow with server access. Manually
+  dispatched; `apply` runs require an approval in the `claw-production`
+  environment. Push to `main` and a weekly cron run it in `--check` mode for
+  drift detection.
+
+Two repository secrets are required, `CI_SSH_PRIVATE_KEY` (a dedicated ed25519
+key, *not* your personal one) and `ANSIBLE_VAULT_PASSWORD`.
+
+> [!IMPORTANT]
+> This repository is public, so Actions logs are world-readable. `--diff` is
+> therefore **off by default** in CI even though `ansible.cfg` enables it, since
+> rendered templates can contain vault-decrypted secrets.
+
+Full setup, secret list, rotation procedure and how to add another server:
+[docs/ci-ansible.md](docs/ci-ansible.md).
+
 ### Updating
 
 * Update Python modules:
