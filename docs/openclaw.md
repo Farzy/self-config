@@ -181,6 +181,9 @@ The server includes modern CLI tools configured with standard short names:
 * **`uv`**: Installed system-wide at `/usr/local/bin/uv` for fast Python package management.
 * **`gh`**: GitHub CLI installed via official GitHub APT keyring and authenticated for user `claw`.
 
+### 5.5 Google Workspace CLI (`gog`)
+* **`gog`**: Installed via versioned GitHub release download (checksum-verified against the release's `checksums.txt`), extracted to `/opt/gogcli-<version>/`, and symlinked to `/usr/local/bin/gog` — same pattern as `signal-cli` above. The pinned version lives in `openclaw_setup_gog_cli_version` (`ansible/roles/openclaw_setup/defaults/main.yml`). OAuth account authorization is provisioned non-interactively from vault-encrypted secrets — see [6.6](#66-gog-google-workspace-cli-oauth-setup). The `skills.entries.gog.enabled` flag in `openclaw.json` (gating whether the agent actually invokes the `gog` skill) is templated on whether `openclaw_gog_refresh_token_export_json` is defined, so the skill only turns on once an account is actually authorized.
+
 ---
 
 ## 6. Control Channels & Integration Workflows
@@ -332,6 +335,103 @@ OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `c
 * **`openclaw_setup_telegram_thread_bindings_enabled`** (default: `true`) — rendered as `channels.telegram.threadBindings.enabled`.
 
 These four settings previously existed only as manual drift on the live server (set outside Ansible) and were wiped by a plain redeploy; they're now first-class template inputs so `ansible-playbook --diff` stays a true no-op when nothing has actually changed.
+
+---
+
+### 6.6 `gog` (Google Workspace CLI) OAuth Setup
+
+`gog`'s account authorization normally requires an interactive browser OAuth
+flow, but `gog auth credentials set`/`gog auth tokens import` accept the OAuth
+client JSON and a refresh-token export as files (or stdin), so the whole thing
+can be done headlessly by reusing a login already authorized on your laptop —
+no browser or TTY needed on the server. This mirrors the [6.4](#64-claude-anthropic-model-via-claude-code-cli-reuse)
+pattern (laptop-side secret → `ansible-vault encrypt_string` → deploy):
+
+1. **Authorize the account on your laptop first** (one-time, interactive —
+   this is the only step that needs a browser), if you haven't already:
+   ```bash
+   gog auth setup                      # OAuth client / Google Cloud project
+   gog auth add you@gmail.com --services calendar,contacts,docs,drive,gmail,sheets
+   ```
+   The OAuth client's consent screen must be in **Production/published**
+   status, not Testing — Google auto-expires refresh tokens after 7 days for
+   apps still in Testing, regardless of how the token is used. Publishing an
+   unverified app is safe for single-user personal use: it only changes who
+   can *start* a consent flow against your client, not what they can access —
+   OAuth grants scopes against the consenting account's own data, never the
+   app owner's.
+
+2. **Export the refresh token and grab the OAuth client credentials**:
+   ```bash
+   gog auth tokens export you@gmail.com --out /tmp/gog-token-export.json
+   ```
+   This produces a self-contained JSON blob (refresh token, granted services/scopes,
+   client name) designed to round-trip into `gog auth tokens import` on another
+   machine. Separately, get the OAuth client JSON (client_id + client_secret) from
+   **Google Cloud Console → APIs & Services → Credentials → your OAuth client →
+   Download JSON** — `gog auth credentials set` splits this into `credentials.json`
+   (client_id) plus the keyring (client_secret) on first use, so the original
+   downloaded file (not gog's local copy) is what's needed here; re-downloading
+   doesn't rotate anything.
+
+3. **Encrypt both blobs, plus a keyring password, with Ansible Vault**:
+   ```bash
+   cd ansible
+   uv run ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key \
+     --name openclaw_gog_oauth_client_json "$(cat /path/to/downloaded-client-secret.json)"
+   uv run ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key \
+     --name openclaw_gog_refresh_token_export_json "$(cat /tmp/gog-token-export.json)"
+   uv run ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key \
+     --name openclaw_gog_keyring_password "$(openssl rand -hex 32)"
+   rm -f /tmp/gog-token-export.json
+   ```
+   `openclaw_gog_keyring_password` protects `gog`'s on-disk token store: the
+   server has no OS keychain or D-Bus secret service, so `gog`'s `auto` keyring
+   backend falls back to its encrypted-file backend, which needs a password on
+   every invocation (there's no TTY to prompt for one). It's an arbitrary secret
+   you generate once, not something Google issues.
+
+4. **Append the three encrypted blocks to
+   [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml)
+   and deploy**:
+   ```bash
+   uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
+   ```
+   The role writes the client JSON and token export to short-lived 0600
+   temp files under `/home/claw`, feeds them to `gog auth credentials set` /
+   `gog auth tokens import` as the `claw` user, then deletes the temp files.
+   The token-import step is skipped on repeat runs once `gog auth list`
+   already shows `openclaw_setup_gog_account_email`. `GOG_KEYRING_PASSWORD`
+   is also injected into `/etc/openclaw/secrets.env`, so the openclaw
+   service's own `gog` subprocess calls (and manual verification below) can
+   unlock the store. `skills.entries.gog.enabled` in `openclaw.json` turns on
+   automatically once `openclaw_gog_refresh_token_export_json` is defined.
+
+5. **Verify**:
+   ```bash
+   ssh claw "sudo bash -c '
+     set -a; source /etc/openclaw/secrets.env; set +a
+     sudo -u claw -E gog auth list
+     sudo -u claw -E gog calendar list
+   '"
+   ```
+
+**Token lifecycle**: with the OAuth client published, the refresh token
+doesn't expire on a fixed schedule — it lasts until revoked, unused for 6
+months, or invalidated by a Google account security event (e.g. a password
+change). If `gog` calls start failing with auth errors, redo step 1 on your
+laptop (`gog auth add` re-authorizes in place) and step 2 to get a fresh
+export, then re-encrypt `openclaw_gog_refresh_token_export_json` (step 3) and
+redeploy. The import task only runs when `gog auth list` on the server does
+**not** yet show the account, so redeploying alone won't pick up a rotated
+token — first remove the stale one so the task's guard clears:
+```bash
+ssh claw "sudo bash -c '
+  set -a; source /etc/openclaw/secrets.env; set +a
+  sudo -u claw -E gog auth remove you@gmail.com --force
+'"
+```
+then redeploy.
 
 ---
 

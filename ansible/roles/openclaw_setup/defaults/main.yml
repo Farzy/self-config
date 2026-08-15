@@ -38,6 +38,12 @@ openclaw_setup_signal_cli_version: "0.14.7"
 openclaw_setup_signal_account: ""
 openclaw_setup_signal_allow_from: []
 
+openclaw_setup_gog_cli_version: "0.37.0"
+openclaw_setup_gog_cli_sha256: "905fed0bfabafa5dde7189e50642b3fa31d7fc4aad50a8d27d2b92071d875962"
+# Account authorized non-interactively via openclaw_gog_oauth_client_json /
+# openclaw_gog_refresh_token_export_json (ansible/vars/openclaw.yml) — see docs/openclaw.md 6.6.
+openclaw_setup_gog_account_email: "farzad.farid@gmail.com"
+
 openclaw_setup_telegram_enabled: true
 openclaw_setup_telegram_allow_from: []
 openclaw_setup_telegram_thread_bindings_enabled: true
