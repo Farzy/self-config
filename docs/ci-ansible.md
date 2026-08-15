@@ -170,9 +170,16 @@ not applied ones.
 
 ### A pending apply can be cancelled by a newer run
 
-`check` and `apply` share one concurrency group *per target*
-(`ansible-deploy-<limit>`), so a drift check can never run against a host at the
-same time as a converge, while different groups still sweep in parallel. GitHub
+`check` and `apply` share one concurrency group per *lock*
+(`ansible-deploy-<lock>`), so a drift check can never run against a host at the
+same time as a converge, while non-overlapping targets still sweep in parallel.
+
+The lock is usually the limit, but not always: targets whose host sets overlap
+must share one. `minecraft-01.farzad.tech` belongs to both `linux_servers` (base
+OS, via `linux.yml`) and `minecraft` (the game servers), and both playbooks run
+apt — keyed on the limit they would have raced for the dpkg lock. Adding a
+target that shares hosts with an existing one means giving it the existing
+target's `lock`, not a new one. GitHub
 keeps at most one *pending* run per group, so an apply left sitting at the
 approval prompt can be cancelled when a newer run queues for the same target —
 typically a push-to-`main` check run.
@@ -245,9 +252,14 @@ three reviewed changes:
 4. **Add its inventory group** to `CI_MANAGED_GROUPS` in `ansible-ci.yml`, which
    is what makes step 1 enforce itself for that host.
 
-5. **Add a `{playbook, limit}` entry to the drift matrix** in the `targets` job
-   of `ansible-deploy.yml`. Without this the host is deployable by hand but
-   never checked for drift, which is the easiest half of the setup to forget.
+5. **Add a `{playbook, limit, lock}` entry to the drift matrix** in the
+   `targets` job of `ansible-deploy.yml`. Without this the host is deployable by
+   hand but never checked for drift, which is the easiest half of the setup to
+   forget. Set `lock` to an existing target's lock if the host sets overlap —
+   see §5 — otherwise to the limit.
+
+   `CI_MANAGED_GROUPS` and the drift matrix are currently `openclaw`,
+   `linux_servers` and `minecraft`.
 
 Currently CI-managed: `openclaw` (`claw.farzad.tech`) and `linux_servers`
 (`quassel.farzy.org`, `minecraft-01.farzad.tech`).
