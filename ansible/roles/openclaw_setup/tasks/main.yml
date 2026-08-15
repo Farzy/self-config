@@ -276,6 +276,47 @@
     state: link
   notify: Restart openclaw
 
+- name: "Check if gog CLI is installed: {{ openclaw_setup_gog_cli_version }}"
+  ansible.builtin.stat:
+    path: "/opt/gogcli-{{ openclaw_setup_gog_cli_version }}/gog"
+  register: openclaw_setup_gog_cli_stat
+
+- name: Download gog CLI release archive (Linux amd64)
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/openclaw/gogcli/releases/download/v{{
+      openclaw_setup_gog_cli_version }}/gogcli_{{
+      openclaw_setup_gog_cli_version }}_linux_amd64.tar.gz
+    dest: "/tmp/gogcli-{{ openclaw_setup_gog_cli_version }}-linux-amd64.tar.gz"
+    mode: '0644'
+  when: not openclaw_setup_gog_cli_stat.stat.exists
+
+- name: Create gog CLI install directory
+  ansible.builtin.file:
+    path: "/opt/gogcli-{{ openclaw_setup_gog_cli_version }}"
+    state: directory
+    mode: '0755'
+  when: not openclaw_setup_gog_cli_stat.stat.exists
+
+- name: Extract gog CLI
+  ansible.builtin.unarchive:
+    src: "/tmp/gogcli-{{ openclaw_setup_gog_cli_version }}-linux-amd64.tar.gz"
+    dest: "/opt/gogcli-{{ openclaw_setup_gog_cli_version }}"
+    remote_src: true
+  when: not openclaw_setup_gog_cli_stat.stat.exists
+
+- name: Remove downloaded gog CLI archive
+  ansible.builtin.file:
+    path: "/tmp/gogcli-{{ openclaw_setup_gog_cli_version }}-linux-amd64.tar.gz"
+    state: absent
+  when: not openclaw_setup_gog_cli_stat.stat.exists
+
+- name: Symlink gog CLI to /usr/local/bin
+  ansible.builtin.file:
+    src: "/opt/gogcli-{{ openclaw_setup_gog_cli_version }}/gog"
+    dest: /usr/local/bin/gog
+    state: link
+
 - name: Install OpenClaw globally via npm
   community.general.npm:
     name: openclaw
