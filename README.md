@@ -127,9 +127,9 @@ OpenClaw server (`claw.farzad.tech`). Two workflows are involved:
   secrets and never contacts a server: `yamllint`, `ansible-lint`,
   `--syntax-check` on every playbook, and an inventory parse.
 * **`🚀 Ansible Deploy`** — the only workflow with server access. Manually
-  dispatched; `apply` runs require an approval in the `claw-production`
-  environment. Push to `main` and a weekly cron run it in `--check` mode for
-  drift detection.
+  dispatched by choosing a playbook, one per server; `apply` runs require an
+  approval in the `claw-production` environment. Push to `main` and a weekly
+  cron run it in `--check` mode for drift detection across every server.
 
 Two repository secrets are required, `CI_SSH_PRIVATE_KEY` (a dedicated ed25519
 key, *not* your personal one) and `ANSIBLE_VAULT_PASSWORD`.

@@ -1,13 +1,22 @@
 ---
 
-- name: "Install Linux server"
-  hosts: linux_servers
+# quassel.farzy.org, and only quassel.farzy.org.
+#
+# One playbook per server is deliberate: the deploy workflow picks a playbook
+# and nothing else, so the playbook's own `hosts:` is the only thing that
+# decides which machine is touched. There is no --limit to get wrong.
+- name: "Deploy quassel"
+  hosts: quassel
 
   roles:
+    # `setup`, matching openclaw.yml. These two carried `deploy`, inherited
+    # from the old linux.yml, so `--tags deploy` from the dispatch form meant
+    # "base OS config" on two servers and nothing at all on the third.
     - role: master_setup
-      tags: deploy
+      tags: setup
     - role: iterm2_integration
       tags: iterm2
+
   vars:
     iterm2_integration_users:
       - { name: "root", home_path: "/root", owner: "root", group: "root" }

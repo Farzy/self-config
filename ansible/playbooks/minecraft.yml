@@ -1,11 +1,15 @@
 ---
 
-# The Minecraft game servers on minecraft-01.farzad.tech.
+# minecraft-01.farzad.tech, and only minecraft-01.farzad.tech: base OS config
+# and the Minecraft game servers.
 #
-# Base OS configuration for this host comes from playbooks/linux.yml, which
-# targets it as a member of linux_servers. This playbook layers only the game
-# servers on top, so the two can be run independently.
-- name: "Deploy Minecraft servers"
+# One playbook per server is deliberate: the deploy workflow picks a playbook
+# and nothing else, so the playbook's own `hosts:` is the only thing that
+# decides which machine is touched. There is no --limit to get wrong, and no
+# playbook spans two servers — this host used to also be reached by linux.yml
+# via the linux_servers group, which made it possible for two CI jobs to
+# converge it at once.
+- name: "Deploy minecraft-01"
   hosts: minecraft
   become: true
 
@@ -13,6 +17,10 @@
     - ../vars/minecraft.yml
 
   vars:
+    iterm2_integration_users:
+      - { name: "root", home_path: "/root", owner: "root", group: "root" }
+      - { name: "debian", home_path: "/home/debian", owner: "debian", group: "debian" }
+
     minecraft_server_instances:
       - name: mc01
         port: 25565
@@ -28,6 +36,14 @@
         ops: "{{ minecraft_mc02_ops }}"
 
   roles:
+    # `setup`, matching openclaw.yml. These two carried `deploy`, inherited
+    # from the old linux.yml, so `--tags deploy` from the dispatch form meant
+    # "base OS config" on two servers and nothing at all on the third.
+    - role: master_setup
+      tags: setup
+    - role: iterm2_integration
+      tags: iterm2
+
     # Docker itself is IaC too: the host was built by hand with Docker's own
     # repository, and without this the container runtime was the one part of
     # the stack a rebuild would not reproduce.

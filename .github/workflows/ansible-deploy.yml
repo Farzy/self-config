@@ -8,8 +8,10 @@ name: '🚀 Ansible Deploy'
 #     --check mode.
 #   * `apply` runs go through the `claw-production` environment, whose required
 #     reviewer is the second factor between a dispatch click and a live change.
+#   * One playbook per server, and the playbook is the whole target selection.
+#     There is no --limit input to disagree with it.
 #   * SSH host keys are pinned from ansible/known_hosts, and the run is refused
-#     outright if the requested --limit resolves to a host with no pin.
+#     outright if the playbook resolves to a host with no pin.
 #   * Credentials are written outside the workspace with umask 077 and shredded
 #     in an always() step — the SSH key to $RUNNER_TEMP, the vault password to
 #     ~/.ansible-personal-key because a role template reads that exact path.
@@ -20,17 +22,23 @@ on:
   workflow_dispatch:
     inputs:
       playbook:
-        description: 'Playbook to run'
+        description: 'What to deploy — one playbook per server'
         type: 'choice'
         required: true
         default: 'openclaw.yml'
-        # Adding a playbook here is a reviewed change that must land together
-        # with the target hosts' SSH host keys in ansible/known_hosts, their
-        # group in ansible-ci.yml's CI_MANAGED_GROUPS, and an entry in the drift
-        # matrix below — see docs/ci-ansible.md §7.
+        # One entry per server, and the entry is the *whole* target selection.
+        # There is deliberately no --limit input beside it: two inputs that had
+        # to agree meant a mismatched pair converged nothing while the job still
+        # reported success (run 31907311939, minecraft.yml with --limit
+        # openclaw). The playbook's own `hosts:` is now the only thing deciding
+        # which machine is touched.
+        #
+        # Adding a server means a new playbook scoped to it, its host key in
+        # ansible/known_hosts, its group in ansible-ci.yml's CI_MANAGED_GROUPS,
+        # and an entry in the drift matrix below — see docs/ci-ansible.md §7.
         options:
           - 'openclaw.yml'
-          - 'linux.yml'
+          - 'quassel.yml'
           - 'minecraft.yml'
       mode:
         description: 'check = dry run (no changes), apply = converge for real'
@@ -40,11 +48,6 @@ on:
         options:
           - 'check'
           - 'apply'
-      limit:
-        description: 'Ansible --limit pattern — must match the chosen playbook (openclaw.yml -> openclaw, linux.yml -> linux_servers, minecraft.yml -> minecraft)'
-        type: 'string'
-        required: true
-        default: 'openclaw'
       tags:
         description: 'Only run these tags (comma separated, blank = all)'
         type: 'string'
@@ -93,10 +96,10 @@ defaults:
     shell: 'bash'
 
 jobs:
-  # A dispatch runs exactly the one playbook/limit pair the operator chose. The
-  # drift triggers (push to main, weekly cron) instead sweep every CI-managed
-  # group, so adding a server to the pipeline means adding it here — otherwise
-  # it is deployable by hand but never checked for drift.
+  # A dispatch runs the one playbook chosen. The drift triggers (push to main,
+  # weekly cron) sweep every server, so adding one to the pipeline means adding
+  # it here too — otherwise it is deployable by hand but never checked for
+  # drift.
   targets:
     name: 'Resolve targets'
     runs-on: 'ubuntu-latest'
@@ -104,33 +107,25 @@ jobs:
     outputs:
       matrix: '${{ steps.resolve.outputs.matrix }}'
     steps:
-      - name: 'Decide which playbook/limit pairs this run covers'
+      - name: 'Decide which playbooks this run covers'
         id: 'resolve'
         env:
           IS_DISPATCH: "${{ github.event_name == 'workflow_dispatch' }}"
           PLAYBOOK: '${{ inputs.playbook }}'
-          LIMIT: '${{ inputs.limit }}'
         run: |
           set -euo pipefail
 
-          # `lock` is the concurrency key, and it is NOT always the limit.
-          # Targets whose host sets overlap have to share one, or they can run
-          # against the same machine simultaneously — minecraft-01 is in both
-          # `linux_servers` (base OS, via linux.yml) and `minecraft` (the game
-          # servers), and both playbooks run apt, so a parallel sweep would
-          # race for the dpkg lock.
+          # An entry is just a playbook name. Each playbook targets exactly one
+          # server through its own `hosts:`, so there is no second field here
+          # that could contradict it, and no two entries can reach the same
+          # machine.
           if [ "${IS_DISPATCH}" = 'true' ]; then
-            case "${LIMIT}" in
-              minecraft) lock='linux_servers' ;;
-              *)         lock="${LIMIT}" ;;
-            esac
-            matrix="$(jq -cn --arg p "${PLAYBOOK}" --arg l "${LIMIT}" --arg k "${lock}" \
-              '[{playbook: $p, limit: $l, lock: $k}]')"
+            matrix="$(jq -cn --arg p "${PLAYBOOK}" '[{playbook: $p}]')"
           else
             matrix="$(jq -cn '[
-              {playbook: "openclaw.yml",  limit: "openclaw",      lock: "openclaw"},
-              {playbook: "linux.yml",     limit: "linux_servers", lock: "linux_servers"},
-              {playbook: "minecraft.yml", limit: "minecraft",     lock: "linux_servers"}
+              {playbook: "openclaw.yml"},
+              {playbook: "quassel.yml"},
+              {playbook: "minecraft.yml"}
             ]')"
           fi
           echo "matrix=${matrix}" >> "${GITHUB_OUTPUT}"
@@ -140,22 +135,23 @@ jobs:
     needs: 'targets'
     name: >-
       ${{ (github.event_name == 'workflow_dispatch' && inputs.mode == 'apply')
-          && 'Apply' || 'Check' }} ${{ matrix.target.limit }}
+          && 'Apply' || 'Check' }} ${{ matrix.target.playbook }}
     runs-on: 'ubuntu-latest'
     timeout-minutes: 45
 
     strategy:
-      # One target failing must not cancel the sweep of the others — a broken
-      # openclaw converge should still leave a usable drift signal for the linux
-      # servers.
+      # One server failing must not cancel the sweep of the others — a broken
+      # openclaw converge should still leave a usable drift signal for the
+      # others.
       fail-fast: false
       matrix:
         target: '${{ fromJSON(needs.targets.outputs.matrix) }}'
 
-    # Keyed per lock rather than globally, so the drift sweep can cover
-    # non-overlapping groups in parallel while still never letting two runs hit
-    # the *same* hosts at once, and never cancelling one mid-flight — a
-    # half-applied converge is worse than a queued one.
+    # Keyed per playbook rather than globally, so the drift sweep covers the
+    # servers in parallel while still never letting two runs hit the *same* host
+    # at once, and never cancelling one mid-flight — a half-applied converge is
+    # worse than a queued one. One playbook per server with non-overlapping
+    # inventory groups is what makes the playbook name a sufficient key.
     #
     # check and apply deliberately share a group for a given target: separate
     # ones would let a drift check and a converge run against the same host
@@ -165,8 +161,7 @@ jobs:
     # the cancelled run was never approved and never touched the server.
     # Re-dispatch it. See docs/ci-ansible.md §5.
     concurrency:
-      # Keyed on `lock`, not `limit` — see the targets job for why they differ.
-      group: 'ansible-deploy-${{ matrix.target.lock }}'
+      group: 'ansible-deploy-${{ matrix.target.playbook }}'
       cancel-in-progress: false
 
     # The approval gate. `claw-check` should have no protection rules;
@@ -179,11 +174,10 @@ jobs:
     env:
       # Inputs are surfaced as environment variables rather than interpolated
       # into `run:` bodies: a `${{ }}` inside a shell script is a template
-      # injection sink, and free-text inputs (limit/tags) are attacker-shaped
-      # even when the attacker is a tired maintainer.
+      # injection sink, and free-text inputs (tags) are attacker-shaped even
+      # when the attacker is a tired maintainer.
       PLAYBOOK: '${{ matrix.target.playbook }}'
       MODE: "${{ (github.event_name == 'workflow_dispatch' && inputs.mode) || 'check' }}"
-      LIMIT: '${{ matrix.target.limit }}'
       TAGS: '${{ inputs.tags }}'
       SKIP_TAGS: '${{ inputs.skip_tags }}'
       VERBOSITY: '${{ inputs.verbosity }}'
@@ -313,21 +307,34 @@ jobs:
 
       - name: 'Refuse to target hosts without a pinned SSH host key'
         working-directory: 'ansible'
-        # This is the blast-radius control. `--limit` is free text, and a typo
-        # or a paste error could otherwise aim a converge at every host in the
-        # inventory. Resolving the pattern first and requiring each resulting
-        # host to be pinned in known_hosts means CI can only ever reach hosts
-        # whose identity has been reviewed into the repository.
+        # This is the blast-radius control. The playbook chooses its own hosts,
+        # and every host it resolves to must be pinned in known_hosts, so CI can
+        # only ever reach machines whose identity has been reviewed into the
+        # repository.
         run: |
           set -euo pipefail
 
-          if ! hosts="$(uv run ansible-inventory --list --limit "${LIMIT}" | jq -r '._meta.hostvars | keys[]')"; then
-            echo "::error::Could not resolve --limit '${LIMIT}' against the inventory."
+          # Asks the playbook which hosts it targets, rather than resolving a
+          # separate pattern that might not be the same set. --list-hosts exits
+          # 0 even when nothing matched, so an empty result has to be caught
+          # explicitly — otherwise a playbook that reaches no host would sail
+          # through here and report a green run that did nothing.
+          # stderr is kept, not discarded: it carries the only explanation of a
+          # failure here — an unparseable playbook, a renamed vars_files, or the
+          # "[WARNING] Could not match supplied host pattern" line that explains
+          # the empty-host case this gate exists for.
+          err="${RUNNER_TEMP}/list-hosts.err"
+
+          if ! hosts="$(uv run ansible-playbook "playbooks/${PLAYBOOK}" --list-hosts 2> "${err}" |
+                          sed -n 's/^ *\([a-zA-Z0-9][a-zA-Z0-9._-]*\) *$/\1/p' | sort -u)"; then
+            cat "${err}" >&2
+            echo "::error::Could not resolve the hosts of '${PLAYBOOK}'."
             exit 1
           fi
 
           if [ -z "${hosts}" ]; then
-            echo "::error::--limit '${LIMIT}' matches no hosts. Refusing to run."
+            cat "${err}" >&2
+            echo "::error::'${PLAYBOOK}' matches no hosts. Refusing to run."
             exit 1
           fi
 
@@ -358,13 +365,12 @@ jobs:
         run: |
           set -euo pipefail
           {
-            echo "### Ansible ${MODE} — \`${LIMIT}\`"
+            echo "### Ansible ${MODE} — \`${PLAYBOOK}\`"
             echo
             echo "| | |"
             echo "|---|---|"
             echo "| Playbook | \`${PLAYBOOK}\` |"
             echo "| Mode | \`${MODE}\` |"
-            echo "| Limit | \`${LIMIT}\` |"
             echo "| Tags | \`${TAGS:-<all>}\` |"
             echo "| Skip tags | \`${SKIP_TAGS:-<none>}\` |"
             echo "| Diff | \`${ANSIBLE_DIFF_ALWAYS}\` |"
@@ -399,7 +405,8 @@ jobs:
           # is on.
           umask 077
 
-          args=( "playbooks/${PLAYBOOK}" --limit "${LIMIT}" )
+          # No --limit: the playbook's own `hosts:` is the target selection.
+          args=( "playbooks/${PLAYBOOK}" )
 
           if [ "${MODE}" = 'check' ]; then
             args+=( --check )
@@ -487,7 +494,7 @@ jobs:
           else
             {
               echo
-              echo "✅ Applied to \`${LIMIT}\`."
+              echo "✅ Applied \`${PLAYBOOK}\`."
             } >> "${GITHUB_STEP_SUMMARY}"
           fi
 

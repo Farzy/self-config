@@ -226,9 +226,11 @@ ansible-playbook playbooks/minecraft.yml                  # apply
 > definition changed, so a change scoped to one instance leaves the other's
 > players alone. Deploy when nobody is on.
 
-Base OS configuration for this host comes from `playbooks/linux.yml`, which
-targets it as a member of `linux_servers`. This playbook layers only the game
-servers on top; the two are independent.
+`playbooks/minecraft.yml` owns this host entirely — base OS configuration
+(`master_setup`, `iterm2_integration`) as well as Docker and the game servers.
+One playbook per server is deliberate: the deploy workflow selects a playbook
+and nothing else, so a playbook's `hosts:` is the only thing that decides which
+machine is touched.
 
 ---
 
