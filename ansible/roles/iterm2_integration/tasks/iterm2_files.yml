@@ -31,7 +31,16 @@
     archive: false
     recursive: true
     links: true
-    times: true
+    # rsync's quick check is size+mtime, and `actions/checkout` re-creates the
+    # working tree on every workflow run — so every source file arrives with a
+    # fresh mtime while its size is unchanged. With `times` on, all 16 files
+    # would be re-sent on every CI run and the task would report `changed`
+    # forever: the same broken drift signal the metadata flags below avoid,
+    # arriving via mtime instead. Compare content and leave mtimes alone.
+    # `checksum` alone is not enough — with -c -t rsync skips the transfer but
+    # still fixes up mtimes, which is itself an itemised change.
+    checksum: true
+    times: false
     perms: false
     owner: false
     group: false
@@ -39,7 +48,12 @@
     # which needs rsync >= 3.1 on the *controller*. macOS ships openrsync
     # (protocol 29, "2.6.9 compatible"), so --chown would work from a GitHub
     # runner and fail from the laptop.
-    rsync_path: "sudo rsync"
+    # Derived, not hardcoded: this role also runs from playbooks/laptop.yml,
+    # where the hosts are `ansible_connection=local ansible_become=false` and the
+    # play writes into the invoking user's own home. An unconditional
+    # `sudo rsync` would escalate there for no reason, and CI never exercises
+    # that path because it only ever runs openclaw.yml.
+    rsync_path: "{{ 'sudo rsync' if ansible_become | default(true) | bool else omit }}"
     # Defaults to false, and leaving it false would be a silent security
     # regression: rsync spawns its own ssh, and without this it ignores
     # ssh_common_args — which is where ansible-deploy.yml puts

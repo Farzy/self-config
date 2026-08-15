@@ -5,11 +5,13 @@ iterm2_integration_users:
 
 # Top-level dotfiles copied one by one. Everything under `files/.iterm2/` is no
 # longer listed here — that whole tree is transferred with a single rsync (see
-# tasks/iterm2_files.yml), so the directory itself is the source of truth.
+# tasks/iterm2_files.yml), so adding a file there is enough to deploy it.
 #
-# Note that the old list had already drifted from disk: `files/.iterm2/it2cat`
-# exists but was never listed, so it was never deployed. Syncing the tree
-# deploys it, which is why the first apply after this change reports `changed`.
+# Removal is not symmetric: without `delete: true` on the sync, deleting a file
+# from `files/.iterm2/` leaves it on every target indefinitely. That is
+# deliberate — `delete` would also remove anything placed in `~/.iterm2` by
+# hand, e.g. by running iTerm2's own install_shell_integration.sh on the host —
+# but it does mean the directory governs additions only.
 iterm2_integration_dotfiles:
   - .iterm2_shell_integration.zsh
   - .iterm2_shell_integration.bash

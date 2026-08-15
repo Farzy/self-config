@@ -62,11 +62,17 @@
     archive: false
     recursive: true
     links: true
-    times: true
+    # Same reasoning as iterm2_files.yml: a fresh checkout re-stamps every
+    # mtime, so comparing on mtime would make this report `changed` on every CI
+    # run. `perms` stays on — with `checksum`, rsync still corrects attributes
+    # on files it skips, so 0644 is enforced without churning when it already
+    # matches.
+    checksum: true
+    times: false
     perms: true
     owner: false
     group: false
-    rsync_path: "sudo rsync"
+    rsync_path: "{{ 'sudo rsync' if ansible_become | default(true) | bool else omit }}"
     # rsync spawns its own ssh; without this it ignores ssh_common_args, which
     # is where ansible-deploy.yml puts the pinned UserKnownHostsFile and
     # StrictHostKeyChecking=yes.
