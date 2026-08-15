@@ -404,8 +404,13 @@ pattern (laptop-side secret → `ansible-vault encrypt_string` → deploy):
    already shows `openclaw_setup_gog_account_email`. `GOG_KEYRING_PASSWORD`
    is also injected into `/etc/openclaw/secrets.env`, so the openclaw
    service's own `gog` subprocess calls (and manual verification below) can
-   unlock the store. `skills.entries.gog.enabled` in `openclaw.json` turns on
-   automatically once `openclaw_gog_refresh_token_export_json` is defined.
+   unlock the store. `GOG_ACCOUNT` is injected the same way (from
+   `openclaw_setup_gog_account_email`) so `gog` invocations that omit
+   `-a/--account` — including the agent's own tool calls — default to the
+   authorized account instead of falling back to whichever account was
+   authorized most recently. `skills.entries.gog.enabled` in `openclaw.json`
+   turns on automatically once `openclaw_gog_refresh_token_export_json` is
+   defined.
 
 5. **Verify**:
    ```bash
