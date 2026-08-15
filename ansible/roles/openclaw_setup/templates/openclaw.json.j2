@@ -146,7 +146,7 @@
         "enabled": false
       },
       "gog": {
-        "enabled": false
+        "enabled": {{ (openclaw_gog_refresh_token_export_json is defined) | to_json }}
       },
       "goplaces": {
         "enabled": false

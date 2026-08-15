@@ -318,6 +318,78 @@
     state: link
     force: true
 
+- name: Write gog OAuth client credentials to temp file for claw user
+  ansible.builtin.copy:
+    content: "{{ openclaw_gog_oauth_client_json }}"
+    dest: "{{ openclaw_setup_home }}/.gog-oauth-client.json.tmp"
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0600'
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  when: openclaw_gog_oauth_client_json is defined
+  no_log: true
+
+- name: Store gog OAuth client credentials for claw user
+  ansible.builtin.command:
+    cmd: "gog --client default auth credentials set {{ openclaw_setup_home }}/.gog-oauth-client.json.tmp"
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  environment:
+    GOG_KEYRING_PASSWORD: "{{ openclaw_gog_keyring_password }}"
+  args:
+    creates: "{{ openclaw_setup_home }}/.local/share/gogcli/credentials.json"
+  when: openclaw_gog_oauth_client_json is defined
+  no_log: true
+
+- name: Remove gog OAuth client credentials temp file
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_home }}/.gog-oauth-client.json.tmp"
+    state: absent
+
+- name: Check existing gog auth accounts for claw user
+  ansible.builtin.command:
+    cmd: gog auth list --plain
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  environment:
+    GOG_KEYRING_PASSWORD: "{{ openclaw_gog_keyring_password }}"
+  register: openclaw_setup_gog_auth_list
+  changed_when: false
+  when: openclaw_gog_refresh_token_export_json is defined
+
+- name: Write gog refresh token export to temp file for claw user
+  ansible.builtin.copy:
+    content: "{{ openclaw_gog_refresh_token_export_json }}"
+    dest: "{{ openclaw_setup_home }}/.gog-refresh-token.json.tmp"
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0600'
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  when: >-
+    openclaw_gog_refresh_token_export_json is defined and
+    openclaw_setup_gog_account_email not in openclaw_setup_gog_auth_list.stdout
+  no_log: true
+
+- name: Import gog refresh token for claw user
+  ansible.builtin.command:
+    cmd: "gog auth tokens import {{ openclaw_setup_home }}/.gog-refresh-token.json.tmp"
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  environment:
+    GOG_KEYRING_PASSWORD: "{{ openclaw_gog_keyring_password }}"
+  when: >-
+    openclaw_gog_refresh_token_export_json is defined and
+    openclaw_setup_gog_account_email not in openclaw_setup_gog_auth_list.stdout
+  changed_when: true
+  no_log: true
+
+- name: Remove gog refresh token temp file
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_home }}/.gog-refresh-token.json.tmp"
+    state: absent
+
 - name: Install OpenClaw globally via npm
   community.general.npm:
     name: openclaw
