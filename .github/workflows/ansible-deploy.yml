@@ -343,7 +343,58 @@ jobs:
           fi
 
           echo "Running: ansible-playbook ${args[*]}"
-          uv run ansible-playbook "${args[@]}"
+
+          # tee'd so the next step can lift PLAY RECAP into the job summary.
+          # `set -o pipefail` above keeps ansible's exit status, not tee's.
+          uv run ansible-playbook "${args[@]}" | tee "${RUNNER_TEMP}/ansible-stdout.log"
+
+      - name: 'Summarise the play recap'
+        if: always()
+        # The job summary is a separate page from the job log, so telling the
+        # reader to "see the recap above" pointed at nothing. Ansible's PLAY
+        # RECAP is lifted in here instead, so the summary answers "what would
+        # change?" on its own.
+        #
+        # Only the recap line is copied — hostnames and counters. Task output,
+        # which is what could carry vault-decrypted values when diff is on, is
+        # never read out of the log.
+        run: |
+          set -euo pipefail
+
+          log="${RUNNER_TEMP}/ansible-stdout.log"
+          if [ ! -s "${log}" ]; then
+            echo "_No play recap: Ansible produced no output (it failed before the play started)._" >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+
+          # ansible writes ANSI colour even through a pipe because of
+          # ANSIBLE_FORCE_COLOR; strip it before parsing.
+          recap="$(sed 's/\x1b\[[0-9;]*m//g' "${log}" | grep -E '^[^ ]+ +: +ok=' || true)"
+
+          if [ -z "${recap}" ]; then
+            echo "_No play recap: the run ended before Ansible printed one._" >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+
+          {
+            echo
+            if [ "${MODE}" = 'check' ]; then
+              echo "### Pending changes (check mode — nothing was applied)"
+            else
+              echo "### Applied"
+            fi
+            echo
+            echo "| Host | ok | changed | unreachable | failed | skipped |"
+            echo "|---|---|---|---|---|---|"
+            echo "${recap}" | while read -r line; do
+              host="${line%%:*}"
+              field() { printf '%s' "${line}" | grep -oE "$1=[0-9]+" | cut -d= -f2; }
+              printf '| `%s` | %s | **%s** | %s | %s | %s |\n' \
+                "$(printf '%s' "${host}" | tr -d '[:space:]')" \
+                "$(field ok)" "$(field changed)" "$(field unreachable)" \
+                "$(field failed)" "$(field skipped)"
+            done
+          } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: 'Record success'
         if: success()
@@ -351,10 +402,12 @@ jobs:
           set -euo pipefail
           if [ "${MODE}" = 'check' ]; then
             {
-              echo "✅ Check completed. Read the task recap above for \`changed\` counts —"
-              echo "in check mode those are *pending* changes, not applied ones."
+              echo
+              echo "✅ Check completed. A non-zero \`changed\` above is a *pending* change:"
+              echo "the repository and the server have diverged. Nothing was applied."
             } >> "${GITHUB_STEP_SUMMARY}"
           else
+            echo "" >> "${GITHUB_STEP_SUMMARY}"
             echo "✅ Applied to \`${LIMIT}\`." >> "${GITHUB_STEP_SUMMARY}"
           fi
 
@@ -362,6 +415,7 @@ jobs:
         if: failure()
         run: |
           {
+            echo
             echo "❌ Run failed. Note that not every task is check-mode safe, so a red"
             echo "*check* run does not always mean real drift."
           } >> "${GITHUB_STEP_SUMMARY}"
@@ -369,8 +423,12 @@ jobs:
       - name: 'Shred credentials'
         if: always()
         run: |
+          # ansible-stdout.log holds full task output, which carries rendered
+          # template contents when diff is on — same handling as the key material.
           shred --remove --force \
             "${RUNNER_TEMP}/ci_ssh_key" \
             "${HOME}/.ansible-personal-key" \
-            "${RUNNER_TEMP}/ansible.log" 2> /dev/null || true
-          rm -f "${RUNNER_TEMP}/ci_ssh_key" "${HOME}/.ansible-personal-key" "${RUNNER_TEMP}/ansible.log"
+            "${RUNNER_TEMP}/ansible.log" \
+            "${RUNNER_TEMP}/ansible-stdout.log" 2> /dev/null || true
+          rm -f "${RUNNER_TEMP}/ci_ssh_key" "${HOME}/.ansible-personal-key" \
+                "${RUNNER_TEMP}/ansible.log" "${RUNNER_TEMP}/ansible-stdout.log"
