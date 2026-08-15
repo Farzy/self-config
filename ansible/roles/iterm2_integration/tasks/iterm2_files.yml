@@ -1,13 +1,81 @@
 ---
 
-- name: Create iTerm2 directory
+# Everything under files/.iterm2/ is transferred as a tree with rsync; only the
+# two top-level shell-integration dotfiles are copied individually.
+#
+# This used to be one `copy` per file. With 17 files and three users that is 51
+# module calls, each paying a full round trip — about 2.25s from a GitHub
+# runner — for files that essentially never change. It accounted for ~114s of a
+# 4m25s CI run (43%), every task reporting `ok`.
+#
+# A recursive `ansible.builtin.copy` does NOT fix this: its action plugin walks
+# the directory and still issues one module call per file. Measured against
+# claw.farzad.tech with 14 files: per-file loop 8.91s, recursive copy 7.99s,
+# rsync 2.09s.
+
+- name: Install iTerm2 config files
+  ansible.posix.synchronize:
+    src: "{{ role_path }}/files/.iterm2/"
+    dest: "{{ user.home_path }}/.iterm2/"
+    # `archive: true` (the default) implies -rlptgoD, which makes rsync push the
+    # *controller's* permissions, owner and group onto the target. Those never
+    # match — the files are owned by whoever cloned the repo, and the target
+    # wants root/debian/claw — so every run would report `changed` and drift
+    # detection would be worthless. Verified with a dry run: the itemised flags
+    # were `<f..tpog.` (times, perms, owner, group all differing) while the
+    # content matched.
+    #
+    # So: sync content only, and let the task below own permissions and
+    # ownership. `times` stays on because rsync's quick check needs mtime to
+    # decide a file is unchanged; without it every file transfers every run.
+    archive: false
+    recursive: true
+    links: true
+    # rsync's quick check is size+mtime, and `actions/checkout` re-creates the
+    # working tree on every workflow run — so every source file arrives with a
+    # fresh mtime while its size is unchanged. With `times` on, all 16 files
+    # would be re-sent on every CI run and the task would report `changed`
+    # forever: the same broken drift signal the metadata flags below avoid,
+    # arriving via mtime instead. Compare content and leave mtimes alone.
+    # `checksum` alone is not enough — with -c -t rsync skips the transfer but
+    # still fixes up mtimes, which is itself an itemised change.
+    checksum: true
+    times: false
+    perms: false
+    owner: false
+    group: false
+    # Ownership is fixed by the next task rather than with rsync's `--chown`,
+    # which needs rsync >= 3.1 on the *controller*. macOS ships openrsync
+    # (protocol 29, "2.6.9 compatible"), so --chown would work from a GitHub
+    # runner and fail from the laptop.
+    # Derived, not hardcoded: this role also runs from playbooks/laptop.yml,
+    # where the hosts are `ansible_connection=local ansible_become=false` and the
+    # play writes into the invoking user's own home. An unconditional
+    # `sudo rsync` would escalate there for no reason, and CI never exercises
+    # that path because it only ever runs openclaw.yml.
+    rsync_path: "{{ 'sudo rsync' if ansible_become | default(true) | bool else omit }}"
+    # Defaults to false, and leaving it false would be a silent security
+    # regression: rsync spawns its own ssh, and without this it ignores
+    # ssh_common_args — which is where ansible-deploy.yml puts
+    # UserKnownHostsFile and StrictHostKeyChecking=yes. The private key needs no
+    # such handling; the action plugin already falls back to the play context's
+    # private_key_file.
+    use_ssh_args: true
+  # synchronize runs rsync on the *controller*, so the play-level `become: true`
+  # would escalate on the wrong side. Privilege on the target comes from
+  # rsync_path above, which relies on the deploy account's passwordless sudo.
+  become: false
+
+- name: Set ownership and permissions on the iTerm2 directory
   ansible.builtin.file:
     path: "{{ user.home_path }}/.iterm2"
     owner: "{{ user.owner }}"
     group: "{{ user.group }}"
     mode: '0755'
     state: directory
-- name: Install iTerm2 config files
+    recurse: true
+
+- name: Install iTerm2 shell integration dotfiles
   ansible.builtin.copy:
     src: "{{ dotfile }}"
     dest: "{{ user.home_path }}/{{ dotfile }}"
@@ -17,6 +85,7 @@
   loop: "{{ iterm2_integration_dotfiles }}"
   loop_control:
     loop_var: dotfile
+
 # - name: Add iTerm2 activation to .profile
 #   ansible.builtin.blockinfile:
 #     path: "{{ user.home_path }}/.profile"

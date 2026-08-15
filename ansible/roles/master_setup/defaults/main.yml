@@ -2,16 +2,10 @@
 
 master_setup_is_debian_lower_12: "{{ ansible_facts['distribution'] == 'Debian' and ansible_facts['distribution_major_version'] | int < 12 }}"
 
-master_setup_global_etcfiles:
-  - name: "profile.d/pragmatic.sh"
-    mode: "0644"
-  - name: "vim/vimrc"
-    mode: "0644"
-  - name: "screenrc"
-    mode: "0644"
-  - name: "apt/apt.conf.d/20auto-upgrades"
-  - name: "apt/apt.conf.d/50unattended-upgrades"
-    mode: "0644"
+# `master_setup_global_etcfiles` was removed: files/etcfiles/ is now transferred
+# to /etc/ wholesale with a single rsync (see tasks/debian.yml), so the
+# directory is its own source of truth and cannot drift from a hand-kept list.
+# Every file it held was 0644, which rsync reproduces from the source mode.
 master_setup_global_apt_repositories:
   - repo: 'deb http://ftp.debian.org/debian jessie-backports main contrib non-free'
     state: present
