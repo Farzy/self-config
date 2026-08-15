@@ -10,8 +10,9 @@ name: '🚀 Ansible Deploy'
 #     reviewer is the second factor between a dispatch click and a live change.
 #   * SSH host keys are pinned from ansible/known_hosts, and the run is refused
 #     outright if the requested --limit resolves to a host with no pin.
-#   * Credentials are written to $RUNNER_TEMP with umask 077 and shredded in an
-#     always() step; nothing is ever written into the workspace.
+#   * Credentials are written outside the workspace with umask 077 and shredded
+#     in an always() step — the SSH key to $RUNNER_TEMP, the vault password to
+#     ~/.ansible-personal-key because a role template reads that exact path.
 #   * `--diff` is off by default (ansible.cfg turns it on) because rendered
 #     templates can contain vault-decrypted secrets, and these logs are public.
 
@@ -138,9 +139,9 @@ jobs:
       # Per-task timings make a slow converge diagnosable from the log alone.
       ANSIBLE_CALLBACKS_ENABLED: 'ansible.posix.profile_tasks'
 
-      # ANSIBLE_VAULT_PASSWORD_FILE / ANSIBLE_VAULT_IDENTITY_LIST cannot be set
-      # here — the `runner` context is not available in a job-level `env:` — so
-      # the 'Materialise credentials' step exports them via $GITHUB_ENV instead.
+      # No ANSIBLE_VAULT_PASSWORD_FILE / ANSIBLE_VAULT_IDENTITY_LIST anywhere in
+      # this workflow: 'Materialise credentials' writes the password to the exact
+      # path ansible.cfg already names, so no override is needed.
 
     steps:
       - name: 'Checkout repository'
@@ -191,8 +192,22 @@ jobs:
         env:
           CI_SSH_PRIVATE_KEY: '${{ secrets.CI_SSH_PRIVATE_KEY }}'
           ANSIBLE_VAULT_PASSWORD: '${{ secrets.ANSIBLE_VAULT_PASSWORD }}'
-        # $RUNNER_TEMP, never the workspace: nothing here can be picked up by a
-        # later `actions/upload-artifact` or committed by accident.
+        # Never the workspace: nothing here can be picked up by a later
+        # `actions/upload-artifact` or committed by accident.
+        #
+        # The vault password goes to ~/.ansible-personal-key specifically, not
+        # to $RUNNER_TEMP. That exact path is this repository's convention —
+        # ansible.cfg, README.md, AGENTS.md and docs/openclaw.md all name it —
+        # and openclaw_setup/templates/secrets.env.j2 reads it *directly*:
+        #
+        #   ANSIBLE_VAULT_PASSWORD="{{ lookup('file', '~/.ansible-personal-key') | trim }}"
+        #
+        # A controller-side lookup like that bypasses ANSIBLE_VAULT_PASSWORD_FILE
+        # entirely, so pointing env vars at a temp file was not enough: the run
+        # got 80 tasks in and then failed on "Deploy OpenClaw secrets
+        # environment file". Honouring the convention makes ansible.cfg's
+        # vault_password_file, its vault_identity_list and that lookup all
+        # resolve with no overrides at all.
         run: |
           set -euo pipefail
           umask 077
@@ -207,8 +222,17 @@ jobs:
           fi
 
           printf '%s\n' "${CI_SSH_PRIVATE_KEY}" > "${RUNNER_TEMP}/ci_ssh_key"
-          printf '%s\n' "${ANSIBLE_VAULT_PASSWORD}" > "${RUNNER_TEMP}/vault_pass"
-          chmod 600 "${RUNNER_TEMP}/ci_ssh_key" "${RUNNER_TEMP}/vault_pass"
+
+          # $RUNNER_TEMP is guaranteed job-scoped; $HOME is not. On a self-hosted
+          # or reused runner the 'Shred credentials' step would otherwise destroy
+          # the real vault key of whoever owns that machine, unrecoverably. Fail
+          # instead of overwriting — a no-op on ubuntu-latest.
+          if [ -e "${HOME}/.ansible-personal-key" ]; then
+            echo "::error::${HOME}/.ansible-personal-key already exists; this job shreds that path and will not overwrite a pre-existing key."
+            exit 1
+          fi
+          printf '%s\n' "${ANSIBLE_VAULT_PASSWORD}" > "${HOME}/.ansible-personal-key"
+          chmod 600 "${RUNNER_TEMP}/ci_ssh_key" "${HOME}/.ansible-personal-key"
 
           # Fail here with a clear message rather than as an opaque UNREACHABLE
           # 90 seconds later, e.g. when the secret was pasted without its
@@ -218,16 +242,16 @@ jobs:
             exit 1
           fi
 
-          # Exported for every later step, not just 'Run Ansible': ansible.cfg
-          # declares `vault_password_file = ~/.ansible-personal-key`, and *any*
-          # ansible command aborts when that file is missing — including the
-          # `ansible-inventory` call in the host-pinning gate, which never
-          # decrypts anything. The `personal` label must match the vault ID the
-          # vars were encrypted under.
-          {
-            echo "ANSIBLE_VAULT_PASSWORD_FILE=${RUNNER_TEMP}/vault_pass"
-            echo "ANSIBLE_VAULT_IDENTITY_LIST=personal@${RUNNER_TEMP}/vault_pass"
-          } >> "${GITHUB_ENV}"
+          # No ANSIBLE_VAULT_PASSWORD_FILE / ANSIBLE_VAULT_IDENTITY_LIST
+          # overrides any more: with the file at the conventional path,
+          # ansible.cfg's own `vault_password_file` and
+          # `vault_identity_list = personal@~/.ansible-personal-key` already
+          # resolve, and one fewer override means one fewer thing that can
+          # disagree with a controller-side lookup.
+          #
+          # This step still has to run *before* the host-pinning gate: any
+          # ansible command, including that gate's `ansible-inventory` call,
+          # aborts when the vault password file named in ansible.cfg is missing.
 
       - name: 'Refuse to target hosts without a pinned SSH host key'
         working-directory: 'ansible'
@@ -311,6 +335,11 @@ jobs:
             -o ConnectTimeout=15
         run: |
           set -euo pipefail
+          # umask does not carry across steps. Without it the tee'd log and
+          # ansible's own log land at 0644 while holding full task output —
+          # which is exactly what carries rendered template contents when diff
+          # is on.
+          umask 077
 
           args=( "playbooks/${PLAYBOOK}" --limit "${LIMIT}" )
 
@@ -328,7 +357,64 @@ jobs:
           fi
 
           echo "Running: ansible-playbook ${args[*]}"
-          uv run ansible-playbook "${args[@]}"
+
+          # tee'd so the next step can lift PLAY RECAP into the job summary.
+          # `set -o pipefail` above keeps ansible's exit status, not tee's.
+          uv run ansible-playbook "${args[@]}" | tee "${RUNNER_TEMP}/ansible-stdout.log"
+
+      - name: 'Summarise the play recap'
+        if: always()
+        # The job summary is a separate page from the job log, so telling the
+        # reader to "see the recap above" pointed at nothing. Ansible's PLAY
+        # RECAP is lifted in here instead, so the summary answers "what would
+        # change?" on its own.
+        #
+        # Only the recap line is copied — hostnames and counters. Task output,
+        # which is what could carry vault-decrypted values when diff is on, is
+        # never read out of the log.
+        run: |
+          set -euo pipefail
+
+          log="${RUNNER_TEMP}/ansible-stdout.log"
+          if [ ! -s "${log}" ]; then
+            echo "_No play recap: Ansible produced no output (it failed before the play started)._" >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+
+          # ansible writes ANSI colour even through a pipe because of
+          # ANSIBLE_FORCE_COLOR; strip it before parsing.
+          recap="$(sed 's/\x1b\[[0-9;]*m//g' "${log}" | grep -E '^[^ ]+ +: +ok=' || true)"
+
+          if [ -z "${recap}" ]; then
+            echo "_No play recap: the run ended before Ansible printed one._" >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+
+          {
+            echo
+            if [ "${MODE}" = 'check' ]; then
+              echo "### Pending changes (check mode — nothing was applied)"
+            else
+              echo "### Applied"
+            fi
+            echo
+            echo "| Host | ok | changed | unreachable | failed | skipped | rescued | ignored |"
+            echo "|---|---|---|---|---|---|---|---|"
+            # The ANSI-stripped recap is whitespace-separated (ansible's
+            # colorize() emits '%s=%-4s'), so `read` splits it directly — no
+            # per-field subprocesses, and a here-string avoids the pipeline
+            # subshell. The bare `_` swallows the ':' separator.
+            #
+            # `ignored` is carried because a non-zero value is precisely the
+            # "green run that was not actually clean" case, which the summary is
+            # meant to answer on its own.
+            while read -r host _ ok changed unreachable failed skipped rescued ignored; do
+              printf '| `%s` | %s | **%s** | %s | %s | %s | %s | %s |\n' \
+                "${host}" "${ok#ok=}" "${changed#changed=}" \
+                "${unreachable#unreachable=}" "${failed#failed=}" \
+                "${skipped#skipped=}" "${rescued#rescued=}" "${ignored#ignored=}"
+            done <<< "${recap}"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: 'Record success'
         if: success()
@@ -336,17 +422,22 @@ jobs:
           set -euo pipefail
           if [ "${MODE}" = 'check' ]; then
             {
-              echo "✅ Check completed. Read the task recap above for \`changed\` counts —"
-              echo "in check mode those are *pending* changes, not applied ones."
+              echo
+              echo "✅ Check completed. A non-zero \`changed\` above is a *pending* change:"
+              echo "the repository and the server have diverged. Nothing was applied."
             } >> "${GITHUB_STEP_SUMMARY}"
           else
-            echo "✅ Applied to \`${LIMIT}\`." >> "${GITHUB_STEP_SUMMARY}"
+            {
+              echo
+              echo "✅ Applied to \`${LIMIT}\`."
+            } >> "${GITHUB_STEP_SUMMARY}"
           fi
 
       - name: 'Record failure'
         if: failure()
         run: |
           {
+            echo
             echo "❌ Run failed. Note that not every task is check-mode safe, so a red"
             echo "*check* run does not always mean real drift."
           } >> "${GITHUB_STEP_SUMMARY}"
@@ -354,8 +445,12 @@ jobs:
       - name: 'Shred credentials'
         if: always()
         run: |
+          # ansible-stdout.log holds full task output, which carries rendered
+          # template contents when diff is on — same handling as the key material.
           shred --remove --force \
             "${RUNNER_TEMP}/ci_ssh_key" \
-            "${RUNNER_TEMP}/vault_pass" \
-            "${RUNNER_TEMP}/ansible.log" 2> /dev/null || true
-          rm -f "${RUNNER_TEMP}/ci_ssh_key" "${RUNNER_TEMP}/vault_pass" "${RUNNER_TEMP}/ansible.log"
+            "${HOME}/.ansible-personal-key" \
+            "${RUNNER_TEMP}/ansible.log" \
+            "${RUNNER_TEMP}/ansible-stdout.log" 2> /dev/null || true
+          rm -f "${RUNNER_TEMP}/ci_ssh_key" "${HOME}/.ansible-personal-key" \
+                "${RUNNER_TEMP}/ansible.log" "${RUNNER_TEMP}/ansible-stdout.log"

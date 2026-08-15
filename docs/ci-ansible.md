@@ -38,7 +38,7 @@ triggered by pull request content.
 | **MITM resistance** | `StrictHostKeyChecking=yes` against the committed `known_hosts`. Ephemeral runners have no known-hosts of their own, so without this pin the only options would be trust-on-first-use or disabling host key checking. |
 | **Least-privilege credentials** | A dedicated ed25519 key used only by CI, revocable without touching your personal key. |
 | **No secret spillage into logs** | `--diff` is **off by default**, overriding `[diff] always = True` in `ansible.cfg`, because rendered templates can contain vault-decrypted secrets. `ANSIBLE_LOG_PATH` is redirected to `$RUNNER_TEMP` and shredded. |
-| **Credential hygiene** | Secrets are written under `$RUNNER_TEMP` with `umask 077`, never into the workspace, and shredded in an `always()` step. `actions/checkout` runs with `persist-credentials: false`. |
+| **Credential hygiene** | Secrets are written outside the workspace with `umask 077` and shredded in an `always()` step: the SSH key to `$RUNNER_TEMP`, the vault password to `~/.ansible-personal-key` (see §9). `actions/checkout` runs with `persist-credentials: false`. |
 | **Supply chain** | All third-party actions pinned to commit SHAs; Python toolchain installed with `uv sync --locked`; Galaxy collections pinned in `ansible/requirements.yml`; `zizmor` and `actionlint` enforce workflow hygiene via `pre-commit`. |
 | **No concurrent converges** | `concurrency: ansible-deploy` with `cancel-in-progress: false` — a queued run is better than a half-applied one. |
 
@@ -277,3 +277,42 @@ Workflow-specific linters, both wired into `pre-commit`:
 * **`zizmor`** — security audit (template injection, over-broad permissions,
   unpinned actions). Its suppressions live in
   [`.github/zizmor.yml`](../.github/zizmor.yml), each with a written reason.
+
+---
+
+## 9. Controller-side paths: why the vault password lives at `~/.ansible-personal-key`
+
+CI writes the vault password to `~/.ansible-personal-key` on the runner rather
+than to a temporary file, because that exact path is a hard dependency of the
+Ansible tree, not just a config default.
+
+`openclaw_setup/templates/secrets.env.j2` reads it directly on the controller:
+
+```jinja
+ANSIBLE_VAULT_PASSWORD="{{ lookup('file', '~/.ansible-personal-key') | trim }}"
+```
+
+That value is shipped to `/etc/openclaw/secrets.env` so OpenClaw's own agents can
+run Ansible on the box (see [openclaw.md](openclaw.md) §"Ansible Vault Password
+Injection"). A `lookup()` runs on the controller and reads the literal path
+given — it does **not** consult `ANSIBLE_VAULT_PASSWORD_FILE`. The first
+check-mode run from CI got 80 tasks in and then failed on *Deploy OpenClaw
+secrets environment file* with:
+
+```
+The lookup plugin 'file' failed: Unable to access the file
+'~/.ansible-personal-key': File not found.
+```
+
+Putting the file where the repository already says it lives makes
+`ansible.cfg`'s `vault_password_file`, its
+`vault_identity_list = personal@~/.ansible-personal-key`, and that lookup all
+resolve with no environment overrides at all. It is shredded in the same
+`always()` step as the SSH key.
+
+> [!IMPORTANT]
+> When adding a role or template that needs something from the controller, a
+> `lookup()` on an absolute path is invisible to CI's environment. Either keep
+> the path repo-relative, or make CI provide it at the same location a laptop
+> would. `grep -rn "lookup('file'" ansible/roles/` finds them; every other one
+> in this tree is repo-relative.
