@@ -162,7 +162,7 @@ approve.
 Both the push-to-`main` trigger and the Monday 06:17 UTC cron run in check mode
 against **every** CI-managed group — one matrix job per entry in the `targets`
 job, currently `openclaw.yml`, `quassel.yml` and `minecraft.yml`. A dispatch, by contrast, runs
-only the single playbook/limit pair chosen. `fail-fast` is off, so one target
+only the single playbook chosen. `fail-fast` is off, so one target
 failing still leaves a usable drift signal for the others. A green run with non-zero `changed` counts means the
 repository and the server have diverged — check mode reports *pending* changes,
 not applied ones.
@@ -245,16 +245,18 @@ three reviewed changes:
    `ansible-deploy.yml`, and — if the new host should have its own approval gate
    — give it a dedicated environment.
 
-4. **Add its inventory group** to `CI_MANAGED_GROUPS` in `ansible-ci.yml`, which
-   is what makes step 1 enforce itself for that host.
+4. **Add the playbook** to `CI_MANAGED_PLAYBOOKS` in `ansible-ci.yml`, which is
+   what makes step 1 enforce itself for that host, and what checks that the new
+   playbook does not overlap an existing one.
 
 5. **Add a `{playbook}` entry to the drift matrix** in the `targets` job of
-   `ansible-deploy.yml`, and the playbook to the `playbook` input's options.
-   Without the matrix entry the server is deployable by hand but never checked
-   for drift, which is the easiest half of the setup to forget.
+   `ansible-deploy.yml`. Without it the server is deployable by hand but never
+   checked for drift, which is the easiest half of the setup to forget.
 
-   `CI_MANAGED_GROUPS` and the drift matrix are currently `openclaw`, `quassel`
-   and `minecraft`.
+   `CI_MANAGED_PLAYBOOKS` in `ansible-ci.yml` and the drift matrix are currently
+   `openclaw.yml`, `quassel.yml` and `minecraft.yml`. `Ansible CI` fails if two
+   of them ever resolve to the same host, since the deploy workflow's
+   concurrency key assumes they cannot.
 
 Currently CI-managed, one playbook per server:
 

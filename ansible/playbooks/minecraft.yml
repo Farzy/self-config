@@ -21,9 +21,6 @@
       - { name: "root", home_path: "/root", owner: "root", group: "root" }
       - { name: "debian", home_path: "/home/debian", owner: "debian", group: "debian" }
 
-    master_setup_ci_authorized_keys:
-      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF9YfG+nqsaWqTXsGA39w48vSgaoSeu7rRS7TL80e4vF github-actions@self-config"
-
     minecraft_server_instances:
       - name: mc01
         port: 25565
@@ -39,8 +36,11 @@
         ops: "{{ minecraft_mc02_ops }}"
 
   roles:
+    # `setup`, matching openclaw.yml. These two carried `deploy`, inherited
+    # from the old linux.yml, so `--tags deploy` from the dispatch form meant
+    # "base OS config" on two servers and nothing at all on the third.
     - role: master_setup
-      tags: deploy
+      tags: setup
     - role: iterm2_integration
       tags: iterm2
 

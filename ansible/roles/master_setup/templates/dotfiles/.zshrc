@@ -205,7 +205,7 @@ fi
 # OpenClaw completion
 {# `openclaw_setup_user` comes from the openclaw_setup role's defaults, which are
    only in scope on plays that include that role. master_setup also runs from
-   linux.yml, web.yml and k8s-server.yml, where the variable does not exist and
+   quassel.yml, minecraft.yml, web.yml and k8s-server.yml, where it does not exist and
    rendering this file failed outright with "'openclaw_setup_user' is undefined".
    Guarded rather than defaulted so hosts that never run OpenClaw simply do not
    carry the block; .gitconfig in this same directory uses the same convention. #}

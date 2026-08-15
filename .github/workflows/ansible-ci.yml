@@ -28,12 +28,11 @@ env:
   PY_COLORS: '1'
   FORCE_COLOR: '1'
 
-  # Inventory groups that ansible-deploy.yml can actually target — one per
-  # server, matching its `playbook` input and drift matrix one-for-one. Only these are
-  # required to have a pinned SSH host key. Keep in step with that workflow when
-  # adding a server (docs/ci-ansible.md §7). Colon-separated: this is an Ansible
-  # host pattern, not a list.
-  CI_MANAGED_GROUPS: 'openclaw:quassel:minecraft'
+  # The playbooks ansible-deploy.yml can run — one per server. Hosts are derived
+  # from these the same way the deploy gate derives them, so this is the single
+  # list to keep in step when adding a server (docs/ci-ansible.md §7). It
+  # replaces a separate list of inventory groups that had to agree with it.
+  CI_MANAGED_PLAYBOOKS: 'openclaw.yml quassel.yml minecraft.yml'
 
 jobs:
   lint:
@@ -126,6 +125,45 @@ jobs:
         working-directory: 'ansible'
         run: 'uv run ansible-inventory --list > /dev/null'
 
+      - name: 'Verify CI playbooks target disjoint, non-empty host sets'
+        working-directory: 'ansible'
+        # The deploy workflow keys its concurrency group on the playbook name,
+        # which is a safe key only while one playbook targets one server and no
+        # host is reachable from two of them. That invariant was a paragraph in
+        # docs/ci-ansible.md §5 and nothing more: putting a host back into a
+        # second CI-managed group would have silently restored the race the old
+        # `lock` aliasing existed to prevent, and stayed green.
+        run: |
+          set -euo pipefail
+          seen=''
+          failed=0
+
+          for playbook in ${CI_MANAGED_PLAYBOOKS}; do
+            hosts="$(uv run ansible-playbook "playbooks/${playbook}" --list-hosts |
+                       sed -n 's/^ *\([a-zA-Z0-9][a-zA-Z0-9._-]*\) *$/\1/p' | sort -u)"
+
+            if [ -z "${hosts}" ]; then
+              echo "::error file=ansible/playbooks/${playbook}::Targets no hosts, so deploying it would silently do nothing."
+              failed=1
+            fi
+
+            for host in ${hosts}; do
+              case " ${seen} " in
+                *" ${host} "*)
+                  printf '::error file=ansible/hosts::%s%s\n' \
+                    "${host} is targeted by more than one CI playbook. " \
+                    "Groups must stay disjoint — see docs/ci-ansible.md §5."
+                  failed=1
+                  ;;
+              esac
+              seen="${seen} ${host}"
+            done
+
+            echo "${playbook}: ${hosts}"
+          done
+
+          exit "${failed}"
+
       - name: 'Verify CI-managed hosts have a pinned SSH host key'
         working-directory: 'ansible'
         # The deploy workflow refuses to target a host that is absent from
@@ -133,25 +171,24 @@ jobs:
         # CI-managed host reminds you to pin its key, without turning an
         # unrelated pull request red.
         #
-        # Scoped to $CI_MANAGED_GROUPS rather than the whole inventory: the
+        # Scoped to $CI_MANAGED_PLAYBOOKS rather than the whole inventory: the
         # other servers are not deployable from CI at all, so warning about them
         # would emit the same four annotations on every pull request forever and
         # train everyone to ignore this check.
         run: |
           set -euo pipefail
 
-          # Hosts with ansible_connection=local (the laptops) are never reached
-          # over SSH, so they need no host key pin.
+          # Derived from the playbooks, exactly as the deploy gate derives
+          # them, so the two cannot disagree about what "CI-managed" means.
           remote_hosts="$(
-            uv run ansible-inventory --list --limit "${CI_MANAGED_GROUPS}" |
-              jq -r '._meta.hostvars
-                     | to_entries[]
-                     | select(.value.ansible_connection != "local")
-                     | .key'
+            for playbook in ${CI_MANAGED_PLAYBOOKS}; do
+              uv run ansible-playbook "playbooks/${playbook}" --list-hosts |
+                sed -n 's/^ *\([a-zA-Z0-9][a-zA-Z0-9._-]*\) *$/\1/p'
+            done | sort -u
           )"
 
           if [ -z "${remote_hosts}" ]; then
-            echo "::error::CI_MANAGED_GROUPS ('${CI_MANAGED_GROUPS}') matches no inventory hosts."
+            echo "::error::CI_MANAGED_PLAYBOOKS ('${CI_MANAGED_PLAYBOOKS}') resolves to no hosts."
             exit 1
           fi
 

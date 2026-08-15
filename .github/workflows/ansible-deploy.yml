@@ -307,11 +307,10 @@ jobs:
 
       - name: 'Refuse to target hosts without a pinned SSH host key'
         working-directory: 'ansible'
-        # This is the blast-radius control. `--limit` is free text, and a typo
-        # or a paste error could otherwise aim a converge at every host in the
-        # inventory. Resolving the pattern first and requiring each resulting
-        # host to be pinned in known_hosts means CI can only ever reach hosts
-        # whose identity has been reviewed into the repository.
+        # This is the blast-radius control. The playbook chooses its own hosts,
+        # and every host it resolves to must be pinned in known_hosts, so CI can
+        # only ever reach machines whose identity has been reviewed into the
+        # repository.
         run: |
           set -euo pipefail
 
@@ -320,13 +319,21 @@ jobs:
           # 0 even when nothing matched, so an empty result has to be caught
           # explicitly — otherwise a playbook that reaches no host would sail
           # through here and report a green run that did nothing.
-          if ! hosts="$(uv run ansible-playbook "playbooks/${PLAYBOOK}" --list-hosts 2>/dev/null |
+          # stderr is kept, not discarded: it carries the only explanation of a
+          # failure here — an unparseable playbook, a renamed vars_files, or the
+          # "[WARNING] Could not match supplied host pattern" line that explains
+          # the empty-host case this gate exists for.
+          err="${RUNNER_TEMP}/list-hosts.err"
+
+          if ! hosts="$(uv run ansible-playbook "playbooks/${PLAYBOOK}" --list-hosts 2> "${err}" |
                           sed -n 's/^ *\([a-zA-Z0-9][a-zA-Z0-9._-]*\) *$/\1/p' | sort -u)"; then
+            cat "${err}" >&2
             echo "::error::Could not resolve the hosts of '${PLAYBOOK}'."
             exit 1
           fi
 
           if [ -z "${hosts}" ]; then
+            cat "${err}" >&2
             echo "::error::'${PLAYBOOK}' matches no hosts. Refusing to run."
             exit 1
           fi

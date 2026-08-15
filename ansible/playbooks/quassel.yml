@@ -9,8 +9,11 @@
   hosts: quassel
 
   roles:
+    # `setup`, matching openclaw.yml. These two carried `deploy`, inherited
+    # from the old linux.yml, so `--tags deploy` from the dispatch form meant
+    # "base OS config" on two servers and nothing at all on the third.
     - role: master_setup
-      tags: deploy
+      tags: setup
     - role: iterm2_integration
       tags: iterm2
 
