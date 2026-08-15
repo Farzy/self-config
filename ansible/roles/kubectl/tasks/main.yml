@@ -1,20 +1,51 @@
 ---
-- name: "Add Kubernetes Apt key {{ kubectl_version }}"
-  ansible.builtin.apt_key:
-    url: "https://pkgs.k8s.io/core:/stable:/{{ kubectl_version }}/deb/Release.key"
+- name: Install deb822 repository support
+  ansible.builtin.apt:
+    name: python3-debian
+    state: present
+    update_cache: true
+
+# apt_key and apt_repository are both deprecated and removed in ansible-core
+# 2.25. deb822_repository replaces the pair: it carries the signing key with the
+# repository definition, so the key is scoped to this one source instead of
+# being trusted for every repository on the host — which is the actual reason
+# apt_key is going away.
+#
+# This is a flat repository: the suite is a bare "/" and there are no
+# components, which is how the old one-line `deb <uri>/ /` form is expressed in
+# deb822.
+- name: "Add Kubernetes Apt repository {{ kubectl_version }}"
+  ansible.builtin.deb822_repository:
+    name: kubernetes
+    types: [deb]
+    uris: "https://pkgs.k8s.io/core:/stable:/{{ kubectl_version }}/deb/"
+    suites: ["/"]
+    signed_by: "https://pkgs.k8s.io/core:/stable:/{{ kubectl_version }}/deb/Release.key"
     state: present
 
-- name: "Add Kubernetes Apt repository {{ kubectl_version }}"
-  ansible.builtin.apt_repository:
-    repo: "deb https://pkgs.k8s.io/core:/stable:/{{ kubectl_version }}/deb/ /"
-    filename: kubernetes
-    update_cache: true
-    state: present
+# deb822_repository writes kubernetes.sources while the old module wrote
+# kubernetes.list, and apt would read both.
+- name: Remove the superseded Kubernetes .list definition
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/kubernetes.list
+    state: absent
+
+# NOTE: apt_key will also have left the Kubernetes key in /etc/apt/trusted.gpg,
+# where it is trusted to sign any repository. It is deliberately NOT removed
+# here, unlike in openclaw_setup: there, that keyring was verified to hold
+# nothing but the one key being replaced. On these hosts it may well hold other
+# keys, and deleting it would break every repository relying on them. Check with
+# `apt-key list` and remove the specific key by fingerprint if you want the
+# cleanup.
 
 - name: "Add kubectl {{ kubectl_version }}"
   ansible.builtin.apt:
     name: kubectl
     state: present
+    # deb822_repository has no update_cache option, unlike the apt_repository
+    # task it replaces — so the refresh moves here, where it is still needed for
+    # a first install to find the package.
+    update_cache: true
 
 - name: Install Snap
   ansible.builtin.apt:

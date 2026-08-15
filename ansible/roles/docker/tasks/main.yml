@@ -23,18 +23,47 @@
       - python3-pip
       - virtualenv
       - python3-setuptools
+      # Required on the managed node by ansible.builtin.deb822_repository,
+      # which replaces the deprecated apt_key/apt_repository below.
+      - python3-debian
     state: present
     update_cache: true
 
-- name: Add Docker GPG apt Key
-  ansible.builtin.apt_key:
-    url: https://download.docker.com/linux/debian/gpg
+# apt_key and apt_repository are both deprecated and removed in ansible-core
+# 2.25. deb822_repository replaces the pair: it carries the signing key with the
+# repository definition, so the key is scoped to this one source instead of
+# being trusted for every repository on the host — which is the actual reason
+# apt_key is going away.
+- name: Add Docker Repository
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: [deb]
+    uris: https://download.docker.com/linux/debian
+    suites: ["{{ ansible_distribution_release }}"]
+    components: [stable]
+    architectures: [amd64]
+    signed_by: https://download.docker.com/linux/debian/gpg
     state: present
 
-- name: Add Docker Repository
-  ansible.builtin.apt_repository:
-    repo: "deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
-    state: present
+# deb822_repository writes docker.sources; the old module wrote a .list whose
+# name it derived from the URI, since no `filename:` was given. That derivation
+# is `_suggest_filename` in apt_repository: strip the options block and scheme,
+# keep the first field, replace every non-alphanumeric character with an
+# underscore — so `https://download.docker.com/linux/debian` became
+# download_docker_com_linux_debian.list. Both files would be read, so the stale
+# one has to go.
+- name: Remove the superseded Docker .list definition
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/download_docker_com_linux_debian.list
+    state: absent
+
+# NOTE: apt_key will also have left the Docker key in /etc/apt/trusted.gpg,
+# where it is trusted to sign any repository. It is deliberately NOT removed
+# here, unlike in openclaw_setup: there, that keyring was verified to hold
+# nothing but the one key being replaced. On these hosts it may well hold other
+# keys, and deleting it would break every repository relying on them. Check with
+# `apt-key list` and remove the specific key by fingerprint if you want the
+# cleanup.
 
 - name: Update apt and install docker-ce
   ansible.builtin.apt:
