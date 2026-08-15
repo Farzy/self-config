@@ -9,6 +9,12 @@ openclaw_setup_avatar: ""
 openclaw_setup_port: 18789
 openclaw_setup_ssh_key: ""
 
+# Where gog stores the OAuth client credentials once imported. Both the guard
+# that decides whether to write the temp file and the `creates:` of the task
+# that consumes it key off this exact path — hoisted here so the two cannot
+# drift apart, since the whole point of the guard is that they match.
+openclaw_setup_gog_credentials_path: "{{ openclaw_setup_home }}/.local/share/gogcli/credentials.json"
+
 openclaw_setup_email: farzy@farzy.org
 openclaw_setup_model: "anthropic/claude-sonnet-5"
 openclaw_setup_claude_cli_enabled: true

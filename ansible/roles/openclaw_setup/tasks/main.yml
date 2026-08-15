@@ -325,7 +325,7 @@
 # which is exactly the signal the scheduled drift check exists to produce.
 - name: Check whether gog OAuth client credentials are already stored
   ansible.builtin.stat:
-    path: "{{ openclaw_setup_home }}/.local/share/gogcli/credentials.json"
+    path: "{{ openclaw_setup_gog_credentials_path }}"
   become: true
   become_user: "{{ openclaw_setup_user }}"
   register: openclaw_setup_gog_credentials_stat
@@ -353,7 +353,7 @@
   environment:
     GOG_KEYRING_PASSWORD: "{{ openclaw_gog_keyring_password }}"
   args:
-    creates: "{{ openclaw_setup_home }}/.local/share/gogcli/credentials.json"
+    creates: "{{ openclaw_setup_gog_credentials_path }}"
   when: openclaw_gog_oauth_client_json is defined
   no_log: true
 
@@ -371,6 +371,13 @@
     GOG_KEYRING_PASSWORD: "{{ openclaw_gog_keyring_password }}"
   register: openclaw_setup_gog_auth_list
   changed_when: false
+  # `check_mode: false` below makes this probe run for real, including against a
+  # host that has never been converged — where a --check run only *simulates*
+  # the gog download/extract/symlink, so the binary is absent and this exits
+  # 127. Without failed_when the play would hard-fail there, having previously
+  # just skipped and carried on. Failing soft leaves stdout empty, which makes
+  # the guard below fall through to "would import" — the correct signal.
+  failed_when: false
   # Read-only, and it must run during a --check run: `command` is skipped in
   # check mode by default, which left `stdout` empty, made the guard below
   # ("account not in the list") trivially true, and reported a spurious change

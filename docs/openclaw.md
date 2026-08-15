@@ -401,7 +401,13 @@ pattern (laptop-side secret → `ansible-vault encrypt_string` → deploy):
    temp files under `/home/claw`, feeds them to `gog auth credentials set` /
    `gog auth tokens import` as the `claw` user, then deletes the temp files.
    The token-import step is skipped on repeat runs once `gog auth list`
-   already shows `openclaw_setup_gog_account_email`. `GOG_KEYRING_PASSWORD`
+   already shows `openclaw_setup_gog_account_email`. The client-credentials
+   step is skipped the same way once
+   `openclaw_setup_gog_credentials_path` exists, which keeps a converged
+   host at `changed=0`. Both guards key on presence, not content, so
+   **rotating to a different OAuth client or token requires clearing the
+   existing keyring entry first** — otherwise the new value is written to
+   the vault but never applied to the host. `GOG_KEYRING_PASSWORD`
    is also injected into `/etc/openclaw/secrets.env`, so the openclaw
    service's own `gog` subprocess calls (and manual verification below) can
    unlock the store. `GOG_ACCOUNT` is injected the same way (from
