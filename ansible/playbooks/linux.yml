@@ -12,3 +12,13 @@
     iterm2_integration_users:
       - { name: "root", home_path: "/root", owner: "root", group: "root" }
       - { name: "debian", home_path: "/home/debian", owner: "debian", group: "debian" }
+
+    # Public SSH key GitHub Actions authenticates with, installed for the
+    # `debian` account (the inventory's `ansible_user`). Public keys are not
+    # secrets, so this is deliberately unencrypted — the private half lives only
+    # in the repository secret CI_SSH_PRIVATE_KEY. Same key as
+    # vars/openclaw.yml; see docs/ci-ansible.md §7.
+    #
+    # Fingerprint: SHA256:DMb6MJpuE2Yumm52pGtydezEffHjNe7RALZL/CfwGTI (ED25519)
+    master_setup_ci_authorized_keys:
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF9YfG+nqsaWqTXsGA39w48vSgaoSeu7rRS7TL80e4vF github-actions@self-config"

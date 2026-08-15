@@ -45,17 +45,28 @@
     signed_by: https://download.docker.com/linux/debian/gpg
     state: present
 
-# deb822_repository writes docker.sources; the old module wrote a .list whose
-# name it derived from the URI, since no `filename:` was given. That derivation
-# is `_suggest_filename` in apt_repository: strip the options block and scheme,
-# keep the first field, replace every non-alphanumeric character with an
-# underscore — so `https://download.docker.com/linux/debian` became
-# download_docker_com_linux_debian.list. Both files would be read, so the stale
-# one has to go.
-- name: Remove the superseded Docker .list definition
+# deb822_repository writes docker.sources, and any leftover .list would be read
+# alongside it — apt would then have the repository configured twice. Two names
+# are possible and both are cleaned up:
+#
+#   download_docker_com_linux_debian.list
+#     what this role's own apt_repository task wrote. With no `filename:` given,
+#     apt_repository derives one via `_suggest_filename`: strip the options
+#     block and the scheme, keep the first field, replace every non-alphanumeric
+#     character with an underscore.
+#
+#   docker.list
+#     what Docker's own documented install writes, and what is actually on disk
+#     on every host checked (minecraft-01, claw). So in practice this is the one
+#     that matters — the derived name was a plausible guess that the hosts
+#     disagree with.
+- name: Remove any superseded Docker .list definition
   ansible.builtin.file:
-    path: /etc/apt/sources.list.d/download_docker_com_linux_debian.list
+    path: "/etc/apt/sources.list.d/{{ item }}"
     state: absent
+  loop:
+    - download_docker_com_linux_debian.list
+    - docker.list
 
 # NOTE: apt_key will also have left the Docker key in /etc/apt/trusted.gpg,
 # where it is trusted to sign any repository. It is deliberately NOT removed

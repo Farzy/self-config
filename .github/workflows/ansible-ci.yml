@@ -29,10 +29,11 @@ env:
   FORCE_COLOR: '1'
 
   # Inventory groups that ansible-deploy.yml can actually target, i.e. the ones
-  # covered by its `playbook` input. Only these are required to have a pinned
-  # SSH host key. Keep in step with that input's `options:` list when adding a
-  # server (docs/ci-ansible.md §7).
-  CI_MANAGED_GROUPS: 'openclaw'
+  # covered by its `playbook` input and its drift matrix. Only these are
+  # required to have a pinned SSH host key. Keep in step with that workflow when
+  # adding a server (docs/ci-ansible.md §7). Colon-separated: this is an Ansible
+  # host pattern, not a list.
+  CI_MANAGED_GROUPS: 'openclaw:linux_servers'
 
 jobs:
   lint:

@@ -151,9 +151,9 @@ approve.
 
 | Input | Default | Notes |
 |---|---|---|
-| `playbook` | `openclaw.yml` | Deliberately a one-item list — see §7. |
+| `playbook` | `openclaw.yml` | `openclaw.yml` or `linux.yml`; adding one is a reviewed change — see §7. |
 | `mode` | `check` | `check` adds `--check`; `apply` converges for real and requires approval. |
-| `limit` | `openclaw` | Must resolve only to hosts pinned in `known_hosts`. |
+| `limit` | `openclaw` | Must match the chosen playbook (`openclaw.yml` -> `openclaw`, `linux.yml` -> `linux_servers`) and resolve only to hosts pinned in `known_hosts`. |
 | `tags` / `skip_tags` | empty | Passed straight to `--tags` / `--skip-tags`. |
 | `diff` | `false` | ⚠️ Enables `--diff`. Logs are public — only enable when you know the diff contains no secrets. |
 | `verbosity` | `default` | `-v` … `-vvv`; `default` passes no flag. |
@@ -161,16 +161,20 @@ approve.
 ### Drift detection
 
 Both the push-to-`main` trigger and the Monday 06:17 UTC cron run in check mode
-against `openclaw`. A green run with non-zero `changed` counts means the
+against **every** CI-managed group — one matrix job per entry in the `targets`
+job, currently `openclaw` and `linux_servers`. A dispatch, by contrast, runs
+only the single playbook/limit pair chosen. `fail-fast` is off, so one target
+failing still leaves a usable drift signal for the others. A green run with non-zero `changed` counts means the
 repository and the server have diverged — check mode reports *pending* changes,
 not applied ones.
 
 ### A pending apply can be cancelled by a newer run
 
-`check` and `apply` share one `ansible-deploy` concurrency group, so that a
-drift check can never run against a host at the same time as a converge. GitHub
+`check` and `apply` share one concurrency group *per target*
+(`ansible-deploy-<limit>`), so a drift check can never run against a host at the
+same time as a converge, while different groups still sweep in parallel. GitHub
 keeps at most one *pending* run per group, so an apply left sitting at the
-`claw-production` approval prompt can be cancelled when a newer run queues —
+approval prompt can be cancelled when a newer run queues for the same target —
 typically a push-to-`main` check run.
 
 This is fail-safe rather than dangerous: the cancelled run had not been
@@ -241,10 +245,17 @@ three reviewed changes:
 4. **Add its inventory group** to `CI_MANAGED_GROUPS` in `ansible-ci.yml`, which
    is what makes step 1 enforce itself for that host.
 
-Servers absent from `CI_MANAGED_GROUPS` — currently `farzad-01.farzy.org`,
-`k8S.farzad.tech`, `quassel.farzy.org`, `minecraft-01.farzad.tech` — are not
-deployable from CI and are not expected to have pinned host keys. They are not
-warned about, so the warning stays worth reading.
+5. **Add a `{playbook, limit}` entry to the drift matrix** in the `targets` job
+   of `ansible-deploy.yml`. Without this the host is deployable by hand but
+   never checked for drift, which is the easiest half of the setup to forget.
+
+Currently CI-managed: `openclaw` (`claw.farzad.tech`) and `linux_servers`
+(`quassel.farzy.org`, `minecraft-01.farzad.tech`).
+
+Servers absent from `CI_MANAGED_GROUPS` — currently `farzad-01.farzy.org` and
+`k8S.farzad.tech` — are not deployable from CI and are not expected to have
+pinned host keys. They are not warned about, so the warning stays worth
+reading.
 
 ---
 
