@@ -64,12 +64,24 @@
     links: true
     # Same reasoning as iterm2_files.yml: a fresh checkout re-stamps every
     # mtime, so comparing on mtime would make this report `changed` on every CI
-    # run. `perms` stays on — with `checksum`, rsync still corrects attributes
-    # on files it skips, so 0644 is enforced without churning when it already
-    # matches.
+    # run.
+    #
+    # `perms: false` matters here specifically. With it on, rsync pushes the
+    # *source tree's* directory permissions onto the destination — and the
+    # source dirs are 755 purely as an artifact of git checkout, not as policy.
+    # On quassel.farzy.org /etc/apt and /etc/apt/apt.conf.d are 775, so the sync
+    # itemised them as `.d...p...` and would have silently chmod'ed two system
+    # directories to match a checkout artifact. `--chmod=F644` would restrict
+    # mode-setting to files and leave dirs alone, but macOS ships openrsync,
+    # which rejects it outright ("--chmod=F644: invalid argument"), and this
+    # role is run from the laptop as well as from CI.
+    #
+    # Dropping perms costs nothing real: the five files already exist at 0644 on
+    # every managed host, rsync gives newly created files the source mode
+    # (0644), and it leaves the mode of existing files untouched.
     checksum: true
     times: false
-    perms: true
+    perms: false
     owner: false
     group: false
     rsync_path: "{{ 'sudo rsync' if ansible_become | default(true) | bool else omit }}"

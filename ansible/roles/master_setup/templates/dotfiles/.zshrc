@@ -201,10 +201,18 @@ if command -v gog &> /dev/null; then
     eval "$(gog completion zsh)"
 fi
 
+{% if openclaw_setup_user is defined %}
 # OpenClaw completion
+{# `openclaw_setup_user` comes from the openclaw_setup role's defaults, which are
+   only in scope on plays that include that role. master_setup also runs from
+   linux.yml, web.yml and k8s-server.yml, where the variable does not exist and
+   rendering this file failed outright with "'openclaw_setup_user' is undefined".
+   Guarded rather than defaulted so hosts that never run OpenClaw simply do not
+   carry the block; .gitconfig in this same directory uses the same convention. #}
 if [[ $(id -un) == "{{ openclaw_setup_user }}" ]] && command -v openclaw &> /dev/null; then
     eval "$(openclaw completion --shell zsh)"
 fi
+{% endif %}
 
 # iTerm2 integration
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
