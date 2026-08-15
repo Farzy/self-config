@@ -201,9 +201,21 @@
 # so filtering fingerprints would leave the NodeSource *subkey*
 # (0FA5ECC8C0CA58863C0AC5867E9656125E955B26) behind and the condition could
 # never hold.
+# The probe below must not run against a path that does not exist: `gpg
+# --keyring <path>` *creates* an empty keyring (32 bytes) as a side effect. That
+# turned the removal into a permanent churn loop — the probe recreated
+# /etc/apt/trusted.gpg on every run and the next task deleted it again, so a
+# converged host reported `changed` forever. Verified on claw: pointing gpg at a
+# nonexistent path leaves a 32-byte file behind, exactly the size found there.
+- name: Check whether the legacy globally-trusted apt keyring exists
+  ansible.builtin.stat:
+    path: /etc/apt/trusted.gpg
+  register: openclaw_setup_legacy_trusted_stat
+
 - name: Inspect the legacy globally-trusted apt keyring
   ansible.builtin.command:
     cmd: gpg --no-default-keyring --keyring /etc/apt/trusted.gpg --list-keys --with-colons
+  when: openclaw_setup_legacy_trusted_stat.stat.exists
   register: openclaw_setup_legacy_trusted
   changed_when: false
   # Absent keyring, or no gpg, exits non-zero; that is a reason to leave the
@@ -218,6 +230,7 @@
     path: /etc/apt/trusted.gpg
     state: absent
   when:
+    - openclaw_setup_legacy_trusted_stat.stat.exists
     - openclaw_setup_legacy_trusted.rc | default(1) == 0
     - openclaw_setup_legacy_trusted.stdout_lines | default([])
       | select('match', '^pub:')
