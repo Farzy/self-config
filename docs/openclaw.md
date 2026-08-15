@@ -181,6 +181,9 @@ The server includes modern CLI tools configured with standard short names:
 * **`uv`**: Installed system-wide at `/usr/local/bin/uv` for fast Python package management.
 * **`gh`**: GitHub CLI installed via official GitHub APT keyring and authenticated for user `claw`.
 
+### 5.5 Google Workspace CLI (`gog`)
+* **`gog`**: Installed via versioned GitHub release download (checksum-verified against the release's `checksums.txt`), extracted to `/opt/gogcli-<version>/`, and symlinked to `/usr/local/bin/gog` — same pattern as `signal-cli` above. The pinned version lives in `openclaw_setup_gog_cli_version` (`ansible/roles/openclaw_setup/defaults/main.yml`). Ansible only installs the binary; OAuth account authorization is a manual, interactive one-time step — see [6.6](#66-gog-google-workspace-cli-oauth-setup).
+
 ---
 
 ## 6. Control Channels & Integration Workflows
@@ -332,6 +335,29 @@ OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `c
 * **`openclaw_setup_telegram_thread_bindings_enabled`** (default: `true`) — rendered as `channels.telegram.threadBindings.enabled`.
 
 These four settings previously existed only as manual drift on the live server (set outside Ansible) and were wiped by a plain redeploy; they're now first-class template inputs so `ansible-playbook --diff` stays a true no-op when nothing has actually changed.
+
+---
+
+### 6.6 `gog` (Google Workspace CLI) OAuth Setup
+
+Ansible only installs the `gog` binary (see [5.5](#55-google-workspace-cli-gog)); authorizing it against a Google account requires an interactive OAuth flow in a browser, so it cannot be automated headlessly and must be run manually after deploy:
+
+1. **Run the interactive auth setup on the server**:
+   ```bash
+   ssh claw "sudo -u claw gog auth setup"
+   ```
+   Follow the printed instructions to create/select a Google Cloud project and enable the required APIs.
+
+2. **Authorize the account for the services you need**:
+   ```bash
+   ssh claw "sudo -u claw gog auth add you@gmail.com --services calendar"
+   ```
+   This opens a browser-based OAuth consent flow — if the server has no local browser/display, `gog` prints a URL to open manually and a code/callback to complete on the server side.
+
+3. **Verify**:
+   ```bash
+   ssh claw "sudo -u claw gog calendar list"
+   ```
 
 ---
 

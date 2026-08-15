@@ -288,6 +288,7 @@
       openclaw_setup_gog_cli_version }}/gogcli_{{
       openclaw_setup_gog_cli_version }}_linux_amd64.tar.gz
     dest: "/tmp/gogcli-{{ openclaw_setup_gog_cli_version }}-linux-amd64.tar.gz"
+    checksum: "sha256:{{ openclaw_setup_gog_cli_sha256 }}"
     mode: '0644'
   when: not openclaw_setup_gog_cli_stat.stat.exists
 
@@ -309,13 +310,13 @@
   ansible.builtin.file:
     path: "/tmp/gogcli-{{ openclaw_setup_gog_cli_version }}-linux-amd64.tar.gz"
     state: absent
-  when: not openclaw_setup_gog_cli_stat.stat.exists
 
 - name: Symlink gog CLI to /usr/local/bin
   ansible.builtin.file:
     src: "/opt/gogcli-{{ openclaw_setup_gog_cli_version }}/gog"
     dest: /usr/local/bin/gog
     state: link
+    force: true
 
 - name: Install OpenClaw globally via npm
   community.general.npm:
