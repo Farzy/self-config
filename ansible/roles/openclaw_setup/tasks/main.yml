@@ -318,6 +318,19 @@
     state: link
     force: true
 
+# The consumer below already skips once the keyring holds the credentials, via
+# its `creates:`. This write had no equivalent guard, so every run wrote a temp
+# file that nothing read and the next task deleted — two `changed` results per
+# run, for no work. That noise meant a converged host never reported changed=0,
+# which is exactly the signal the scheduled drift check exists to produce.
+- name: Check whether gog OAuth client credentials are already stored
+  ansible.builtin.stat:
+    path: "{{ openclaw_setup_gog_credentials_path }}"
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  register: openclaw_setup_gog_credentials_stat
+  when: openclaw_gog_oauth_client_json is defined
+
 - name: Write gog OAuth client credentials to temp file for claw user
   ansible.builtin.copy:
     content: "{{ openclaw_gog_oauth_client_json }}"
@@ -327,7 +340,9 @@
     mode: '0600'
   become: true
   become_user: "{{ openclaw_setup_user }}"
-  when: openclaw_gog_oauth_client_json is defined
+  when:
+    - openclaw_gog_oauth_client_json is defined
+    - not openclaw_setup_gog_credentials_stat.stat.exists
   no_log: true
 
 - name: Store gog OAuth client credentials for claw user
@@ -338,7 +353,7 @@
   environment:
     GOG_KEYRING_PASSWORD: "{{ openclaw_gog_keyring_password }}"
   args:
-    creates: "{{ openclaw_setup_home }}/.local/share/gogcli/credentials.json"
+    creates: "{{ openclaw_setup_gog_credentials_path }}"
   when: openclaw_gog_oauth_client_json is defined
   no_log: true
 
@@ -356,6 +371,19 @@
     GOG_KEYRING_PASSWORD: "{{ openclaw_gog_keyring_password }}"
   register: openclaw_setup_gog_auth_list
   changed_when: false
+  # `check_mode: false` below makes this probe run for real, including against a
+  # host that has never been converged — where a --check run only *simulates*
+  # the gog download/extract/symlink, so the binary is absent and this exits
+  # 127. Without failed_when the play would hard-fail there, having previously
+  # just skipped and carried on. Failing soft leaves stdout empty, which makes
+  # the guard below fall through to "would import" — the correct signal.
+  failed_when: false
+  # Read-only, and it must run during a --check run: `command` is skipped in
+  # check mode by default, which left `stdout` empty, made the guard below
+  # ("account not in the list") trivially true, and reported a spurious change
+  # on every check run. Same treatment as the other read-only probes in this
+  # role.
+  check_mode: false
   when: openclaw_gog_refresh_token_export_json is defined
 
 - name: Write gog refresh token export to temp file for claw user
