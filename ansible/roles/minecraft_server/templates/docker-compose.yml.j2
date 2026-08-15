@@ -1,0 +1,45 @@
+# {{ ansible_managed }}
+# Managed by roles/minecraft_server — edit the role or vars, not this file.
+---
+services:
+{% for mc in minecraft_server_instances %}
+  {{ mc.name }}:
+    image: "{{ minecraft_server_image }}"
+    # The image expects an interactive console: mc-server-runner reads the
+    # server's stdin so `docker attach` and mc-send-to-console can drive it.
+    tty: true
+    stdin_open: true
+    # This, together with docker.service being enabled, is what brings the
+    # servers back after a reboot. There is deliberately no systemd unit per
+    # server — see docs/minecraft.md.
+    restart: always
+    ports:
+      - "{{ mc.port }}:{{ mc.port }}"
+    environment:
+      EULA: "TRUE"
+      VERSION: "{{ minecraft_server_version }}"
+      MEMORY: "{{ minecraft_server_memory }}"
+      TZ: "{{ minecraft_server_timezone }}"
+      # Run as the owning account so bind-mounted world data is not root-owned.
+      UID: "{{ minecraft_server_uid }}"
+      GID: "{{ minecraft_server_gid }}"
+      # SERVER_PORT must be set here, not only in server.properties. The image
+      # derives its healthcheck target from this variable, so a server listening
+      # on a non-default port while this is unset is reported `unhealthy`
+      # forever even though players can connect — which is exactly what mc02 did
+      # before this role existed.
+      SERVER_PORT: "{{ mc.port }}"
+      # Rendered through to_json so a value containing a quote or backslash
+      # cannot produce an invalid compose file, and with `$` doubled because
+      # Compose performs its own variable substitution on these values.
+      MOTD: {{ mc.motd | replace('$', '$$') | to_json }}
+      # The password itself lives in .env (mode 0600) so this file stays
+      # non-secret and its --check --diff remains readable. Compose reads .env
+      # from the project directory automatically.
+      RCON_PASSWORD: "${{ '{' }}{{ mc.name | upper }}_RCON_PASSWORD{{ '}' }}"
+{% for key, value in minecraft_server_common_env | dictsort %}
+      {{ key }}: "{{ value }}"
+{% endfor %}
+    volumes:
+      - "./{{ mc.name }}:/data"
+{% endfor %}

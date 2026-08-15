@@ -14,3 +14,8 @@ minecraft-01.farzad.tech ansible_user=debian ansible_python_interpreter=python3
 
 [openclaw]
 claw.farzad.tech ansible_user=debian ansible_python_interpreter=python3
+
+# Runs the Minecraft game servers. Also a member of linux_servers, which gives
+# it the base OS config; playbooks/minecraft.yml adds the game servers on top.
+[minecraft]
+minecraft-01.farzad.tech ansible_user=debian ansible_python_interpreter=python3

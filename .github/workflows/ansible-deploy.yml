@@ -31,6 +31,7 @@ on:
         options:
           - 'openclaw.yml'
           - 'linux.yml'
+          - 'minecraft.yml'
       mode:
         description: 'check = dry run (no changes), apply = converge for real'
         type: 'choice'
@@ -40,7 +41,7 @@ on:
           - 'check'
           - 'apply'
       limit:
-        description: 'Ansible --limit pattern — must match the chosen playbook (openclaw.yml -> openclaw, linux.yml -> linux_servers)'
+        description: 'Ansible --limit pattern — must match the chosen playbook (openclaw.yml -> openclaw, linux.yml -> linux_servers, minecraft.yml -> minecraft)'
         type: 'string'
         required: true
         default: 'openclaw'
@@ -111,12 +112,25 @@ jobs:
           LIMIT: '${{ inputs.limit }}'
         run: |
           set -euo pipefail
+
+          # `lock` is the concurrency key, and it is NOT always the limit.
+          # Targets whose host sets overlap have to share one, or they can run
+          # against the same machine simultaneously — minecraft-01 is in both
+          # `linux_servers` (base OS, via linux.yml) and `minecraft` (the game
+          # servers), and both playbooks run apt, so a parallel sweep would
+          # race for the dpkg lock.
           if [ "${IS_DISPATCH}" = 'true' ]; then
-            matrix="$(jq -cn --arg p "${PLAYBOOK}" --arg l "${LIMIT}" '[{playbook: $p, limit: $l}]')"
+            case "${LIMIT}" in
+              minecraft) lock='linux_servers' ;;
+              *)         lock="${LIMIT}" ;;
+            esac
+            matrix="$(jq -cn --arg p "${PLAYBOOK}" --arg l "${LIMIT}" --arg k "${lock}" \
+              '[{playbook: $p, limit: $l, lock: $k}]')"
           else
             matrix="$(jq -cn '[
-              {playbook: "openclaw.yml", limit: "openclaw"},
-              {playbook: "linux.yml",    limit: "linux_servers"}
+              {playbook: "openclaw.yml",  limit: "openclaw",      lock: "openclaw"},
+              {playbook: "linux.yml",     limit: "linux_servers", lock: "linux_servers"},
+              {playbook: "minecraft.yml", limit: "minecraft",     lock: "linux_servers"}
             ]')"
           fi
           echo "matrix=${matrix}" >> "${GITHUB_OUTPUT}"
@@ -138,10 +152,10 @@ jobs:
       matrix:
         target: '${{ fromJSON(needs.targets.outputs.matrix) }}'
 
-    # Keyed per target rather than globally, so the drift sweep can cover the
-    # groups in parallel while still never letting two runs hit the *same* hosts
-    # at once, and never cancelling one mid-flight — a half-applied converge is
-    # worse than a queued one.
+    # Keyed per lock rather than globally, so the drift sweep can cover
+    # non-overlapping groups in parallel while still never letting two runs hit
+    # the *same* hosts at once, and never cancelling one mid-flight — a
+    # half-applied converge is worse than a queued one.
     #
     # check and apply deliberately share a group for a given target: separate
     # ones would let a drift check and a converge run against the same host
@@ -151,7 +165,8 @@ jobs:
     # the cancelled run was never approved and never touched the server.
     # Re-dispatch it. See docs/ci-ansible.md §5.
     concurrency:
-      group: 'ansible-deploy-${{ matrix.target.limit }}'
+      # Keyed on `lock`, not `limit` — see the targets job for why they differ.
+      group: 'ansible-deploy-${{ matrix.target.lock }}'
       cancel-in-progress: false
 
     # The approval gate. `claw-check` should have no protection rules;

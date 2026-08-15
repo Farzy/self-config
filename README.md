@@ -228,6 +228,19 @@ And access the cluster with its context name which is `kind-<CLUSTER-NAME>`.
 - The Kube API server cannot be directly exposed on the Internet because the domain name is not part of the X509
   certificate and `kubectl` will refuse the connection.
 - My goal is to be able to shut down the server in order to save money. But KinD in HA mode (multiple control planes) does
+## Minecraft servers
+
+Two Minecraft servers run in Docker on `minecraft-01.farzad.tech`, reachable as
+`minecraft-01.farzad.tech` and `minecraft-02.farzad.tech` via SRV records.
+Managed by `ansible/roles/minecraft_server`:
+
+    cd ansible
+    ansible-playbook playbooks/minecraft.yml --check --diff
+    ansible-playbook playbooks/minecraft.yml
+
+Architecture, the SRV/port relationship, settings handling, and known gaps:
+[docs/minecraft.md](docs/minecraft.md).
+
 ## OpenClaw Operations
 
 The OpenClaw gateway runs on a dedicated Scaleway instance (`openclaw`) backing `claw.farzad.tech`.
