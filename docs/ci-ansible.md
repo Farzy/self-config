@@ -34,7 +34,7 @@ triggered by pull request content.
 |---|---|
 | **No PR-triggered access** | `workflow_dispatch` is restricted by GitHub to users with write access. `push`/`schedule` runs are hard-wired to `--check`; only an explicit dispatch can apply. |
 | **Human approval for apply** | `apply` runs execute in the `claw-production` environment, which requires a reviewer. `check` runs use `claw-check`, which has no protection rules. |
-| **Blast-radius limit** | Before connecting, the workflow resolves `--limit` against the inventory and **refuses to run** unless every resulting host has a pinned SSH host key in [`ansible/known_hosts`](../ansible/known_hosts). A typo like `--limit all` fails closed. |
+| **Blast-radius limit** | One playbook per server, and the playbook is the whole target selection — there is no `--limit` input to get wrong. Before connecting, the workflow asks the playbook which hosts it targets and **refuses to run** unless every one has a pinned SSH host key in [`ansible/known_hosts`](../ansible/known_hosts). |
 | **MITM resistance** | `StrictHostKeyChecking=yes` against the committed `known_hosts`. Ephemeral runners have no known-hosts of their own, so without this pin the only options would be trust-on-first-use or disabling host key checking. |
 | **Least-privilege credentials** | A dedicated ed25519 key used only by CI, revocable without touching your personal key. |
 | **No secret spillage into logs** | `--diff` is **off by default**, overriding `[diff] always = True` in `ansible.cfg`, because rendered templates can contain vault-decrypted secrets. `ANSIBLE_LOG_PATH` is redirected to `$RUNNER_TEMP` and shredded. |
@@ -151,9 +151,8 @@ approve.
 
 | Input | Default | Notes |
 |---|---|---|
-| `playbook` | `openclaw.yml` | `openclaw.yml`, `linux.yml` or `minecraft.yml`; adding one is a reviewed change — see §7. |
+| `playbook` | `openclaw.yml` | The **entire** target selection — one playbook per server. Adding one is a reviewed change; see §7. |
 | `mode` | `check` | `check` adds `--check`; `apply` converges for real and requires approval. |
-| `limit` | `openclaw` | Must match the chosen playbook (`openclaw.yml` -> `openclaw`, `linux.yml` -> `linux_servers`, `minecraft.yml` -> `minecraft`) and resolve only to hosts pinned in `known_hosts`. |
 | `tags` / `skip_tags` | empty | Passed straight to `--tags` / `--skip-tags`. |
 | `diff` | `false` | ⚠️ Enables `--diff`. Logs are public — only enable when you know the diff contains no secrets. |
 | `verbosity` | `default` | `-v` … `-vvv`; `default` passes no flag. |
@@ -162,7 +161,7 @@ approve.
 
 Both the push-to-`main` trigger and the Monday 06:17 UTC cron run in check mode
 against **every** CI-managed group — one matrix job per entry in the `targets`
-job, currently `openclaw`, `linux_servers` and `minecraft`. A dispatch, by contrast, runs
+job, currently `openclaw.yml`, `quassel.yml` and `minecraft.yml`. A dispatch, by contrast, runs
 only the single playbook/limit pair chosen. `fail-fast` is off, so one target
 failing still leaves a usable drift signal for the others. A green run with non-zero `changed` counts means the
 repository and the server have diverged — check mode reports *pending* changes,
@@ -170,24 +169,21 @@ not applied ones.
 
 ### A pending apply can be cancelled by a newer run
 
-`check` and `apply` share one concurrency group per *lock*
-(`ansible-deploy-<lock>`), so a drift check can never run against a host at the
-same time as a converge, while non-overlapping targets still sweep in parallel.
+`check` and `apply` share one concurrency group per *playbook*
+(`ansible-deploy-<playbook>`), so a drift check can never run against a host at
+the same time as a converge, while different servers still sweep in parallel.
 
-The lock is usually the limit, but not always: targets whose host sets overlap
-must share one. `minecraft-01.farzad.tech` belongs to both `linux_servers` (base
-OS, via `linux.yml`) and `minecraft` (the game servers), and both playbooks run
-apt — keyed on the limit they would have raced for the dpkg lock. Adding a
-target that shares hosts with an existing one means giving it the existing
-target's `lock`, not a new one. GitHub
-keeps at most one *pending* run per group, so an apply left sitting at the
-approval prompt can be cancelled when a newer run queues for the same target —
-typically a push-to-`main` check run.
+That key is only sufficient because **one playbook targets exactly one server
+and the inventory groups do not overlap**. An earlier layout had
+`minecraft-01.farzad.tech` in both `linux_servers` and `minecraft`, which let
+two jobs converge it simultaneously and race for the dpkg lock. Keep groups
+disjoint rather than reintroducing a lock-aliasing scheme.
 
-This is fail-safe rather than dangerous: the cancelled run had not been
-approved, so it never reached the server. Just re-dispatch it. Splitting the
-group would remove the annoyance but reintroduce concurrent access to the same
-host, which is the worse trade.
+GitHub keeps at most one *pending* run per group, so an apply left sitting at
+the approval prompt can be cancelled when a newer run queues for the same
+playbook — typically a push-to-`main` check run. That is fail-safe: the
+cancelled run had not been approved and never reached the server. Re-dispatch
+it.
 
 > [!WARNING]
 > Not every Ansible task is check-mode safe. Tasks using `command`/`shell`
@@ -252,18 +248,23 @@ three reviewed changes:
 4. **Add its inventory group** to `CI_MANAGED_GROUPS` in `ansible-ci.yml`, which
    is what makes step 1 enforce itself for that host.
 
-5. **Add a `{playbook, limit, lock}` entry to the drift matrix** in the
-   `targets` job of `ansible-deploy.yml`. Without this the host is deployable by
-   hand but never checked for drift, which is the easiest half of the setup to
-   forget. Set `lock` to an existing target's lock if the host sets overlap —
-   see §5 — otherwise to the limit.
+5. **Add a `{playbook}` entry to the drift matrix** in the `targets` job of
+   `ansible-deploy.yml`, and the playbook to the `playbook` input's options.
+   Without the matrix entry the server is deployable by hand but never checked
+   for drift, which is the easiest half of the setup to forget.
 
-   `CI_MANAGED_GROUPS` and the drift matrix are currently `openclaw`,
-   `linux_servers` and `minecraft`.
+   `CI_MANAGED_GROUPS` and the drift matrix are currently `openclaw`, `quassel`
+   and `minecraft`.
 
-Currently CI-managed: `openclaw` (`claw.farzad.tech`), `linux_servers`
-(`quassel.farzy.org`, `minecraft-01.farzad.tech`) and `minecraft`
-(`minecraft-01.farzad.tech`, the game servers on top of its base config).
+Currently CI-managed, one playbook per server:
+
+| playbook | group | host |
+|---|---|---|
+| `openclaw.yml` | `openclaw` | `claw.farzad.tech` |
+| `quassel.yml` | `quassel` | `quassel.farzy.org` |
+| `minecraft.yml` | `minecraft` | `minecraft-01.farzad.tech` |
+
+Groups must stay disjoint — see §5.
 
 Servers absent from `CI_MANAGED_GROUPS` — currently `farzad-01.farzy.org` and
 `k8S.farzad.tech` — are not deployable from CI and are not expected to have
