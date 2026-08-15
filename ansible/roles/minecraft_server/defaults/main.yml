@@ -15,9 +15,14 @@ minecraft_server_group: debian
 # the *Java* runtime, not the game: VERSION below selects the game version.
 minecraft_server_image: "itzg/minecraft-server:java25"
 
-# LATEST tracks upstream Minecraft releases. Pin to a version string (e.g.
-# "1.21.4") if you would rather a world not move under you.
-minecraft_server_version: "LATEST"
+# Pinned deliberately, to the version both servers are running.
+#
+# LATEST would mean any compose change — a MOTD edit is enough, since settings
+# *are* environment variables — recreates the containers and pulls whatever the
+# newest release is. Minecraft's chunk-format migration is one-way and nothing
+# backs these worlds up (docs/minecraft.md §7), so an incidental edit could
+# upgrade a world irreversibly. Bumping this is now a reviewable commit.
+minecraft_server_version: "26.2"
 
 # The host has 3 vCPU and 3.8 GB RAM shared between both servers plus the OS,
 # so the JVMs are deliberately modest. Raise only alongside the instance count.

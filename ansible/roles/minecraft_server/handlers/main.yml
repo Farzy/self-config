@@ -11,3 +11,22 @@
   become_user: "{{ minecraft_server_user }}"
   changed_when: true
   listen: "Restart minecraft compose project"
+
+# Defined after the compose handler on purpose: handlers run in definition
+# order, so a container recreated above is already starting with the new file
+# and this reload is redundant-but-harmless, rather than racing it.
+#
+# There is no equivalent for ops.json — Minecraft has no `op reload` — so an
+# operator change needs a restart. docs/minecraft.md says so.
+- name: Reload the whitelist on the running servers
+  ansible.builtin.command:
+    cmd: "docker exec minecraft-{{ item }}-1 rcon-cli whitelist reload"
+  loop: "{{ minecraft_server_instances | map(attribute='name') | list }}"
+  become: true
+  become_user: "{{ minecraft_server_user }}"
+  changed_when: true
+  # A container that is still booting has no RCON listener yet. The file is
+  # already on disk, so the next start picks it up either way — a failed reload
+  # must not fail the play.
+  failed_when: false
+  listen: "Reload minecraft whitelist"

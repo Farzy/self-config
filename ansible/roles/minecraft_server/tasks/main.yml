@@ -6,23 +6,9 @@
 # does not touch world data — see docs/minecraft.md for what is and is not
 # under IaC.
 
-# `ansible-vault encrypt_string` can only encrypt scalars, so the player lists
-# come back as JSON *text*, not as parsed lists. Feeding that straight to
-# `to_nice_json` would serialise the string itself — writing a quoted JSON
-# document into whitelist.json and, with enforce-whitelist on, locking every
-# player out. The tasks below parse before re-serialising; this assert makes a
-# malformed list fail loudly here rather than silently produce that.
-- name: Assert every player list is valid JSON
-  ansible.builtin.assert:
-    that:
-      - item.whitelist | from_json is iterable
-      - item.ops | from_json is iterable
-    fail_msg: "whitelist/ops for {{ item.name }} is not parseable JSON"
-    quiet: true
-  loop: "{{ minecraft_server_instances }}"
-  loop_control:
-    label: "{{ item.name }}"
-
+# The cheaper, more fundamental precondition first: an empty list would
+# otherwise pass a loop over nothing before reaching the message that explains
+# the problem.
 - name: Assert the instance list is configured
   ansible.builtin.assert:
     that:
@@ -32,6 +18,36 @@
       otherwise this role would render a compose file with no services and
       `docker compose up -d --remove-orphans` would stop both game servers.
     success_msg: "{{ minecraft_server_instances | length }} Minecraft instance(s) configured."
+
+# `ansible-vault encrypt_string` can only encrypt scalars, so the player lists
+# come back as JSON *text*, not as parsed lists. Feeding that straight to
+# `to_nice_json` would serialise the string itself — writing a quoted JSON
+# document into whitelist.json and, with enforce-whitelist on, locking every
+# player out.
+#
+# `is not string` is the test that actually catches that. An earlier revision
+# used `is iterable`, which is true for strings, so a double-encoded value
+# sailed straight through the guard written to stop it.
+#
+# no_log because `item` is the whole instance dict, RCON password included, and
+# a failed assert prints it.
+- name: Assert every player list is a parsed JSON array
+  ansible.builtin.assert:
+    that:
+      - item.whitelist | from_json is sequence
+      - item.whitelist | from_json is not string
+      - item.ops | from_json is sequence
+      - item.ops | from_json is not string
+    fail_msg: >-
+      A whitelist/ops value in vars/minecraft.yml is not a JSON array. It must
+      be the file's JSON text, e.g. '[{"uuid": "...", "name": "..."}]'; a
+      double-encoded string passes from_json but yields a string, which would be
+      written to disk quoted and lock every player out.
+    quiet: true
+  loop: "{{ minecraft_server_instances }}"
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true
 
 - name: Resolve the owning account's uid and gid
   ansible.builtin.getent:
@@ -60,16 +76,33 @@
 
 # Only the directory itself — never `recurse`, which would walk hundreds of
 # megabytes of world data on every run and rewrite ownership the server sets.
+# Loops over names, not the instance dicts: `item` is echoed in the task result,
+# which is printed at -v and on failure, and those dicts carry the RCON
+# passwords. ansible-deploy.yml offers -v/-vv/-vvv as a dispatch input and its
+# logs are public.
 - name: Create a data directory per instance
   ansible.builtin.file:
-    path: "{{ minecraft_server_root }}/{{ item.name }}"
+    path: "{{ minecraft_server_root }}/{{ item }}"
     state: directory
     owner: "{{ minecraft_server_user }}"
     group: "{{ minecraft_server_group }}"
     mode: '0755'
-  loop: "{{ minecraft_server_instances }}"
-  loop_control:
-    label: "{{ item.name }}"
+  loop: "{{ minecraft_server_instances | map(attribute='name') | list }}"
+
+# Secrets live here rather than in the compose file, so that file carries no
+# secret and can be reviewed in a --check --diff. That matters: the compose file
+# is precisely the one whose content decides whether a converge recreates the
+# containers and disconnects players, and no_log would reduce that to a bare
+# `changed`.
+- name: Deploy the compose environment file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ minecraft_server_root }}/.env"
+    owner: "{{ minecraft_server_user }}"
+    group: "{{ minecraft_server_group }}"
+    mode: '0600'
+  no_log: true
+  notify: "Restart minecraft compose project"
 
 - name: Deploy the compose project
   ansible.builtin.template:
@@ -77,9 +110,7 @@
     dest: "{{ minecraft_server_root }}/docker-compose.yml"
     owner: "{{ minecraft_server_user }}"
     group: "{{ minecraft_server_group }}"
-    mode: '0640'
-  # Contains the RCON passwords.
-  no_log: true
+    mode: '0644'
   notify: "Restart minecraft compose project"
 
 # whitelist.json and ops.json are the "personal setup": who may join, and who
@@ -98,6 +129,11 @@
     label: "{{ item.name }}"
   # Real player names and Mojang UUIDs; the repository is public.
   no_log: true
+  # Minecraft reads whitelist.json at startup and holds it in memory, so writing
+  # the file is not enough — without this the server keeps the old list and
+  # overwrites the file from memory the next time anyone runs /whitelist in
+  # game, quietly undoing the change.
+  notify: "Reload minecraft whitelist"
 
 - name: Deploy the operator list
   ansible.builtin.copy:

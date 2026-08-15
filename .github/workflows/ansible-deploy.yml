@@ -41,7 +41,7 @@ on:
           - 'check'
           - 'apply'
       limit:
-        description: 'Ansible --limit pattern — must match the chosen playbook (openclaw.yml -> openclaw, linux.yml -> linux_servers)'
+        description: 'Ansible --limit pattern — must match the chosen playbook (openclaw.yml -> openclaw, linux.yml -> linux_servers, minecraft.yml -> minecraft)'
         type: 'string'
         required: true
         default: 'openclaw'

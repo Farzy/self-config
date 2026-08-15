@@ -151,9 +151,9 @@ approve.
 
 | Input | Default | Notes |
 |---|---|---|
-| `playbook` | `openclaw.yml` | `openclaw.yml` or `linux.yml`; adding one is a reviewed change — see §7. |
+| `playbook` | `openclaw.yml` | `openclaw.yml`, `linux.yml` or `minecraft.yml`; adding one is a reviewed change — see §7. |
 | `mode` | `check` | `check` adds `--check`; `apply` converges for real and requires approval. |
-| `limit` | `openclaw` | Must match the chosen playbook (`openclaw.yml` -> `openclaw`, `linux.yml` -> `linux_servers`) and resolve only to hosts pinned in `known_hosts`. |
+| `limit` | `openclaw` | Must match the chosen playbook (`openclaw.yml` -> `openclaw`, `linux.yml` -> `linux_servers`, `minecraft.yml` -> `minecraft`) and resolve only to hosts pinned in `known_hosts`. |
 | `tags` / `skip_tags` | empty | Passed straight to `--tags` / `--skip-tags`. |
 | `diff` | `false` | ⚠️ Enables `--diff`. Logs are public — only enable when you know the diff contains no secrets. |
 | `verbosity` | `default` | `-v` … `-vvv`; `default` passes no flag. |
@@ -162,7 +162,7 @@ approve.
 
 Both the push-to-`main` trigger and the Monday 06:17 UTC cron run in check mode
 against **every** CI-managed group — one matrix job per entry in the `targets`
-job, currently `openclaw` and `linux_servers`. A dispatch, by contrast, runs
+job, currently `openclaw`, `linux_servers` and `minecraft`. A dispatch, by contrast, runs
 only the single playbook/limit pair chosen. `fail-fast` is off, so one target
 failing still leaves a usable drift signal for the others. A green run with non-zero `changed` counts means the
 repository and the server have diverged — check mode reports *pending* changes,
@@ -261,8 +261,9 @@ three reviewed changes:
    `CI_MANAGED_GROUPS` and the drift matrix are currently `openclaw`,
    `linux_servers` and `minecraft`.
 
-Currently CI-managed: `openclaw` (`claw.farzad.tech`) and `linux_servers`
-(`quassel.farzy.org`, `minecraft-01.farzad.tech`).
+Currently CI-managed: `openclaw` (`claw.farzad.tech`), `linux_servers`
+(`quassel.farzy.org`, `minecraft-01.farzad.tech`) and `minecraft`
+(`minecraft-01.farzad.tech`, the game servers on top of its base config).
 
 Servers absent from `CI_MANAGED_GROUPS` — currently `farzad-01.farzy.org` and
 `k8S.farzad.tech` — are not deployable from CI and are not expected to have

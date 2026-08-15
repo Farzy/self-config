@@ -29,8 +29,14 @@ services:
       # forever even though players can connect — which is exactly what mc02 did
       # before this role existed.
       SERVER_PORT: "{{ mc.port }}"
-      MOTD: "{{ mc.motd }}"
-      RCON_PASSWORD: "{{ mc.rcon_password }}"
+      # Rendered through to_json so a value containing a quote or backslash
+      # cannot produce an invalid compose file, and with `$` doubled because
+      # Compose performs its own variable substitution on these values.
+      MOTD: {{ mc.motd | replace('$', '$$') | to_json }}
+      # The password itself lives in .env (mode 0600) so this file stays
+      # non-secret and its --check --diff remains readable. Compose reads .env
+      # from the project directory automatically.
+      RCON_PASSWORD: "${{ '{' }}{{ mc.name | upper }}_RCON_PASSWORD{{ '}' }}"
 {% for key, value in minecraft_server_common_env | dictsort %}
       {{ key }}: "{{ value }}"
 {% endfor %}

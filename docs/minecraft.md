@@ -158,6 +158,25 @@ Edit them with:
 uv run ansible-vault edit --vault-id personal@~/.ansible-personal-key ansible/vars/minecraft.yml
 ```
 
+### Applying a list change actually reaches the server — for the whitelist
+
+Minecraft reads `whitelist.json` and `ops.json` at startup and keeps them in
+memory. Writing the file is therefore not enough on its own: without a reload
+the server keeps the old list and overwrites the file from memory the next time
+anyone runs `/whitelist` in game, silently undoing the change.
+
+The role notifies a handler that runs `rcon-cli whitelist reload` on each
+instance, so whitelist changes take effect immediately.
+
+> [!IMPORTANT]
+> There is no equivalent for `ops.json` — Minecraft has no `op reload`. An
+> operator change is written to disk but does not take effect until the server
+> restarts:
+>
+> ```bash
+> cd /srv/minecraft && docker compose restart mc01
+> ```
+
 ### In-game changes show up as drift
 
 `/whitelist add` and `/op` rewrite these files on the server. Since the
@@ -169,22 +188,24 @@ vault, not by leaving the server authoritative.
 
 ## 5. Operating it
 
-Everything runs as the `debian` user from `/srv/minecraft`.
+Everything runs as the `debian` user from `/srv/minecraft`. That account is in
+the `docker` group — added by `roles/docker` via `docker_admin_users` — so none
+of these need `sudo`.
 
 ```bash
 # state of both servers
-sudo docker ps
+docker ps
 
 # does a server actually answer? (better than the health status)
-sudo docker exec minecraft-mc01-1 mc-monitor status --host localhost --port 25565
-sudo docker exec minecraft-mc02-1 mc-monitor status --host localhost --port 25566
+docker exec minecraft-mc01-1 mc-monitor status --host localhost --port 25565
+docker exec minecraft-mc02-1 mc-monitor status --host localhost --port 25566
 
 # logs
 cd /srv/minecraft && docker compose logs -f mc01
 
 # server console
-sudo docker exec minecraft-mc01-1 rcon-cli
-sudo docker exec minecraft-mc01-1 mc-send-to-console say Hello
+docker exec minecraft-mc01-1 rcon-cli
+docker exec minecraft-mc01-1 mc-send-to-console say Hello
 
 # restart one server
 cd /srv/minecraft && docker compose restart mc01
