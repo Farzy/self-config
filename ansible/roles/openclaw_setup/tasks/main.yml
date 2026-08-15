@@ -145,6 +145,9 @@
       - gnupg
       - ca-certificates
       - acl
+      # Required on the managed node by ansible.builtin.deb822_repository,
+      # which replaces the deprecated apt_key/apt_repository below.
+      - python3-debian
     state: present
     update_cache: true
 
@@ -157,16 +160,48 @@
     - "80"
     - "443"
 
-- name: Add NodeSource APT key
-  ansible.builtin.apt_key:
-    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+# apt_key and apt_repository are both deprecated and removed in ansible-core
+# 2.25. deb822_repository replaces the pair: it carries the signing key with the
+# repository definition, so the key is scoped to this one source instead of
+# being trusted for every repository on the host — which is the actual reason
+# apt_key is going away.
+- name: Add NodeSource repository
+  ansible.builtin.deb822_repository:
+    name: nodesource
+    types: [deb]
+    uris: "https://deb.nodesource.com/node_26.x"
+    suites: [nodistro]
+    components: [main]
+    signed_by: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
     state: present
 
-- name: Add NodeSource repository
-  ansible.builtin.apt_repository:
-    repo: "deb https://deb.nodesource.com/node_26.x nodistro main"
-    state: present
-    filename: nodesource
+# deb822_repository writes nodesource.sources; the old module wrote
+# nodesource.list. Both would be read, so the stale one has to go — and it is
+# worth going anyway: apt_repository appends rather than replaces, so bumping
+# the Node major left the previous release's line behind. On claw the file held
+# both node_24.x and node_26.x, meaning apt could resolve nodejs from either.
+- name: Remove the superseded NodeSource .list definition
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/nodesource.list
+    state: absent
+
+# apt_key put the NodeSource key in /etc/apt/trusted.gpg, where it is trusted to
+# sign *any* repository. The same key is already present, scoped, via the
+# Signed-By above. Verified on claw that this legacy keyring holds nothing else:
+# only NSolid <nsolid-gpg@nodesource.com>, fingerprint 6F71F525282841EEDAF851B4
+# 2F59B5F99B1BE0B4.
+- name: Remove the legacy globally-trusted apt keyring
+  ansible.builtin.file:
+    path: /etc/apt/trusted.gpg
+    state: absent
+
+# deb822_repository derives the keyring name from `name` plus the key's armour
+# (nodesource.asc here), so the .gpg left by the old flow is superseded rather
+# than reused. Verified on claw that nothing under /etc/apt references it.
+- name: Remove the orphaned NodeSource keyring left by the old flow
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/nodesource.gpg
+    state: absent
 
 - name: Install Node.js
   ansible.builtin.apt:
@@ -187,10 +222,22 @@
     mode: '0644'
 
 - name: Add GitHub CLI APT repository
-  ansible.builtin.apt_repository:
-    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main"
+  ansible.builtin.deb822_repository:
+    name: github-cli
+    types: [deb]
+    uris: https://cli.github.com/packages
+    suites: [stable]
+    components: [main]
+    architectures: [amd64]
+    # Already scoped to its own keyring, downloaded by the task above, so this
+    # is a straight translation of the one-line deb entry.
+    signed_by: /etc/apt/keyrings/githubcli-archive-keyring.gpg
     state: present
-    filename: github-cli
+
+- name: Remove the superseded GitHub CLI .list definition
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/github-cli.list
+    state: absent
 
 - name: Install GitHub CLI (gh)
   ansible.builtin.apt:
