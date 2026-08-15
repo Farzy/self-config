@@ -1,0 +1,167 @@
+name: '✅ Ansible CI'
+
+# Static validation only: no secrets, no network access to any managed host.
+# That is deliberate — this workflow runs on every pull request, including ones
+# from forks of this public repository, so it must never hold a credential.
+# Anything that touches a real server lives in `ansible-deploy.yml`, which is
+# manually triggered and environment-gated.
+
+on:
+  pull_request:
+  push:
+    branches: ['main']
+
+permissions:
+  contents: 'read'
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.ref }}'
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: 'bash'
+
+env:
+  # Silences the galaxy "you are running an older version" phone-home.
+  ANSIBLE_GALAXY_IGNORE_CERTS: 'false'
+  PY_COLORS: '1'
+  FORCE_COLOR: '1'
+
+  # Inventory groups that ansible-deploy.yml can actually target, i.e. the ones
+  # covered by its `playbook` input. Only these are required to have a pinned
+  # SSH host key. Keep in step with that input's `options:` list when adding a
+  # server (docs/ci-ansible.md §7).
+  CI_MANAGED_GROUPS: 'openclaw'
+
+jobs:
+  lint:
+    name: 'Lint & syntax check'
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 15
+
+    steps:
+      - name: 'Checkout repository'
+        uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # ratchet:actions/checkout@v7
+        with:
+          # No step here pushes anything; leaving the token in .git/config would
+          # only widen what a compromised linter dependency could reach.
+          persist-credentials: false
+
+      - name: 'Redirect the Ansible log out of the workspace'
+        # ansible/ansible.cfg sets `log_path = ../log/ansible.log`. Nothing here
+        # holds a credential so there is nothing to leak, but keeping the
+        # workspace clean matches ansible-deploy.yml, where it does matter.
+        run: 'echo "ANSIBLE_LOG_PATH=${RUNNER_TEMP}/ansible.log" >> "${GITHUB_ENV}"'
+
+      - name: 'Set up uv'
+        uses: 'astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d' # ratchet:astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: 'uv.lock'
+
+      - name: 'Install pinned Python toolchain'
+        # --locked fails rather than silently re-resolving, so CI runs exactly
+        # the ansible / ansible-lint versions recorded in uv.lock.
+        run: 'uv sync --locked --group lint'
+
+      - name: 'Restore Ansible collections cache'
+        uses: 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9' # ratchet:actions/cache@v6
+        with:
+          path: '~/.ansible/collections'
+          # No `restore-keys:` on purpose. A prefix fallback would restore an
+          # older cache on a key miss, and `ansible-galaxy collection install`
+          # then reports "already installed" and does nothing — so the effective
+          # collection versions would be whatever was resolved when the cache
+          # was first populated, and editing requirements.yml would not change
+          # them. An exact-key-only cache means a requirements change is a cache
+          # miss and a genuine reinstall.
+          key: "ansible-collections-${{ runner.os }}-${{ hashFiles('ansible/requirements.yml', 'uv.lock') }}"
+
+      - name: 'Install Ansible collections'
+        run: 'uv run ansible-galaxy collection install --requirements-file ansible/requirements.yml'
+
+      - name: 'Provide a placeholder vault password'
+        # ansible.cfg declares `vault_password_file = ~/.ansible-personal-key`.
+        # A runner has no such file and `ansible-playbook --syntax-check` exits 1
+        # on a missing vault password file — even though it never decrypts
+        # anything, because vars_files are resolved lazily at play time.
+        # A dummy value therefore satisfies the config without CI holding the
+        # real vault secret. If a future check actually needs plaintext vault
+        # data, that check belongs in ansible-deploy.yml, not here.
+        run: |
+          umask 077
+          printf 'placeholder-not-the-real-vault-password\n' > "${HOME}/.ansible-personal-key"
+
+      - name: 'yamllint'
+        # Ruleset and ignore list come from .github/yamllint.yml, shared with
+        # the pre-commit hook, so a green pre-commit run means a green CI run.
+        run: 'uv run yamllint -c .github/yamllint.yml --format github .'
+
+      - name: 'ansible-lint'
+        # No `--format github`: ansible-lint has no such formatter (the choices
+        # are brief/full/md/json/codeclimate/quiet/pep8/sarif). It detects
+        # GITHUB_ACTIONS on its own and emits workflow annotations regardless.
+        run: 'uv run ansible-lint --offline'
+
+      - name: 'Syntax-check every playbook'
+        working-directory: 'ansible'
+        run: |
+          set -euo pipefail
+          failed=0
+          for playbook in playbooks/*.yml; do
+            echo "::group::ansible-playbook --syntax-check ${playbook}"
+            if uv run ansible-playbook --syntax-check "${playbook}"; then
+              echo "ok: ${playbook}"
+            else
+              echo "::error file=ansible/${playbook}::Syntax check failed"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "${failed}"
+
+      - name: 'Validate inventory parses'
+        working-directory: 'ansible'
+        run: 'uv run ansible-inventory --list > /dev/null'
+
+      - name: 'Verify CI-managed hosts have a pinned SSH host key'
+        working-directory: 'ansible'
+        # The deploy workflow refuses to target a host that is absent from
+        # ansible/known_hosts. Surfacing that here as a *warning* means adding a
+        # CI-managed host reminds you to pin its key, without turning an
+        # unrelated pull request red.
+        #
+        # Scoped to $CI_MANAGED_GROUPS rather than the whole inventory: the
+        # other servers are not deployable from CI at all, so warning about them
+        # would emit the same four annotations on every pull request forever and
+        # train everyone to ignore this check.
+        run: |
+          set -euo pipefail
+
+          # Hosts with ansible_connection=local (the laptops) are never reached
+          # over SSH, so they need no host key pin.
+          remote_hosts="$(
+            uv run ansible-inventory --list --limit "${CI_MANAGED_GROUPS}" |
+              jq -r '._meta.hostvars
+                     | to_entries[]
+                     | select(.value.ansible_connection != "local")
+                     | .key'
+          )"
+
+          if [ -z "${remote_hosts}" ]; then
+            echo "::error::CI_MANAGED_GROUPS ('${CI_MANAGED_GROUPS}') matches no inventory hosts."
+            exit 1
+          fi
+
+          while read -r host; do
+            [ -n "${host}" ] || continue
+            if ssh-keygen -F "${host}" -f known_hosts > /dev/null 2>&1; then
+              echo "pinned:   ${host}"
+            else
+              echo "unpinned: ${host}"
+              printf '::warning file=ansible/known_hosts::%s%s\n' \
+                "No pinned host key for '${host}', so it cannot be deployed from CI. " \
+                "Add one with: ssh-keyscan -t ed25519,ecdsa,rsa ${host} >> ansible/known_hosts"
+            fi
+          done <<< "${remote_hosts}"

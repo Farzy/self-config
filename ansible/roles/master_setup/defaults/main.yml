@@ -96,3 +96,29 @@ master_setup_user_dotfiles:
   - name: .zshrc
 
 master_setup_install_microk8s: false
+
+# Public SSH keys authorised for the unattended CI deploy account (the account
+# GitHub Actions connects as, i.e. the host's `ansible_user`). Public keys are
+# not secrets, so these live in plain text in the per-host vars files.
+#
+# Empty by default: hosts that are not driven from CI get no extra key. See
+# `docs/ci-ansible.md` for the bootstrap procedure — the first key has to be
+# installed by hand, because CI cannot log in to install its own key.
+master_setup_ci_authorized_keys: []
+
+# Account the CI keys above are installed for: the inventory's `ansible_user`,
+# which is exactly the account CI authenticates as.
+#
+# `| mandatory` rather than `| default('root')` on purpose. A host added to the
+# inventory without an explicit `ansible_user` would otherwise silently
+# authorise the CI key for *root* — the inverse of the least-privilege intent,
+# with nothing in the output to notice. Failing loudly is the safer default.
+# Only templated when master_setup_ci_authorized_keys is non-empty, so hosts
+# that are not CI-managed are unaffected.
+master_setup_ci_authorized_keys_user: "{{ ansible_user | mandatory }}"
+
+# Set to true to make the CI account's authorized_keys file *exactly*
+# `master_setup_ci_authorized_keys`, purging any key added out of band. Left
+# false by default so that a mistake here cannot lock you out of your own
+# server; turn it on once you trust the list.
+master_setup_ci_authorized_keys_exclusive: false

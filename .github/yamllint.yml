@@ -1,0 +1,29 @@
+# Single source of truth for YAML style, used by both the yamllint pre-commit
+# hook and the `✅ Ansible CI` workflow — so a clean `pre-commit run` means a
+# green CI run. Previously this ruleset existed only as an inline `-d '{...}'`
+# argument in .pre-commit-config.yaml, which CI could not reuse.
+#
+# Deliberately NOT at the repository root as `.yamllint`: ansible-lint embeds
+# its own yamllint and auto-discovers a root config, so putting it there makes
+# ansible-lint start failing on pre-existing long lines in the roles. Keeping it
+# here leaves ansible-lint on its own defaults, exactly as before.
+# Both callers pass it explicitly with `-c .github/yamllint.yml`.
+extends: relaxed
+
+rules:
+  line-length:
+    max: 120
+
+# CI runs yamllint across the whole repository, which would otherwise walk into
+# vendored and generated trees — .venv alone holds ~5000 YAML files. These are
+# all git-ignored, so pre-commit never passed them to yamllint either and this
+# list costs no local coverage.
+#
+# `ansible/roles/microk8s/files/` is deliberately NOT ignored here even though
+# .ansible-lint excludes it: those files are tracked, pre-commit was linting
+# them before, and they pass.
+ignore: |
+  .venv/
+  .idea/
+  **/.terraform/
+  log/

@@ -14,6 +14,22 @@
 #   loop: "{{ global.apt_repositories }}"
 #   tags: configuration
 
+# Keeps the key GitHub Actions logs in with under configuration management, so
+# that rotating or revoking it is a reviewed commit rather than a manual edit on
+# the box. Passing every key in a single `key:` value (newline separated) rather
+# than looping is what makes `exclusive` behave: with a loop, exclusive mode
+# would keep only the last iteration's key and drop the rest.
+- name: Authorise CI deploy keys for the unattended deploy account
+  ansible.posix.authorized_key:
+    user: "{{ master_setup_ci_authorized_keys_user }}"
+    key: "{{ master_setup_ci_authorized_keys | join('\n') }}"
+    exclusive: "{{ master_setup_ci_authorized_keys_exclusive }}"
+    state: present
+  when: master_setup_ci_authorized_keys | length > 0
+  tags:
+    - configuration
+    - ci_access
+
 - name: Include Debian specific tasks
   ansible.builtin.include_tasks:
     file: debian.yml
