@@ -10,8 +10,9 @@ name: '🚀 Ansible Deploy'
 #     reviewer is the second factor between a dispatch click and a live change.
 #   * SSH host keys are pinned from ansible/known_hosts, and the run is refused
 #     outright if the requested --limit resolves to a host with no pin.
-#   * Credentials are written to $RUNNER_TEMP with umask 077 and shredded in an
-#     always() step; nothing is ever written into the workspace.
+#   * Credentials are written outside the workspace with umask 077 and shredded
+#     in an always() step — the SSH key to $RUNNER_TEMP, the vault password to
+#     ~/.ansible-personal-key because a role template reads that exact path.
 #   * `--diff` is off by default (ansible.cfg turns it on) because rendered
 #     templates can contain vault-decrypted secrets, and these logs are public.
 
@@ -191,8 +192,22 @@ jobs:
         env:
           CI_SSH_PRIVATE_KEY: '${{ secrets.CI_SSH_PRIVATE_KEY }}'
           ANSIBLE_VAULT_PASSWORD: '${{ secrets.ANSIBLE_VAULT_PASSWORD }}'
-        # $RUNNER_TEMP, never the workspace: nothing here can be picked up by a
-        # later `actions/upload-artifact` or committed by accident.
+        # Never the workspace: nothing here can be picked up by a later
+        # `actions/upload-artifact` or committed by accident.
+        #
+        # The vault password goes to ~/.ansible-personal-key specifically, not
+        # to $RUNNER_TEMP. That exact path is this repository's convention —
+        # ansible.cfg, README.md, AGENTS.md and docs/openclaw.md all name it —
+        # and openclaw_setup/templates/secrets.env.j2 reads it *directly*:
+        #
+        #   ANSIBLE_VAULT_PASSWORD="{{ lookup('file', '~/.ansible-personal-key') | trim }}"
+        #
+        # A controller-side lookup like that bypasses ANSIBLE_VAULT_PASSWORD_FILE
+        # entirely, so pointing env vars at a temp file was not enough: the run
+        # got 80 tasks in and then failed on "Deploy OpenClaw secrets
+        # environment file". Honouring the convention makes ansible.cfg's
+        # vault_password_file, its vault_identity_list and that lookup all
+        # resolve with no overrides at all.
         run: |
           set -euo pipefail
           umask 077
@@ -207,8 +222,8 @@ jobs:
           fi
 
           printf '%s\n' "${CI_SSH_PRIVATE_KEY}" > "${RUNNER_TEMP}/ci_ssh_key"
-          printf '%s\n' "${ANSIBLE_VAULT_PASSWORD}" > "${RUNNER_TEMP}/vault_pass"
-          chmod 600 "${RUNNER_TEMP}/ci_ssh_key" "${RUNNER_TEMP}/vault_pass"
+          printf '%s\n' "${ANSIBLE_VAULT_PASSWORD}" > "${HOME}/.ansible-personal-key"
+          chmod 600 "${RUNNER_TEMP}/ci_ssh_key" "${HOME}/.ansible-personal-key"
 
           # Fail here with a clear message rather than as an opaque UNREACHABLE
           # 90 seconds later, e.g. when the secret was pasted without its
@@ -218,16 +233,16 @@ jobs:
             exit 1
           fi
 
-          # Exported for every later step, not just 'Run Ansible': ansible.cfg
-          # declares `vault_password_file = ~/.ansible-personal-key`, and *any*
-          # ansible command aborts when that file is missing — including the
-          # `ansible-inventory` call in the host-pinning gate, which never
-          # decrypts anything. The `personal` label must match the vault ID the
-          # vars were encrypted under.
-          {
-            echo "ANSIBLE_VAULT_PASSWORD_FILE=${RUNNER_TEMP}/vault_pass"
-            echo "ANSIBLE_VAULT_IDENTITY_LIST=personal@${RUNNER_TEMP}/vault_pass"
-          } >> "${GITHUB_ENV}"
+          # No ANSIBLE_VAULT_PASSWORD_FILE / ANSIBLE_VAULT_IDENTITY_LIST
+          # overrides any more: with the file at the conventional path,
+          # ansible.cfg's own `vault_password_file` and
+          # `vault_identity_list = personal@~/.ansible-personal-key` already
+          # resolve, and one fewer override means one fewer thing that can
+          # disagree with a controller-side lookup.
+          #
+          # This step still has to run *before* the host-pinning gate: any
+          # ansible command, including that gate's `ansible-inventory` call,
+          # aborts when the vault password file named in ansible.cfg is missing.
 
       - name: 'Refuse to target hosts without a pinned SSH host key'
         working-directory: 'ansible'
@@ -356,6 +371,6 @@ jobs:
         run: |
           shred --remove --force \
             "${RUNNER_TEMP}/ci_ssh_key" \
-            "${RUNNER_TEMP}/vault_pass" \
+            "${HOME}/.ansible-personal-key" \
             "${RUNNER_TEMP}/ansible.log" 2> /dev/null || true
-          rm -f "${RUNNER_TEMP}/ci_ssh_key" "${RUNNER_TEMP}/vault_pass" "${RUNNER_TEMP}/ansible.log"
+          rm -f "${RUNNER_TEMP}/ci_ssh_key" "${HOME}/.ansible-personal-key" "${RUNNER_TEMP}/ansible.log"
