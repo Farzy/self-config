@@ -80,7 +80,8 @@
       "enabled": true,
       "cliPath": "/usr/local/bin/signal-cli",
       "dmPolicy": "pairing",
-      "allowFrom": {{ openclaw_setup_signal_allow_from | to_json }}
+      "allowFrom": {{ openclaw_setup_signal_allow_from | to_json }},
+      "account": "{{ openclaw_setup_signal_account }}"
     }{% if openclaw_setup_telegram_enabled and openclaw_telegram_bot_token is defined %},
     "telegram": {
       "enabled": true,
