@@ -15,6 +15,11 @@ integration_market_pay: "{{ (system_serial_number | default('')) == laptop_seria
 # the placeholder.
 claude_personal_md_ready: false
 
+# Shared between the CLAUDE.md install and "ai-drift" trace tasks in
+# laptop_setup, so both variants stay in lockstep with the real installer.
+claude_md_dest: "~/.claude/CLAUDE.md"
+claude_md_mode: "0644"
+
 laptop_hostname: >-
   {% if (system_serial_number | default('')) == laptop_serial_personal %}
   Delerium

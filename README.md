@@ -120,12 +120,13 @@ on the command line.
 
 ### Tracing drift on vault-encrypted AI config files
 
-`~/.claude/CLAUDE.md` (professional: `ai/CLAUDE_professional.md.j2`; personal:
-`ai/CLAUDE_personal.md.j2`) are whole-file vault-encrypted templates. Because
-they hold hand-edited content (e.g. Claude's memory imports), a normal apply
-can silently delete anything on disk that hasn't made it back into the
-template. To check for that drift with zero risk of overwriting the live
-file, use the `ai-drift` tag:
+`~/.claude/CLAUDE.md` (professional:
+`roles/laptop_setup/templates/ai/CLAUDE_professional.md.j2`; personal:
+`roles/laptop_setup/templates/ai/CLAUDE_personal.md.j2`) are whole-file
+vault-encrypted templates. Because they hold hand-edited content (e.g.
+Claude's memory imports), a normal apply can silently delete anything on
+disk that hasn't made it back into the template. To check for that drift
+with zero risk of overwriting the live file, use the `ai-drift` tag:
 
     ansible-playbook --limit <host> -t ai-drift playbooks/laptop.yml
 
@@ -137,10 +138,17 @@ line — and the `never` tag keeps them out of normal runs (including
 content that only exists on disk, port it back into the template with
 `ansible-vault edit` before applying for real.
 
+> [!IMPORTANT]
+> The diff prints the vault-decrypted template content to the terminal.
+> Only run `ai-drift` locally, never in CI or anywhere logs are retained —
+> the same reasoning as the `--diff` suppression in
+> [Running Ansible from GitHub Actions](#running-ansible-from-github-actions).
+
 The personal template currently ships as a placeholder gated behind
-`claude_personal_md_ready: false` in `vars/laptop.yml` — see the comments in
-`CLAUDE_personal.md.j2` for how to seed it and flip that flag once it matches
-the real file.
+`claude_personal_md_ready: false` in `vars/laptop.yml`. To seed it, decrypt
+it with `ansible-vault view roles/laptop_setup/templates/ai/CLAUDE_personal.md.j2`
+for the step-by-step instructions, then flip that flag once its content
+matches the real file (verified with `ai-drift`).
 
 ### Running Ansible from GitHub Actions
 
