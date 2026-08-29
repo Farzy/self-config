@@ -347,6 +347,22 @@ fi
 
 # mp-ops auto-completion
 [[ -f ~/.mp_ops-complete.zsh ]] && source ~/.mp_ops-complete.zsh
+
+# List every Terragrunt unit with a pending change (or a failed/errored plan)
+# across all environments. Takes the Terragrunt working directory as an
+# optional argument (defaults to "main").
+# See https://marketpay.atlassian.net/wiki/spaces/DOS/pages/1199441018887
+function tg-drift {
+    local working_dir="${1:-main}" tmpdir report_file
+    tmpdir="$(mktemp -d)"
+    report_file="${tmpdir}/tg-report.json"
+    terragrunt --non-interactive --no-color plan --all --working-dir "${working_dir}" --log-level error \
+        --report-file "${report_file}" --report-format json 2>&1 \
+        | grep -E "Plan:|Changes to Outputs:" \
+        | sed 's/.*\[//;s/\] terraform: /: /'
+    jq -r '.[] | select(.Result != "succeeded") | "\(.Name): \(.Result)"' "${report_file}"
+    rm -rf "${tmpdir}"
+}
 {| endif |}
 {| if is_wsl2 -|}
 # The path to your Windows home (If you're using WSL)
