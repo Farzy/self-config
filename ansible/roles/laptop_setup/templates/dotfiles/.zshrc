@@ -368,6 +368,9 @@ function tg-drift {
         return 1
     fi
 }
+
+# Claude
+alias claude-ops='cd $HOME/src/market-pay/ffarid-ops-logbook && claude --permission-mode auto --add-dir ../platform-infra ../platform-landing-zone ../platform-tools'
 {| endif |}
 {| if is_wsl2 -|}
 # The path to your Windows home (If you're using WSL)
