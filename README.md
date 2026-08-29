@@ -118,6 +118,30 @@ Here are some sample ansible commands:
 is set in `ansible.cfg`, there is no need to use `--vault-id` or `--encrypt-vault-id`
 on the command line.
 
+### Tracing drift on vault-encrypted AI config files
+
+`~/.claude/CLAUDE.md` (professional: `ai/CLAUDE_professional.md.j2`; personal:
+`ai/CLAUDE_personal.md.j2`) are whole-file vault-encrypted templates. Because
+they hold hand-edited content (e.g. Claude's memory imports), a normal apply
+can silently delete anything on disk that hasn't made it back into the
+template. To check for that drift with zero risk of overwriting the live
+file, use the `ai-drift` tag:
+
+    ansible-playbook --limit <host> -t ai-drift playbooks/laptop.yml
+
+The two `Trace drift: ...` tasks behind that tag set `check_mode: true` and
+`diff: true` directly on the task, so they always show a diff and never
+write, regardless of whether `--check`/`--diff` are passed on the command
+line — and the `never` tag keeps them out of normal runs (including
+`--tags all`) unless `ai-drift` is requested explicitly. If the diff shows
+content that only exists on disk, port it back into the template with
+`ansible-vault edit` before applying for real.
+
+The personal template currently ships as a placeholder gated behind
+`claude_personal_md_ready: false` in `vars/laptop.yml` — see the comments in
+`CLAUDE_personal.md.j2` for how to seed it and flip that flag once it matches
+the real file.
+
 ### Running Ansible from GitHub Actions
 
 Ansible can also be run against remote servers from CI, currently for the

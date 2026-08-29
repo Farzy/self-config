@@ -120,3 +120,48 @@
     - configuration
     - ai
   when: integration_market_pay | default(false)
+
+# Gated on claude_personal_md_ready (see vars/laptop.yml) so this can be
+# scaffolded ahead of the real content: CLAUDE_personal.md.j2 starts out as a
+# placeholder, and applying it for real before it's seeded would overwrite
+# whatever is currently at ~/.claude/CLAUDE.md on the personal laptop. Use the
+# "ai-drift" trace tasks below to compare the placeholder against the live
+# file before flipping the flag.
+- name: Install personal CLAUDE.md to ~/.claude
+  ansible.builtin.template:
+    src: "ai/CLAUDE_personal.md.j2"
+    dest: "~/.claude/CLAUDE.md"
+    mode: "0644"
+  tags:
+    - configuration
+    - ai
+  when: integration_personal_laptop | default(false) and claude_personal_md_ready | default(false)
+
+# Read-only drift check for both CLAUDE.md variants: check_mode/diff are set
+# on the task itself, so it never writes regardless of CLI flags, and always
+# shows a diff. Tagged "never" so it's excluded from normal runs (including
+# --tags all) and only fires when "ai-drift" is requested explicitly, e.g.:
+#   ansible-playbook --limit <host> -t ai-drift playbooks/laptop.yml
+- name: "Trace drift: professional CLAUDE.md (read-only, never writes)"
+  ansible.builtin.template:
+    src: "ai/CLAUDE_professional.md.j2"
+    dest: "~/.claude/CLAUDE.md"
+    mode: "0644"
+  check_mode: true
+  diff: true
+  when: integration_market_pay | default(false)
+  tags:
+    - never
+    - ai-drift
+
+- name: "Trace drift: personal CLAUDE.md (read-only, never writes)"
+  ansible.builtin.template:
+    src: "ai/CLAUDE_personal.md.j2"
+    dest: "~/.claude/CLAUDE.md"
+    mode: "0644"
+  check_mode: true
+  diff: true
+  when: integration_personal_laptop | default(false)
+  tags:
+    - never
+    - ai-drift

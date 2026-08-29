@@ -7,6 +7,14 @@ laptop_serial_professional: "FTV32FH396"
 integration_personal_laptop: "{{ (system_serial_number | default('')) == laptop_serial_personal }}"
 integration_market_pay: "{{ (system_serial_number | default('')) == laptop_serial_professional }}"
 
+# Safety gate for the "Install personal CLAUDE.md" task: CLAUDE_personal.md.j2
+# starts out as a placeholder, not the real content of Delerium's
+# ~/.claude/CLAUDE.md. Leave this false until the template has been seeded
+# with the real content (via `ansible-vault edit`) and verified with the
+# "ai-drift" trace tag, so a normal apply can't overwrite the live file with
+# the placeholder.
+claude_personal_md_ready: false
+
 laptop_hostname: >-
   {% if (system_serial_number | default('')) == laptop_serial_personal %}
   Delerium
