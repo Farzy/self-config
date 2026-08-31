@@ -34,22 +34,23 @@
 {% endif %}
       },
       "models": {{ ns.models | to_json }},
-      "reasoningDefault": "{{ openclaw_setup_reasoning_default }}",
-      "memorySearch": {
-        "provider": "{{ openclaw_setup_memory_search_provider }}",
-        "model": "{{ openclaw_setup_memory_search_model }}"{% if openclaw_setup_memory_search_extra_paths is defined and openclaw_setup_memory_search_extra_paths | length > 0 %},
-        "extraPaths": {{ openclaw_setup_memory_search_extra_paths | to_json }}
-{% endif %}
-      }
+      "reasoningDefault": "{{ openclaw_setup_reasoning_default }}"
     },
-    "list": [
-      {
-        "id": "main",
+    "entries": {
+      "main": {
         "identity": {
           "avatar": "{{ openclaw_setup_avatar }}"
         }
       }
-    ]
+    }
+  },
+  "memory": {
+    "search": {
+      "provider": "{{ openclaw_setup_memory_search_provider }}",
+      "model": "{{ openclaw_setup_memory_search_model }}"{% if openclaw_setup_memory_search_extra_paths is defined and openclaw_setup_memory_search_extra_paths | length > 0 %},
+      "extraPaths": {{ openclaw_setup_memory_search_extra_paths | to_json }}
+{% endif %}
+    }
   },
   "plugins": {
     "entries": {
@@ -78,7 +79,10 @@
   "channels": {
     "signal": {
       "enabled": true,
-      "cliPath": "/usr/local/bin/signal-cli",
+      "transport": {
+        "kind": "managed-native",
+        "cliPath": "/usr/local/bin/signal-cli"
+      },
       "dmPolicy": "pairing",
       "allowFrom": {{ openclaw_setup_signal_allow_from | to_json }},
       "account": "{{ openclaw_setup_signal_account }}"
