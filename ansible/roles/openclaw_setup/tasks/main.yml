@@ -525,6 +525,7 @@
     name: openclaw
     version: "{{ openclaw_setup_version }}"
     global: true
+  notify: Restart openclaw
 
 - name: Install Claude Code CLI globally via npm
   community.general.npm:
