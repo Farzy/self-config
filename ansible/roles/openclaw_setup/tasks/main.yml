@@ -374,7 +374,7 @@
 - name: Symlink signal-cli to /usr/local/bin
   ansible.builtin.file:
     src: "/opt/signal-cli-{{ openclaw_setup_signal_cli_version }}/signal-cli"
-    dest: /usr/local/bin/signal-cli
+    dest: "{{ openclaw_setup_signal_cli_path }}"
     state: link
   notify: Restart openclaw
 
@@ -520,6 +520,14 @@
     path: "{{ openclaw_setup_home }}/.gog-refresh-token.json.tmp"
     state: absent
 
+- name: Assert the pinned openclaw version understands the templated config schema
+  ansible.builtin.assert:
+    that:
+      - openclaw_setup_version is version('2026.8.1', '>=')
+    fail_msg: >-
+      openclaw.json.j2 emits the 2026.8.1 schema (agents.entries, memory.search,
+      channels.signal.transport); pin openclaw_setup_version >= 2026.8.1 or revert the template.
+
 - name: Install OpenClaw globally via npm
   community.general.npm:
     name: openclaw
@@ -559,6 +567,7 @@
     owner: "{{ openclaw_setup_user }}"
     group: "{{ openclaw_setup_group }}"
     mode: '0600'
+    validate: python3 -c "import json,sys; json.load(open(sys.argv[1]))" %s
   notify: Restart openclaw
 
 - name: Create OpenClaw secrets directory

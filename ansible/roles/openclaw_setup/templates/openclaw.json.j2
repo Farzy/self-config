@@ -81,7 +81,7 @@
       "enabled": true,
       "transport": {
         "kind": "managed-native",
-        "cliPath": "/usr/local/bin/signal-cli"
+        "cliPath": "{{ openclaw_setup_signal_cli_path }}"
       },
       "dmPolicy": "pairing",
       "allowFrom": {{ openclaw_setup_signal_allow_from | to_json }},
