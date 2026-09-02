@@ -99,6 +99,18 @@
     force: true
   become: true
   become_user: "{{ fastmail_mcp_user }}"
+  # GitHub now returns 401 for anonymous git-upload-pack requests from this
+  # host's IP (confirmed via curl/git trace: same request succeeds from other
+  # IPs, and hits every public repo, not just this one - anti-abuse throttling
+  # on the hosting range, not a repo-specific or local-config issue). Skip
+  # /etc/gitconfig's `gh auth git-credential` helper (fastmail-mcp has no gh
+  # session) and instead authenticate this one request in-memory with the PAT
+  # already provisioned for this host, without writing it to any file.
+  environment:
+    GIT_CONFIG_NOSYSTEM: "1"
+    GIT_CONFIG_COUNT: "1"
+    GIT_CONFIG_KEY_0: "http.https://github.com/.extraheader"
+    GIT_CONFIG_VALUE_0: "Authorization: Basic {{ ('x-access-token:' ~ openclaw_github_pat) | b64encode }}"
   register: fastmail_mcp_repo
 
 - name: Check if dist/index.js exists
@@ -180,6 +192,12 @@
     version: "{{ fastmail_mcp_supergateway_git_version }}"
     force: true
   when: fastmail_mcp_supergateway_source == "git"
+  # Same anonymous-GitHub-fetch-from-this-IP issue as the fastmail-mcp clone above.
+  environment:
+    GIT_CONFIG_NOSYSTEM: "1"
+    GIT_CONFIG_COUNT: "1"
+    GIT_CONFIG_KEY_0: "http.https://github.com/.extraheader"
+    GIT_CONFIG_VALUE_0: "Authorization: Basic {{ ('x-access-token:' ~ openclaw_github_pat) | b64encode }}"
   register: fastmail_mcp_supergateway_repo
 
 - name: Check if patched supergateway dist/index.js exists
