@@ -41,6 +41,7 @@ openclaw_setup_scaleway_reasoning_model_ids:
   - "qwen3.6-35b-a3b"
 
 openclaw_setup_signal_cli_version: "0.14.7"
+openclaw_setup_signal_cli_path: "/usr/local/bin/signal-cli"
 openclaw_setup_signal_account: ""
 openclaw_setup_signal_allow_from: []
 
@@ -64,4 +65,4 @@ openclaw_setup_memory_search_extra_paths:
 openclaw_setup_dreaming_enabled: true
 openclaw_setup_memory_wiki_enabled: true
 
-openclaw_setup_version: "2026.8.1"
+openclaw_setup_version: "2026.8.2"

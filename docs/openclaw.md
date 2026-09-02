@@ -12,7 +12,7 @@ This guide details the deployment, configuration, operational management, and tr
 * **Runtime Environment**: Node.js 26.x (`node_26.x` APT repository), OpenClaw systemd service (`openclaw.service`).
 * **Dedicated System Account**: User `claw` (`/home/claw`, default shell `/usr/bin/zsh`).
 * **LLM Provider**: Anthropic Claude (`anthropic/claude-sonnet-5`), routed through the `claude-cli` agent runtime (reuses a Claude Code login on the host instead of a separate API key — see [6.4](#64-claude-anthropic-model-via-claude-code-cli-reuse)), with optional Scaleway Generative APIs (`https://api.scaleway.ai/5e40a076-f4e5-4328-8052-1a543614ec45/v1`, supporting GLM 5.2, Qwen 3.6 Coder, and Mistral Small 3) available as an alternate provider.
-* **Embeddings Provider**: Google Gemini (`gemini-embedding-001`) is still used for `memorySearch` — unrelated to the chat model, kept for semantic memory indexing (see [4.2](#42-memory-search--background-dreaming-configuration)).
+* **Embeddings Provider**: Google Gemini (`gemini-embedding-001`) is still used for `memory.search` — unrelated to the chat model, kept for semantic memory indexing (see [4.2](#42-memory-search--background-dreaming-configuration)).
 * **API Key Management**: Dedicated Gemini API key (embeddings only) and optional Scaleway API key stored encrypted with Ansible Vault in [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml). Claude auth uses a long-lived OAuth token (`CLAUDE_CODE_OAUTH_TOKEN`), also vault-encrypted.
 * **Control Channels**:
   - **Telegram**: Stock `@openclaw/telegram` plugin connected in live long-polling mode using an encrypted bot token.
@@ -135,13 +135,13 @@ Ansible automatically asserts system user isolation during playbook execution:
 
 To leverage semantic search and automatic long-term memory consolidation, OpenClaw includes active memory searching and dreaming plugins pre-integrated into your Ansible defaults:
 
-* **Semantic Memory Search (`agents.defaults.memorySearch`)**:
+* **Semantic Memory Search (top-level `memory.search`)**:
   - Configures OpenClaw's vector search pipeline using Google's modern embedding API.
   - Defaults are managed in Ansible via:
     - `openclaw_setup_memory_search_provider` (default: `"gemini"`)
     - `openclaw_setup_memory_search_model` (default: `"gemini-embedding-001"`)
     - `openclaw_setup_memory_search_extra_paths` (default: `["{{ openclaw_setup_home }}/.openclaw/workspace/farzad-wiki"]` to index your professional wiki).
-  - It generates the standard `memorySearch` block inside `openclaw.json`, allowing the agent to dynamically index and retrieve matching historical contexts during conversation turns.
+  - It generates the standard `memory.search` block inside `openclaw.json` (moved from `agents.defaults.memorySearch` as of the 2026.8.1 schema — see [§8](#8-service-management--troubleshooting)), allowing the agent to dynamically index and retrieve matching historical contexts during conversation turns.
 
 * **Memory Dreaming (`plugins.entries.memory-core`)**:
   - Enables OpenClaw's background memory dreaming and consolidation sweeps.
@@ -320,7 +320,7 @@ OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `c
 
 **Switching model tier**: `openclaw_setup_model` (`ansible/roles/openclaw_setup/defaults/main.yml`, default `anthropic/claude-sonnet-5`) can be overridden per-inventory to `anthropic/claude-opus-5` for higher-quality/slower responses, or any other `anthropic/claude-*` id — the `claude-cli` `agentRuntime` mapping in the template follows whatever `openclaw_setup_model` is set to, as long as `openclaw_setup_claude_cli_enabled` stays `true`.
 
-**Reverting to Gemini as primary**: set `openclaw_setup_model: "google/gemini-3.1-pro-preview"` and `openclaw_setup_claude_cli_enabled: false`, then redeploy. `GEMINI_API_KEY` and the `google` plugin stay wired regardless (needed for `memorySearch` embeddings).
+**Reverting to Gemini as primary**: set `openclaw_setup_model: "google/gemini-3.1-pro-preview"` and `openclaw_setup_claude_cli_enabled: false`, then redeploy. `GEMINI_API_KEY` and the `google` plugin stay wired regardless (needed for `memory.search` embeddings).
 
 ### 6.5 Model Fallback Chain & Reasoning Config
 
@@ -483,3 +483,10 @@ OpenClaw workspace skills are automatically provisioned via Ansible:
   ```bash
   ssh claw "sudo -u claw openclaw dashboard --no-open"
   ```
+* **Recovering from an `openclaw.json` schema migration crash-loop**:
+  An OpenClaw version bump can ship a breaking `openclaw.json` schema change (e.g. the 2026.8.1 release moved `agents.list` → `agents.entries`, `agents.defaults.memorySearch` → top-level `memory.search`, and flattened `channels.<name>.cliPath` under a `transport` object). If the live config still uses the old shape, the gateway can crash-loop on startup. `openclaw doctor --fix` auto-migrates the on-disk config to the new schema and writes timestamped `openclaw.json.bak.*` snapshots before each rewrite — diff those against `ansible/roles/openclaw_setup/templates/openclaw.json.j2` to confirm the Ansible template matches, then restart:
+  ```bash
+  ssh claw "sudo -u claw openclaw doctor --fix"
+  ssh claw "sudo systemctl restart openclaw"
+  ```
+  Update `openclaw.json.j2` (and `ansible/roles/openclaw_setup/defaults/main.yml: openclaw_setup_version`) to match so the next Ansible deploy doesn't regenerate the old schema and re-trigger the same migration.

@@ -34,22 +34,23 @@
 {% endif %}
       },
       "models": {{ ns.models | to_json }},
-      "reasoningDefault": "{{ openclaw_setup_reasoning_default }}",
-      "memorySearch": {
-        "provider": "{{ openclaw_setup_memory_search_provider }}",
-        "model": "{{ openclaw_setup_memory_search_model }}"{% if openclaw_setup_memory_search_extra_paths is defined and openclaw_setup_memory_search_extra_paths | length > 0 %},
-        "extraPaths": {{ openclaw_setup_memory_search_extra_paths | to_json }}
-{% endif %}
-      }
+      "reasoningDefault": "{{ openclaw_setup_reasoning_default }}"
     },
-    "list": [
-      {
-        "id": "main",
+    "entries": {
+      "main": {
         "identity": {
           "avatar": "{{ openclaw_setup_avatar }}"
         }
       }
-    ]
+    }
+  },
+  "memory": {
+    "search": {
+      "provider": "{{ openclaw_setup_memory_search_provider }}",
+      "model": "{{ openclaw_setup_memory_search_model }}"{% if openclaw_setup_memory_search_extra_paths is defined and openclaw_setup_memory_search_extra_paths | length > 0 %},
+      "extraPaths": {{ openclaw_setup_memory_search_extra_paths | to_json }}
+{% endif %}
+    }
   },
   "plugins": {
     "entries": {
@@ -67,9 +68,13 @@
           "dreaming": {
             "enabled": {{ openclaw_setup_dreaming_enabled | to_json }}
           }
-        }
+        },
+        "enabled": true
       }{% if openclaw_setup_telegram_enabled and openclaw_telegram_bot_token is defined %},
       "telegram": {
+        "enabled": true
+      },
+      "anthropic": {
         "enabled": true
       }
 {% endif %}
@@ -78,10 +83,13 @@
   "channels": {
     "signal": {
       "enabled": true,
-      "cliPath": "/usr/local/bin/signal-cli",
       "dmPolicy": "pairing",
       "allowFrom": {{ openclaw_setup_signal_allow_from | to_json }},
-      "account": "{{ openclaw_setup_signal_account }}"
+      "account": "{{ openclaw_setup_signal_account }}",
+      "transport": {
+        "kind": "managed-native",
+        "cliPath": "{{ openclaw_setup_signal_cli_path }}"
+      }
     }{% if openclaw_setup_telegram_enabled and openclaw_telegram_bot_token is defined %},
     "telegram": {
       "enabled": true,
@@ -90,7 +98,8 @@
       "allowFrom": {{ openclaw_setup_telegram_allow_from | to_json }},
       "threadBindings": {
         "enabled": {{ openclaw_setup_telegram_thread_bindings_enabled | to_json }}
-      }
+      },
+      "groupAllowFrom": {{ openclaw_setup_telegram_allow_from | to_json }}
     }
 {% endif %}
   },
@@ -204,6 +213,9 @@
         "enabled": false
       },
       "xurl": {
+        "enabled": false
+      },
+      "model-usage": {
         "enabled": false
       }
     }
