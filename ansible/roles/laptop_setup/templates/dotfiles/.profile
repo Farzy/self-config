@@ -95,9 +95,10 @@ fi
 complete -C aws_completer aws
 
 # shellcheck disable=SC3046
-if [ -d ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk ]; then
-    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc
-    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc
+# The `gcloud-cli` cask installs the SDK under share/, not Caskroom/.
+if [ -d ${HOMEBREW_PREFIX}/share/google-cloud-sdk ]; then
+    source ${HOMEBREW_PREFIX}/share/google-cloud-sdk/completion.bash.inc
+    source ${HOMEBREW_PREFIX}/share/google-cloud-sdk/path.bash.inc
 fi
 
 # pyenv-virtual

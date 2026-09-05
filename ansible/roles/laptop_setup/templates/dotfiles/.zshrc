@@ -286,9 +286,10 @@ compdef tg=terragrunt
 command -v direnv > /dev/null && eval "$(direnv hook zsh)"
 
 {| if is_macos -|}
-if [ -d ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk ]; then
-    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc
-    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc
+# The `gcloud-cli` cask installs the SDK under share/, not Caskroom/.
+if [ -d ${HOMEBREW_PREFIX}/share/google-cloud-sdk ]; then
+    source ${HOMEBREW_PREFIX}/share/google-cloud-sdk/completion.zsh.inc
+    source ${HOMEBREW_PREFIX}/share/google-cloud-sdk/path.zsh.inc
 fi
 
 # Brew completion
