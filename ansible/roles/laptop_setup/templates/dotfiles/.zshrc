@@ -46,19 +46,15 @@ elif [[ -d /usr/local/Homebrew && ! -v HOMEBREW_PREFIX ]]; then
 fi
 {| endif |}
 
-# Go
+# Go — toolchain from Homebrew; GOPATH/bin holds `go install`-ed binaries
 if [[ -d "$HOME/go" ]]; then
-    # g-install: do NOT edit, see https://github.com/stefanmaric/g
-    # Only use these two settings if the Go Version Manager is installed
-#     export GOROOT="$HOME/.go"
-#     alias ggovm="$GOPATH/bin/g"
     export GOPATH="$HOME/go"
     export PATH="$GOPATH/bin:$PATH"
 fi
 
 # rbenv
 if type rbenv &>/dev/null; then
-    export RBENV_ROOT=/usr/local/var/rbenv
+    export RBENV_ROOT=$HOME/.rbenv
     eval "$(rbenv init -)"
 fi
 
@@ -286,9 +282,10 @@ compdef tg=terragrunt
 command -v direnv > /dev/null && eval "$(direnv hook zsh)"
 
 {| if is_macos -|}
-if [ -d ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk ]; then
-    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc
-    source ${HOMEBREW_PREFIX}/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc
+# The `gcloud-cli` cask installs the SDK under share/, not Caskroom/.
+if [ -d ${HOMEBREW_PREFIX}/share/google-cloud-sdk ]; then
+    source ${HOMEBREW_PREFIX}/share/google-cloud-sdk/completion.zsh.inc
+    source ${HOMEBREW_PREFIX}/share/google-cloud-sdk/path.zsh.inc
 fi
 
 # Brew completion

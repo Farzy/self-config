@@ -1,7 +1,9 @@
 ---
 
 # Laptop Identification by Serial Number
-laptop_serial_personal: "C02YG6X6JG5J"
+# personal: "Serenity" MacBook Pro (Apple M5 Pro). Was "C02YG6X6JG5J" (Intel
+# "Delerium") before the 2026-09 hardware replacement.
+laptop_serial_personal: "GC29C491K2"
 laptop_serial_professional: "FTV32FH396"
 
 integration_personal_laptop: "{{ (system_serial_number | default('')) == laptop_serial_personal }}"
@@ -16,7 +18,7 @@ claude_md_mode: "0644"
 
 laptop_hostname: >-
   {% if (system_serial_number | default('')) == laptop_serial_personal %}
-  Delerium
+  Serenity
   {% elif (system_serial_number | default('')) == laptop_serial_professional %}
   FRMPTMACFH396
   {% else %}
@@ -24,6 +26,10 @@ laptop_hostname: >-
   {% endif %}
 
 is_macos: "{{ ansible_facts['os_family'] == 'Darwin' }}"
+# homebrew_prefix (/opt/homebrew on Apple Silicon, /usr/local on Intel) is set as
+# a fact in roles/laptop_setup/tasks/main.yml from `brew --prefix` -- NOT derived
+# from ansible_facts['architecture'], which reports x86_64 whenever Ansible's
+# Python interpreter is an Intel build running under Rosetta.
 is_debian_family: "{{ ansible_facts['os_family'] == 'Debian' }}"
 is_debian: "{{ ansible_facts['distribution'] == 'Debian' }}"
 is_ubuntu: "{{ ansible_facts['distribution'] == 'Ubuntu' }}"
@@ -152,7 +158,7 @@ laptop_setup_homebrew_packages:
   - git-lfs
   - glab
   - gnu-sed
-#  - "{{ 'go' if integration_market_pay else omit }}"
+  - go
   - "{{ 'openclaw/tap/gogcli' if integration_market_pay else omit }}"
   - "{{ 'golangci-lint' if integration_market_pay else omit }}"
   - graphicsmagick
@@ -185,9 +191,12 @@ laptop_setup_homebrew_packages:
   - pyenv-virtualenv
   - pwgen
   - python@3.11
+  # python@3.12 also backs serenity's ansible_python_interpreter pin in ./hosts.
   - python@3.12
   - qpdf
+  - rbenv
   - ripgrep
+  - ruby-build
   - rustup
   - "{{ 'shellcheck' if integration_market_pay else omit }}"
   - scw
@@ -211,9 +220,15 @@ laptop_setup_homebrew_packages:
   - zoxide
 homebrew_cask_packages:
   - "{{ 'bitwarden' if integration_market_pay else omit }}"
-  - git-credential-manager
+  - docker-desktop
   - gcloud-cli
+  - git-credential-manager
+  - jetbrains-toolbox
   - "{{ 'lens' if integration_market_pay else omit }}"
+  - notion
+  - obsidian
+  - signal
+  - vlc
 laptop_setup_homebrew_packages_removed:
   - python@3.9
   - python@3.10

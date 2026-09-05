@@ -65,4 +65,4 @@ openclaw_setup_memory_search_extra_paths:
 openclaw_setup_dreaming_enabled: true
 openclaw_setup_memory_wiki_enabled: true
 
-openclaw_setup_version: "2026.9.1"
+openclaw_setup_version: "2026.9.2"
