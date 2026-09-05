@@ -58,7 +58,7 @@ fi
 
 # rbenv
 if type rbenv &>/dev/null; then
-    export RBENV_ROOT=/usr/local/var/rbenv
+    export RBENV_ROOT=$HOME/.rbenv
     eval "$(rbenv init -)"
 fi
 

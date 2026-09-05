@@ -62,13 +62,13 @@ export LC_NUMERIC="en_US.UTF-8"
 export LC_TIME="en_US.UTF-8"
 
 # Pour Brew
-export PATH=/usr/local/bin:/usr/local/sbin:$HOME/bin:$PATH
+export PATH={{ homebrew_prefix }}/bin:{{ homebrew_prefix }}/sbin:$HOME/bin:$PATH
 # Go
 export GOPATH=$HOME/Dropbox/src/gowork
-export PATH=$PATH:/usr/local/opt/go/libexec/bin:$GOPATH/bin
+export PATH=$PATH:{{ homebrew_prefix }}/opt/go/libexec/bin:$GOPATH/bin
 
 # rbenv
-export RBENV_ROOT=/usr/local/var/rbenv
+export RBENV_ROOT=$HOME/.rbenv
 eval "$(rbenv init -)"
 
 # Stack / Haskell
@@ -102,7 +102,9 @@ fi
 
 # pyenv-virtual
 if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -)"; fi
-. /usr/local/bin/virtualenvwrapper.sh
+# Legacy virtualenvwrapper: only source it if actually present (not installed by
+# this role; superseded by uv / pyenv-virtualenv / poetry).
+[ -f "${HOMEBREW_PREFIX}/bin/virtualenvwrapper.sh" ] && . "${HOMEBREW_PREFIX}/bin/virtualenvwrapper.sh"
 {| endif |}
 
 {| if is_debian_family |}

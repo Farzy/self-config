@@ -1,7 +1,9 @@
 ---
 
 # Laptop Identification by Serial Number
-laptop_serial_personal: "C02YG6X6JG5J"
+# personal: "Serenity" MacBook Pro (Apple M5 Pro). Was "C02YG6X6JG5J" (Intel
+# "Delerium") before the 2026-09 hardware replacement.
+laptop_serial_personal: "GC29C491K2"
 laptop_serial_professional: "FTV32FH396"
 
 integration_personal_laptop: "{{ (system_serial_number | default('')) == laptop_serial_personal }}"
@@ -16,7 +18,7 @@ claude_md_mode: "0644"
 
 laptop_hostname: >-
   {% if (system_serial_number | default('')) == laptop_serial_personal %}
-  Delerium
+  Serenity
   {% elif (system_serial_number | default('')) == laptop_serial_professional %}
   FRMPTMACFH396
   {% else %}
@@ -24,6 +26,9 @@ laptop_hostname: >-
   {% endif %}
 
 is_macos: "{{ ansible_facts['os_family'] == 'Darwin' }}"
+# Homebrew lives in /opt/homebrew on Apple Silicon, /usr/local on Intel. Used by
+# the dotfile templates so they never hardcode one prefix.
+homebrew_prefix: "{{ '/opt/homebrew' if ansible_facts['architecture'] == 'arm64' else '/usr/local' }}"
 is_debian_family: "{{ ansible_facts['os_family'] == 'Debian' }}"
 is_debian: "{{ ansible_facts['distribution'] == 'Debian' }}"
 is_ubuntu: "{{ ansible_facts['distribution'] == 'Ubuntu' }}"
