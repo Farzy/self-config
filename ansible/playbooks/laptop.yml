@@ -15,7 +15,7 @@
   # so tasks that shell out to `brew`, `helm`, etc. resolve regardless of the
   # invoking shell (Apple Silicon uses /opt/homebrew, Intel /usr/local).
   environment:
-    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_facts['env']['PATH'] }}"
   roles:
     - role: laptop_setup
       tags: deploy
