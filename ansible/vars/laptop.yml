@@ -219,9 +219,15 @@ laptop_setup_homebrew_packages:
   - zoxide
 homebrew_cask_packages:
   - "{{ 'bitwarden' if integration_market_pay else omit }}"
-  - git-credential-manager
+  - docker-desktop
   - gcloud-cli
+  - git-credential-manager
+  - jetbrains-toolbox
   - "{{ 'lens' if integration_market_pay else omit }}"
+  - notion
+  - obsidian
+  - signal
+  - vlc
 laptop_setup_homebrew_packages_removed:
   - python@3.9
   - python@3.10
