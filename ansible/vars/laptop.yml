@@ -26,9 +26,10 @@ laptop_hostname: >-
   {% endif %}
 
 is_macos: "{{ ansible_facts['os_family'] == 'Darwin' }}"
-# Homebrew lives in /opt/homebrew on Apple Silicon, /usr/local on Intel. Used by
-# the dotfile templates so they never hardcode one prefix.
-homebrew_prefix: "{{ '/opt/homebrew' if ansible_facts['architecture'] == 'arm64' else '/usr/local' }}"
+# homebrew_prefix (/opt/homebrew on Apple Silicon, /usr/local on Intel) is set as
+# a fact in roles/laptop_setup/tasks/main.yml from `brew --prefix` -- NOT derived
+# from ansible_facts['architecture'], which reports x86_64 whenever Ansible's
+# Python interpreter is an Intel build running under Rosetta.
 is_debian_family: "{{ ansible_facts['os_family'] == 'Debian' }}"
 is_debian: "{{ ansible_facts['distribution'] == 'Debian' }}"
 is_ubuntu: "{{ ansible_facts['distribution'] == 'Ubuntu' }}"

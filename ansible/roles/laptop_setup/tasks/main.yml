@@ -1,4 +1,20 @@
 ---
+- name: Detect Apple Silicon Homebrew
+  ansible.builtin.stat:
+    path: /opt/homebrew/bin/brew
+  register: _brew_arm
+  when: is_macos
+  tags: always
+
+- name: Set homebrew_prefix fact
+  ansible.builtin.set_fact:
+    # /opt/homebrew on Apple Silicon, /usr/local on Intel. Checked by file, not
+    # by `brew --prefix` (PATH-dependent) or ansible_facts['architecture']
+    # (reads x86_64 when Ansible's Python runs under Rosetta).
+    homebrew_prefix: "{{ '/opt/homebrew' if _brew_arm.stat.exists else '/usr/local' }}"
+  when: is_macos
+  tags: always
+
 - name: Set hostname
   ansible.builtin.include_tasks:
     file: hostname.yml
@@ -44,6 +60,34 @@
   tags:
     - packages
     - helm
+
+# The `nvm` Homebrew formula keeps its version store in $NVM_DIR (~/.nvm) but
+# ships nvm.sh under the Cellar. Point ~/.nvm/nvm.sh + nvm-exec at the current
+# Homebrew prefix so the oh-my-zsh nvm plugin (which sources $NVM_DIR/nvm.sh)
+# loads the native build and node installs survive `brew upgrade nvm`.
+- name: Ensure NVM_DIR (~/.nvm) exists
+  ansible.builtin.file:
+    path: "~/.nvm"
+    state: directory
+    mode: "0755"
+  tags:
+    - packages
+    - configuration
+  when: is_macos
+
+- name: Link ~/.nvm shims to the Homebrew nvm
+  ansible.builtin.file:
+    src: "{{ homebrew_prefix }}/opt/nvm/libexec/{{ item }}"
+    dest: "~/.nvm/{{ item }}"
+    state: link
+    force: true
+  loop:
+    - nvm.sh
+    - nvm-exec
+  tags:
+    - packages
+    - configuration
+  when: is_macos
 
 - name: Install Oh My Zsh and configure ZSH
   ansible.builtin.include_tasks:

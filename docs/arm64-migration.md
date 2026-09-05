@@ -272,27 +272,40 @@ lists `rustup`, not `rust`.
 
 ---
 
-## 6. Node
+## 6. Node — DONE 2026-09-05
+
+The blocker: `~/.nvm/nvm.sh` and `~/.nvm/nvm-exec` were **symlinks into
+`/usr/local/opt/nvm/libexec/`** (the Intel `nvm` formula, created Jan 2022).
+`NVM_DIR=~/.nvm` (data) but the loader was Intel. The oh-my-zsh `nvm` plugin
+sources `$NVM_DIR/nvm.sh`, so it kept loading the x86 nvm and x86 nodes.
 
 ```bash
-nvm deactivate
-nvm uninstall 12.16.3        # EOL 2022 — drop unless a project pins it
-nvm uninstall 24.14.0
-nvm install --lts            # default alias is lts/*
-nvm install 24               # current, if you want it
+command rm -f ~/.nvm/nvm.sh ~/.nvm/nvm-exec        # `rm` is aliased to `rm -i`
+ln -s /opt/homebrew/opt/nvm/libexec/nvm.sh   ~/.nvm/nvm.sh
+ln -s /opt/homebrew/opt/nvm/libexec/nvm-exec ~/.nvm/nvm-exec
+
+export NVM_DIR="$HOME/.nvm"; source ~/.nvm/nvm.sh
+nvm install --lts        # v24.20.0 (krypton), arm64
+nvm install node         # v26.8.1 current, arm64
 nvm alias default 'lts/*'
-corepack enable
+nvm use --lts
+nvm uninstall v24.14.0   # x86; must switch off it first
+nvm uninstall v12.16.3   # x86, EOL 2022
+
+rm -f ~/.nvmrc           # stale: pinned node 16.7 (Aug 2021, EOL, not installed)
 ```
 
-**Checkpoint:**
+**Result:** login shell `node` → `v24.20.0` arm64; `~/.nvm/nvm.sh` →
+`/opt/homebrew/opt/nvm/libexec/nvm.sh`. `corepack` (0.35.0) is bundled with the
+LTS node (Node 24 still ships it; 26 doesn't — use LTS if you need it). Brew
+`node` formula stays as the separate "system" node (`v26.7.0`, arm64).
 
-```bash
-node -p "process.arch"       # arm64
-file "$(nvm which current)"
-```
-
-The brew `node` formula (arm after phase 3) is the separate "system" node —
-leave it.
+**Repo changes (committed):** `laptop_setup/tasks/main.yml` gains
+`Ensure NVM_DIR exists` + `Link ~/.nvm shims to the Homebrew nvm` (so a fresh
+machine is set up right), and the `homebrew_prefix` detection was moved from a
+`vars/laptop.yml` expression (broken — `ansible_facts['architecture']` reads
+`x86_64` under a Rosetta Python) to a `stat /opt/homebrew/bin/brew` fact in
+`main.yml`.
 
 ---
 
