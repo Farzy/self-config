@@ -7,16 +7,10 @@ laptop_serial_professional: "FTV32FH396"
 integration_personal_laptop: "{{ (system_serial_number | default('')) == laptop_serial_personal }}"
 integration_market_pay: "{{ (system_serial_number | default('')) == laptop_serial_professional }}"
 
-# Safety gate for the "Install personal CLAUDE.md" task: CLAUDE_personal.md.j2
-# starts out as a placeholder, not the real content of Delerium's
-# ~/.claude/CLAUDE.md. Leave this false until the template has been seeded
-# with the real content (via `ansible-vault edit`) and verified with the
-# "ai-drift" trace tag, so a normal apply can't overwrite the live file with
-# the placeholder.
-claude_personal_md_ready: false
-
-# Shared between the CLAUDE.md install and "ai-drift" trace tasks in
-# laptop_setup, so both variants stay in lockstep with the real installer.
+# Shared between the CLAUDE.md check/install tasks in laptop_setup, so all
+# of them stay in lockstep with the real installer. Neither CLAUDE.md variant
+# is ever overwritten by a normal apply -- see the "ai-claude-write" tag in
+# roles/laptop_setup/tasks/main.yml.
 claude_md_dest: "~/.claude/CLAUDE.md"
 claude_md_mode: "0644"
 

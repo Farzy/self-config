@@ -1,6 +1,8 @@
-# Gemini Code Assistant Context
+# AI Assistant Context
 
-This file provides context to the Gemini Code Assistant to help it understand the project and provide more accurate and relevant assistance.
+This file provides context to AI coding assistants (Claude Code, Gemini CLI,
+etc.) to help them understand the project and provide more accurate and
+relevant assistance without having to re-read the whole codebase.
 
 ## Project Overview
 
@@ -19,6 +21,65 @@ The infrastructure is hosted on:
 *   **Scaleway**
 
 The project is structured to manage different environments, including web servers, Kubernetes clusters, and personal laptops.
+
+## Repository Layout
+
+*   `ansible/roles/` — one role per concern: `laptop_setup` (macOS/Debian
+    workstations, incl. Homebrew, dotfiles, AI assistant configs),
+    `openclaw_setup` / `fastmail_mcp_setup` (the OpenClaw gateway host),
+    `master_setup`, `iterm2_integration`, `docker`, `kind`, `kubectl`,
+    `microk8s`, `minikube`, `minecraft_server`, `test`.
+*   `ansible/playbooks/` — one playbook per inventory group in `ansible/hosts`
+    (`laptops` → `laptop.yml`, `web` → `web.yml`, `openclaw` → `openclaw.yml`,
+    `k8s` → `k8s-server.yml`, `minecraft` → `minecraft.yml`,
+    `quassel` → `quassel.yml`), plus `test.yml`, which is not tied to a group
+    and runs against `hosts: all`. The real groups are deliberately
+    non-overlapping so CI's `--limit` can never target a host with two
+    playbooks at once.
+*   `ansible/vars/` — per-group variables loaded via each playbook's
+    `vars_files` (`laptop.yml`, `openclaw.yml`, `minecraft.yml`, `web.yml`).
+    All but `web.yml` also carry inline `!vault` secrets.
+*   `docs/` — deep dives that AGENTS.md and README.md only summarize:
+    [ci-ansible.md](docs/ci-ansible.md) (CI/CD design),
+    [fastmail-mcp.md](docs/fastmail-mcp.md), [minecraft.md](docs/minecraft.md),
+    [openclaw.md](docs/openclaw.md) for those services.
+*   `.claude/skills/openclaw-ops/` — a Claude Code skill for editing,
+    dry-run testing, and deploying the OpenClaw/fastmail-mcp Ansible config;
+    prefer it over ad hoc `ansible-playbook` invocations for that host.
+*   `terraform/` — provisions the GCP/Scaleway infrastructure the servers
+    above run on.
+
+### Host targeting in `laptop_setup`
+
+`ansible/vars/laptop.yml` fingerprints the local machine by
+`system_serial_number` (via `laptop_serial_personal` /
+`laptop_serial_professional`) to derive `integration_personal_laptop` and
+`integration_market_pay`. Most `laptop_setup` tasks are gated on one of these
+booleans instead of `ansible_facts`, so a task that looks unconditional in
+one file may still be a no-op depending on which laptop it runs on.
+`system_serial_number` itself is only set on macOS (`tasks/hostname.yml`, via
+`system_profiler`, `when: is_macos`) — on a Debian/WSL2 laptop both booleans
+evaluate to false and every gated task is silently skipped.
+
+### Vault-encrypted whole-file AI assistant configs
+
+`roles/laptop_setup/files/ai/{CLAUDE,AGENTS}_{personal,professional}.md` are
+not ordinary templates: each whole file is Ansible Vault ciphertext
+(`ansible-vault encrypt`, vault-id `personal`), installed with
+`ansible.builtin.copy` (not `template`, since they hold hand-edited content
+with no intentional Jinja — `copy` still auto-decrypts a vaulted `src` but
+never evaluates `{{ }}`/`{% %}` in it). Never hand-edit the ciphertext
+directly — use
+`ansible-vault view|edit --vault-id personal@~/.ansible-personal-key <path>`.
+
+Only the two `CLAUDE.md` variants are check-by-default: a normal apply never
+writes `~/.claude/CLAUDE.md` — it only runs a diff-only "Check for changes"
+task per variant (`check_mode`/`diff` forced on the task itself) — and
+installing for real requires the explicit `ai-claude-write` tag (`ai-drift`
+runs just the checks, without the rest of `ai`/`configuration`).
+`AGENTS_personal.md`/`AGENTS_professional.md` have no such gate and are
+installed unconditionally to `~/.gemini/AGENTS.md`. Full procedure:
+[README.md § CLAUDE.md: check-by-default, write-on-opt-in](README.md#claudemd-check-by-default-write-on-opt-in).
 
 ## Building and Running
 
