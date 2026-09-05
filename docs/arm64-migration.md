@@ -242,35 +242,33 @@ retire/keep `delerium`), and decide the `laptop_hostname` personal branch
 
 ---
 
-## 5. Rust
+## 5. Rust — DONE 2026-09-05
 
-Keep the official rustup toolchain manager; drop the redundant brew `rust`
-compiler.
+`~/.cargo/bin/rustup` was itself an x86_64 binary, so `rustup set default-host`
++ `rustup self update` was **not** enough — `rustup toolchain install
+stable-aarch64-apple-darwin` refused ("may not be able to run on this system")
+because rustup-under-Rosetta still saw an x86 host. The fix was a native
+reinstall:
 
 ```bash
-brew uninstall rust 2>/dev/null || true    # keep brew "rustup" (arm now) OR use curl installer
-
 rustup set default-host aarch64-apple-darwin
-rustup toolchain install stable aarch64-apple-darwin
-rustup toolchain install nightly            # only if you use it
 rustup toolchain uninstall stable-x86_64-apple-darwin nightly-x86_64-apple-darwin
-rustup default stable
-rustup component add rust-analyzer clippy rustfmt rust-src
-
-# Rebuild the tools you cargo-installed yourself (see cargo-bins-standalone.txt).
-# Typical set from the audit:
-cargo install --locked cargo-expand cargo-edit drill
-# rustlings: reinstall from its installer if you still use it
-# rls: dead, drop it
+# native reinstall — re-lays every ~/.cargo/bin proxy as arm64, keeps toolchains
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+  | sh -s -- -y --default-host aarch64-apple-darwin --no-modify-path --profile default
+hash -r
+rustup toolchain install nightly --no-self-update
+rustup component add rust-analyzer rust-src        # clippy + rustfmt come with the default profile
+rm -f ~/.cargo/bin/rls ~/.cargo/bin/rust-analyzer  # rls is dead; rust-analyzer is now a rustup component
+cargo install --locked cargo-edit cargo-expand drill rustlings
+brew uninstall rust                                # Intel formula; also autoremoved llvm@22 (~1.6 GB)
 ```
 
-**Checkpoint:**
-
-```bash
-rustc -vV | grep host        # host: aarch64-apple-darwin
-file ~/.cargo/bin/cargo ~/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc
-cargo install --list
-```
+**Result:** every `~/.cargo/bin/*` is arm64; `rustc -vV` → `host:
+aarch64-apple-darwin` (1.98.1); toolchains `stable-aarch64` + `nightly-aarch64`.
+`rustlings` went from a local path install (`~/src/personal/RUST/rustlings`,
+v5.6.1) to crates.io v6.5.0. No repo change needed — `vars/laptop.yml` already
+lists `rustup`, not `rust`.
 
 ---
 
