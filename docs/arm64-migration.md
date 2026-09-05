@@ -413,35 +413,41 @@ Fresh login shell now resolves `node`/`npm`/`ruby`/`rustc`/`go`/`python3`/
 
 ---
 
-## 10. GUI apps
+## 10. GUI apps — IN PROGRESS
 
-### Cask-managed (done in phase 3 if added to the Brewfile)
+Casks added to `homebrew_cask_packages` (committed): `docker-desktop`,
+`jetbrains-toolbox`, `notion`, `obsidian`, `signal`, `vlc`.
+
+**Done:** `vlc`, `notion` → `brew install --cask --force` → arm64. (`obsidian`
++ `ghostty` were already arm from phase 3.)
+
+**Still to do** (apps were running / need the GUI):
 
 ```bash
-for c in signal vlc notion docker-desktop jetbrains-toolbox; do
-  brew install --cask "$c"
-done
+osascript -e 'quit app "Signal"' -e 'quit app "Docker Desktop"' -e 'quit app "JetBrains Toolbox"'
+brew install --cask --force signal docker-desktop jetbrains-toolbox
+# or, equivalently, once the three are quit:
+cd ~/src/personal/self-config/ansible
+ansible-playbook playbooks/laptop.yml --limit serenity -t packages
 ```
 
-- **Docker Desktop:** quit fully first. Data in
-  `~/Library/Containers/com.docker.docker` and the `desktop-linux` context
-  persist; re-pull images only if the Linux VM resets.
-- **JetBrains Toolbox:** must be arm **before** you touch the IDEs. Then in
-  Toolbox: uninstall IntelliJ IDEA and RustRover, reinstall — Toolbox now
-  offers the "Apple Silicon" build automatically. Settings/projects in
-  `~/Library/Application Support/JetBrains` survive. In RustRover, re-point the
-  toolchain to `~/.rustup` (Settings → Rust) — it should auto-detect the arm
-  `stable`.
-- **`~/Applications/Air.app`:** x86-only, not in Homebrew. Check the vendor for
+- **Docker Desktop:** `~/Library/Containers/com.docker.docker` and the
+  `desktop-linux` context persist; re-pull images only if the Linux VM resets.
+- **JetBrains Toolbox → IDEs:** Toolbox must be arm **first**. Then in Toolbox
+  uninstall + reinstall **IntelliJ IDEA** and **RustRover** — it offers the
+  Apple Silicon build automatically. Config in
+  `~/Library/Application Support/JetBrains` survives. In RustRover, confirm
+  Settings → Rust points at `~/.rustup` (arm `stable`).
+- **`~/Applications/Air.app`** (x86-only, not in Homebrew): check the vendor for
   an Apple Silicon build; low priority.
 
 ### Universal — quit and relaunch native
 
-iTerm2, Chrome, Telegram, WhatsApp, VS Code, Ghostty, Obsidian, GZDoom.
-
-For each: **Finder → app → Get Info → "Open using Rosetta" unchecked**, then
-fully quit (⌘Q, not just close window) and reopen. Chrome in particular is
-sticky — quit every `Google Chrome Helper` too.
+iTerm2, Chrome, VS Code, Telegram, WhatsApp, Ghostty, Obsidian (all carry an
+arm64 slice). **Finder → Get Info → "Open using Rosetta" unchecked**, then ⌘Q
+(not just close the window) and reopen. Chrome is sticky — also quit every
+`Google Chrome Helper`. Verify with **Activity Monitor → Kind** column
+("Apple", not "Intel").
 
 ---
 
