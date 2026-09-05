@@ -371,25 +371,45 @@ was auto-discovering the Intel `python@3.14` under Rosetta).
 
 ---
 
-## 9. Remove the Intel Homebrew
-
-Only after phases 3–8 verify green.
+## 9. Remove the Intel Homebrew — DONE 2026-09-05
 
 ```bash
-cd ~/arm64-migration
-NONINTERACTIVE=1 /bin/bash -c \
-  "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)" \
-  -- --path /usr/local
+curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh -o /tmp/brew-uninstall.sh
+chmod +x /tmp/brew-uninstall.sh
+/tmp/brew-uninstall.sh --path /usr/local --dry-run   # review
+/tmp/brew-uninstall.sh --path /usr/local             # sudo, interactive confirm
 
-# The script lists what it could not delete. Review, then clean the brew-owned
-# leftovers (do NOT blind `rm -rf /usr/local` — check each first):
-ls /usr/local/{Homebrew,Caskroom,Cellar,Frameworks,var,opt} 2>/dev/null
-sudo rm -rf /usr/local/{Homebrew,Caskroom,Cellar} /usr/local/var/homebrew
+# The uninstaller removes Cellar/Homebrew/Caskroom/caches but leaves the
+# formula-created symlinks (now broken). Sweep only the broken ones:
+sudo find /usr/local/bin /usr/local/sbin /usr/local/lib /usr/local/include \
+          /usr/local/share /usr/local/opt /usr/local/etc /usr/local/Frameworks \
+     -type l ! -exec test -e {} \; -print -delete
+sudo rm -rf /usr/local/share/google-cloud-sdk        # stale old-cask SDK dir
 ```
 
-Then clean the last Intel references in the templated `.profile` (the stale
-`python@3.8` PATH line, `/usr/local/opt/go`) if the phase 4 edits missed any,
-and re-run the role `-t configuration`.
+**Result:** `/usr/local/{Homebrew,Cellar,Caskroom,var/homebrew}` gone;
+`brew --prefix` → `/opt/homebrew` only. `/usr/local/bin` down to 108 entries —
+all non-Homebrew (Docker.app symlinks, MacGPG2, Wireshark, Vagrant, VirtualBox,
+`git-credential-manager`, and years of loose pip/gem scripts); prune those
+separately.
+
+Fresh login shell now resolves `node`/`npm`/`ruby`/`rustc`/`go`/`python3`/
+`gcloud`/`kubectl`/`helm`/`terraform` to arm64 (nvm / rbenv / cargo / brew).
+`docker` and `gpg` still point into `/usr/local` — that's Docker Desktop
+(phase 10) and MacGPG2 (independent), both fine.
+
+### Caught during phase 9
+
+- **`~/.go` (487 MB, x86 Go 1.22.1) via the `g` version manager** was shadowing
+  brew's arm `go` 1.27.1 through `$GOPATH/bin`. Removed `~/.go` + `~/go/bin/{g,
+  go,gofmt}`; brew `go` takes over. `.zshrc` Go block simplified (dropped the
+  `g` cruft); `go` added to `laptop_setup_homebrew_packages`.
+- **`gcloud-cli` cask SDK path** — fixed in the previous commit (share/ not
+  Caskroom/).
+- **Ansible `command`/`shell` tasks couldn't find `brew`/`helm`** once the Intel
+  copies were gone — Ansible's minimal PATH has neither prefix. Added
+  `environment: PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"`
+  to `playbooks/laptop.yml`.
 
 ---
 

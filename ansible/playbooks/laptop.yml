@@ -11,6 +11,11 @@
         home_path: "{{ ansible_facts['user_dir'] }}"
         owner: "{{ ansible_facts['user_id'] }}"
         group: "{{ ansible_facts['user_gid'] }}"
+  # Homebrew is not on Ansible's minimal command/shell PATH. Prepend both prefixes
+  # so tasks that shell out to `brew`, `helm`, etc. resolve regardless of the
+  # invoking shell (Apple Silicon uses /opt/homebrew, Intel /usr/local).
+  environment:
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
   roles:
     - role: laptop_setup
       tags: deploy

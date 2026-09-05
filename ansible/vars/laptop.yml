@@ -158,7 +158,7 @@ laptop_setup_homebrew_packages:
   - git-lfs
   - glab
   - gnu-sed
-#  - "{{ 'go' if integration_market_pay else omit }}"
+  - go
   - "{{ 'openclaw/tap/gogcli' if integration_market_pay else omit }}"
   - "{{ 'golangci-lint' if integration_market_pay else omit }}"
   - graphicsmagick
