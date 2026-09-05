@@ -309,30 +309,29 @@ machine is set up right), and the `homebrew_prefix` detection was moved from a
 
 ---
 
-## 7. Ruby
+## 7. Ruby — DONE 2026-09-05
+
+`rbenv` + `ruby-build` were already arm (phase 3 Brewfile); `RBENV_ROOT` was
+already moved to `$HOME/.rbenv` (phase 4).
 
 ```bash
-brew install rbenv ruby-build          # arm; add to vars/laptop.yml (phase 4e)
-mkdir -p ~/.rbenv
-export RBENV_ROOT=$HOME/.rbenv          # matches the fixed dotfiles
-eval "$(rbenv init - zsh)"
-
-rbenv install -l | grep -E '^\s*3\.[0-9]+\.[0-9]+$' | tail -1   # pick latest 3.x
-rbenv install 3.4.5                     # <-- use the version from the line above
-rbenv global 3.4.5
-gem install bundler
+export RBENV_ROOT="$HOME/.rbenv"
+rbenv install 3.4.10          # compiles ~90s; --with-openssl-dir picks up brew openssl@3
+rbenv global 3.4.10 && rbenv rehash
+gem install bundler --no-document
+rm -rf /usr/local/var/rbenv   # old Intel root: 2.1.4 / 2.3.0 / 2.4.1, all EOL, ~1 GB
 ```
 
-Retire the old tree once the new one works:
+**Result:** login shell `ruby -v` → `3.4.10 … +PRISM [arm64-darwin25]`, bundler
+4.0.20. No `rbenv-bundler` (dropped from the Brewfile in phase 3; nothing under
+`~/.rbenv/plugins`).
 
-```bash
-rbenv versions
-rbenv uninstall -f 2.1.4 2.3.0 2.4.1
-rm -rf /usr/local/var/rbenv             # old RBENV_ROOT
-brew uninstall rbenv-bundler 2>/dev/null || true   # unmaintained plugin
-```
+The only `.ruby-version` pins on disk are two dead Kapten elasticsearch roles
+pinning `2.3.0` (EOL 2019) — not rebuilt; deal with them only if those projects
+ever come back.
 
-**Checkpoint:** `ruby -v` → `... [arm64-darwin25]` (or newer).
+**Repo change (committed):** `rbenv` + `ruby-build` added to
+`laptop_setup_homebrew_packages` (they were unmanaged before).
 
 ---
 

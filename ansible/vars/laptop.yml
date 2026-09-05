@@ -193,7 +193,9 @@ laptop_setup_homebrew_packages:
   - python@3.11
   - python@3.12
   - qpdf
+  - rbenv
   - ripgrep
+  - ruby-build
   - rustup
   - "{{ 'shellcheck' if integration_market_pay else omit }}"
   - scw
