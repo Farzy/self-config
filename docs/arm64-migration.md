@@ -335,26 +335,39 @@ ever come back.
 
 ---
 
-## 8. Python and virtualenvs
+## 8. Python and virtualenvs — DONE 2026-09-05
 
-brew `python@3.11` / `@3.12` are arm after phase 3. Every existing venv still
-has x86 symlinks — recreate:
+brew `python@3.11` / `@3.12` / `@3.14` are arm after phase 3. Two gotchas:
 
-```bash
-# self-config repo itself
-cd ~/src/personal/self-config
-rm -rf .venv && uv sync
-file .venv/bin/python3          # arm64
+1. **`uv` itself.** The `uv` on the stale PATH was Intel `/usr/local/bin/uv`, so
+   the first `uv sync` rebuilt an x86 venv. Use `/opt/homebrew/bin/uv`
+   explicitly until phase 9, and purge uv's x86 managed CPythons:
 
-# pyenv: only "system" is installed, so nothing to rebuild unless you add versions
-# uv will auto-download an arm64 CPython for .python-version (3.12.7) if needed
+   ```bash
+   UV=/opt/homebrew/bin/uv
+   $UV python list --only-installed | grep x86_64        # the uv-downloaded ones
+   $UV python uninstall cpython-3.12.7-macos-x86_64-none  # ...and the rest
+   $UV python install 3.12 3.13 3.14                      # arm managed builds
+   ```
 
-# Other projects — find and recreate:
-fd -HI -t d -g '.venv' ~/src   # then `uv sync` / `python -m venv` per project
-# pipenv:  pipenv --rm && pipenv install
-# poetry:  poetry env remove --all && poetry install
-# virtualenvwrapper (~/.virtualenvs/*): recreate with `mkvirtualenv`
-```
+2. **Projects pinning Python 3.14** (`ca-organizer`, `farzad-wiki`) resolved
+   against Intel `/usr/local/opt/python@3.14` until `uv python install 3.14`
+   gave uv an arm 3.14 to prefer.
+
+Then, per project: `rm -rf .venv && uv sync` (or `uv venv && uv pip install -r
+requirements.txt`). **14 of 15 venvs under `~/src` are now arm64**;
+`~/src/personal/ML/machine-learning-crash-course` fails because its
+`pyproject.toml` has `requires-python == "3.12"` (a constraint that matches no
+release — needs `~=3.12.0` or `>=3.12,<3.13`).
+
+uv tools reinstalled arm: `uv tool install --reinstall --editable
+~/src/personal/books/babelio-automation` (and `ca-organizer`).
+
+pyenv: only `system`, nothing to do. No pipenv/poetry/virtualenvwrapper envs.
+
+**Repo change (committed):** `hosts` pins
+`ansible_python_interpreter=/opt/homebrew/bin/python3.12` on `serenity` (Ansible
+was auto-discovering the Intel `python@3.14` under Rosetta).
 
 ---
 

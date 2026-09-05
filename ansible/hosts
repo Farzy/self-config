@@ -2,7 +2,7 @@
 farzad-01.farzy.org ansible_user=farzad_farid ansible_python_interpreter=python3
 
 [laptops]
-serenity ansible_connection=local ansible_become=false
+serenity ansible_connection=local ansible_become=false ansible_python_interpreter=/opt/homebrew/bin/python3.12
 FRMPTMACFH396 ansible_connection=local ansible_become=false
 
 [k8s]
