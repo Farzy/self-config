@@ -8,12 +8,11 @@ integration_personal_laptop: "{{ (system_serial_number | default('')) == laptop_
 integration_market_pay: "{{ (system_serial_number | default('')) == laptop_serial_professional }}"
 
 # Safety gate for the "Install personal CLAUDE.md" task: CLAUDE_personal.md.j2
-# starts out as a placeholder, not the real content of Delerium's
-# ~/.claude/CLAUDE.md. Leave this false until the template has been seeded
-# with the real content (via `ansible-vault edit`) and verified with the
-# "ai-drift" trace tag, so a normal apply can't overwrite the live file with
-# the placeholder.
-claude_personal_md_ready: false
+# started out as a placeholder, not the real content of Delerium's
+# ~/.claude/CLAUDE.md. It has since been seeded with the real content and
+# verified with the "ai-drift" trace tag (zero diff), so a normal apply can
+# now manage the file going forward.
+claude_personal_md_ready: true
 
 # Shared between the CLAUDE.md install and "ai-drift" trace tasks in
 # laptop_setup, so both variants stay in lockstep with the real installer.
