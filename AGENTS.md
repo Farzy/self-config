@@ -1,6 +1,8 @@
-# Gemini Code Assistant Context
+# AI Assistant Context
 
-This file provides context to the Gemini Code Assistant to help it understand the project and provide more accurate and relevant assistance.
+This file provides context to AI coding assistants (Claude Code, Gemini CLI,
+etc.) to help them understand the project and provide more accurate and
+relevant assistance without having to re-read the whole codebase.
 
 ## Project Overview
 
@@ -19,6 +21,51 @@ The infrastructure is hosted on:
 *   **Scaleway**
 
 The project is structured to manage different environments, including web servers, Kubernetes clusters, and personal laptops.
+
+## Repository Layout
+
+*   `ansible/roles/` — one role per concern: `laptop_setup` (macOS/Debian
+    workstations, incl. Homebrew, dotfiles, AI assistant configs),
+    `openclaw_setup` / `fastmail_mcp_setup` (the OpenClaw gateway host),
+    `master_setup`, `iterm2_integration`, `docker`, `kind`, `kubectl`,
+    `microk8s`, `minikube`, `minecraft_server`, `test`.
+*   `ansible/playbooks/` — one playbook per inventory group in `ansible/hosts`
+    (`laptop.yml`, `web.yml`, `openclaw.yml`, `k8s-server.yml`,
+    `minecraft.yml`, `quassel.yml`, `test.yml`). Groups are deliberately
+    non-overlapping so CI's `--limit` can never target a host with two
+    playbooks at once.
+*   `ansible/vars/` — per-group variables, one file per playbook group that
+    needs vaulted secrets (`laptop.yml`, `openclaw.yml`, `minecraft.yml`,
+    `web.yml`).
+*   `docs/` — deep dives that AGENTS.md and README.md only summarize:
+    [ci-ansible.md](docs/ci-ansible.md) (CI/CD design), plus
+    `fastmail-mcp.md`, `minecraft.md`, `openclaw.md` for those services.
+*   `.claude/skills/openclaw-ops/` — a Claude Code skill for editing,
+    dry-run testing, and deploying the OpenClaw/fastmail-mcp Ansible config;
+    prefer it over ad hoc `ansible-playbook` invocations for that host.
+*   `terraform/` — provisions the GCP/Scaleway infrastructure the servers
+    above run on.
+
+### Host targeting in `laptop_setup`
+
+`ansible/vars/laptop.yml` fingerprints the local machine by
+`system_serial_number` (via `laptop_serial_personal` /
+`laptop_serial_professional`) to derive `integration_personal_laptop` and
+`integration_market_pay`. Most `laptop_setup` tasks are gated on one of these
+booleans instead of `ansible_facts`, so a task that looks unconditional in
+one file may still be a no-op depending on which laptop it runs on.
+
+### Vault-encrypted whole-file AI assistant templates
+
+`roles/laptop_setup/templates/ai/{CLAUDE,AGENTS}_{personal,professional}.md.j2`
+are not ordinary Jinja templates: each whole file is Ansible Vault
+ciphertext (`ansible-vault encrypt`, vault-id `personal`), decrypted at
+template-render time. Never hand-edit the ciphertext directly — use
+`ansible-vault view|edit --vault-id personal@~/.ansible-personal-key <path>`.
+The personal variants start as placeholders gated behind
+`claude_personal_md_ready: false` in `vars/laptop.yml` until seeded with the
+real file content and verified with the `ai-drift` tag. Full procedure:
+[README.md § Tracing drift on vault-encrypted AI config files](README.md#tracing-drift-on-vault-encrypted-ai-config-files).
 
 ## Building and Running
 
