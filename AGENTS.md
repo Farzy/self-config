@@ -61,22 +61,25 @@ one file may still be a no-op depending on which laptop it runs on.
 `system_profiler`, `when: is_macos`) — on a Debian/WSL2 laptop both booleans
 evaluate to false and every gated task is silently skipped.
 
-### Vault-encrypted whole-file AI assistant templates
+### Vault-encrypted whole-file AI assistant configs
 
-`roles/laptop_setup/templates/ai/{CLAUDE,AGENTS}_{personal,professional}.md`
-are not ordinary templates: each whole file is Ansible Vault ciphertext
+`roles/laptop_setup/files/ai/{CLAUDE,AGENTS}_{personal,professional}.md` are
+not ordinary templates: each whole file is Ansible Vault ciphertext
 (`ansible-vault encrypt`, vault-id `personal`), installed with
 `ansible.builtin.copy` (not `template`, since they hold hand-edited content
 with no intentional Jinja — `copy` still auto-decrypts a vaulted `src` but
 never evaluates `{{ }}`/`{% %}` in it). Never hand-edit the ciphertext
 directly — use
 `ansible-vault view|edit --vault-id personal@~/.ansible-personal-key <path>`.
-Only the *personal CLAUDE.md* variant carries a safety gate,
-`claude_personal_md_ready` in `vars/laptop.yml` — it started as a placeholder
-and is now seeded and enabled. The `ai-drift` trace tag traces the CLAUDE.md
-variants only; `AGENTS_personal.md` has no such gate and is installed
-whenever `integration_personal_laptop` is true. Full procedure:
-[README.md § Tracing drift on vault-encrypted AI config files](README.md#tracing-drift-on-vault-encrypted-ai-config-files).
+
+Only the two `CLAUDE.md` variants are check-by-default: a normal apply never
+writes `~/.claude/CLAUDE.md` — it only runs a diff-only "Check for changes"
+task per variant (`check_mode`/`diff` forced on the task itself) — and
+installing for real requires the explicit `ai-claude-write` tag (`ai-drift`
+runs just the checks, without the rest of `ai`/`configuration`).
+`AGENTS_personal.md`/`AGENTS_professional.md` have no such gate and are
+installed unconditionally to `~/.gemini/AGENTS.md`. Full procedure:
+[README.md § CLAUDE.md: check-by-default, write-on-opt-in](README.md#claudemd-check-by-default-write-on-opt-in).
 
 ## Building and Running
 

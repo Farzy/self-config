@@ -118,44 +118,49 @@ Here are some sample ansible commands:
 is set in `ansible.cfg`, there is no need to use `--vault-id` or `--encrypt-vault-id`
 on the command line.
 
-### Tracing drift on vault-encrypted AI config files
+### CLAUDE.md: check-by-default, write-on-opt-in
 
 `~/.claude/CLAUDE.md` (professional:
-`roles/laptop_setup/templates/ai/CLAUDE_professional.md`; personal:
-`roles/laptop_setup/templates/ai/CLAUDE_personal.md`) are whole-file
+`roles/laptop_setup/files/ai/CLAUDE_professional.md`; personal:
+`roles/laptop_setup/files/ai/CLAUDE_personal.md`) are whole-file
 vault-encrypted files installed with `ansible.builtin.copy` (not `template`
 — they hold hand-edited content with no intentional Jinja, and `copy` still
 auto-decrypts a vault-encrypted `src` without evaluating `{{ }}`/`{% %}`
 markers in it). Because they hold hand-edited content (e.g. Claude's memory
-imports), a normal apply can silently delete anything on disk that hasn't
-made it back into the file. To check for that drift with zero risk of
-overwriting the live file, use the `ai-drift` tag:
+imports), a normal apply must never silently delete anything on disk that
+hasn't made it back into the file — so **a normal apply never writes either
+CLAUDE.md variant**. Every run of the `laptop.yml` playbook (with or without
+`--check`/`--diff` on the command line) instead runs a "Check for changes"
+task per variant with `check_mode: true` and `diff: true` set directly on
+the task, so the diff always prints but nothing is ever written. If a
+variant would change, a follow-up debug task prints the exact command to
+apply it:
+
+    ansible-playbook --limit <host> -t ai-claude-write playbooks/laptop.yml
+
+The install tasks behind `ai-claude-write` are tagged `never`, so they are
+excluded even from `--tags all` and only run when that tag is requested
+explicitly. `ai-drift` is a narrower alias that runs just the two
+"Check for changes" tasks (and their debug follow-ups) without the rest of
+`ai`/`configuration`:
 
     ansible-playbook --limit <host> -t ai-drift playbooks/laptop.yml
 
-The two `Trace drift: ...` tasks behind that tag set `check_mode: true` and
-`diff: true` directly on the task, so they always show a diff and never
-write, regardless of whether `--check`/`--diff` are passed on the command
-line — and the `never` tag keeps them out of normal runs (including
-`--tags all`) unless `ai-drift` is requested explicitly. If the diff shows
-content that only exists on disk, port it back into the file with
-`ansible-vault edit` before applying for real.
+If a diff shows content that only exists on disk (e.g. a hand-edit to the
+live file that hasn't been ported back), resolve it with `ansible-vault
+edit` — and re-run `ai-drift` to confirm an empty diff — before applying
+with `ai-claude-write`.
 
 > [!IMPORTANT]
-> The diff prints the vault-decrypted template content to the terminal.
-> Only run `ai-drift` locally, never in CI or anywhere logs are retained —
-> the same reasoning as the `--diff` suppression in
+> The diff prints the vault-decrypted file content to the terminal. Only
+> run `ai-drift`/`ai-claude-write` locally, never in CI or anywhere logs
+> are retained — the same reasoning as the `--diff` suppression in
 > [Running Ansible from GitHub Actions](#running-ansible-from-github-actions).
 
-The personal template has been seeded with the real content of Delerium's
-`~/.claude/CLAUDE.md` and `claude_personal_md_ready` is `true` in
-`vars/laptop.yml`, so a normal apply now manages that file. Note that
-`AGENTS_personal.md` has no equivalent gate — it is installed to
-`~/.gemini/AGENTS.md` whenever `integration_personal_laptop` is true,
-regardless of `claude_personal_md_ready`. To re-seed either file after a
-manual edit to the live file, decrypt it with
-`ansible-vault edit --vault-id personal@~/.ansible-personal-key <path>` and
-confirm the update with `ai-drift` before relying on it.
+Note that `AGENTS_personal.md`/`AGENTS_professional.md` have no equivalent
+check-before-write behavior — they are installed unconditionally to
+`~/.gemini/AGENTS.md` whenever `integration_personal_laptop` /
+`integration_market_pay` is true.
 
 ### Running Ansible from GitHub Actions
 

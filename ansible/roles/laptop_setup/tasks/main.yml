@@ -119,61 +119,91 @@
   tags:
     - configuration
     - ai
+    - ai-claude-write
 
-- name: Install professional CLAUDE.md to ~/.claude
-  ansible.builtin.copy:
-    src: "ai/CLAUDE_professional.md"
-    dest: "{{ claude_md_dest }}"
-    mode: "{{ claude_md_mode }}"
-  tags:
-    - configuration
-    - ai
-  when: integration_market_pay | default(false)
-
-# Gated on claude_personal_md_ready (see vars/laptop.yml) so this can be
-# scaffolded ahead of the real content: CLAUDE_personal.md has been seeded
-# with the real content of ~/.claude/CLAUDE.md and the flag is now true, so
-# this task manages the file going forward. If the live file is ever hand-
-# edited again, use the "ai-drift" trace tasks below to compare it against
-# the template before trusting a normal apply not to overwrite it.
-- name: Install personal CLAUDE.md to ~/.claude
-  ansible.builtin.copy:
-    src: "ai/CLAUDE_personal.md"
-    dest: "{{ claude_md_dest }}"
-    mode: "{{ claude_md_mode }}"
-  tags:
-    - configuration
-    - ai
-  when: integration_personal_laptop | default(false) and claude_personal_md_ready | default(false)
-
-# Read-only drift check for both CLAUDE.md variants: check_mode/diff are set
-# on the task itself, so it never writes regardless of CLI flags, and always
-# shows a diff. Tagged "never" so it's excluded from normal runs (including
-# --tags all) and only fires when "ai-drift" is requested explicitly, e.g.:
-#   ansible-playbook --limit <host> -t ai-drift playbooks/laptop.yml
+# ~/.claude/CLAUDE.md (both variants) is never overwritten by a normal apply.
+# The "Check for changes" tasks below always run in check_mode with
+# diff: true set directly on the task, so every run -- with or without
+# --check/--diff on the command line -- shows what would change but never
+# writes. Installing for real requires explicitly opting in with the
+# "ai-claude-write" tag, e.g.:
+#   ansible-playbook --limit <host> -t ai-claude-write playbooks/laptop.yml
+# Those install tasks are also tagged "never" so they're excluded even from
+# --tags all. "ai-drift" is a narrower alias for just the two check tasks,
+# for a dry run that skips the rest of "ai"/"configuration".
 #
-# WARNING: diff: true here prints the vault-decrypted template content to the
+# WARNING: diff: true here prints the vault-decrypted file content to the
 # terminal. Only run this locally -- never in CI or anywhere logs are kept.
-- name: "Trace drift: professional CLAUDE.md (read-only, never writes)"
+- name: "Check for changes: professional CLAUDE.md (read-only, never writes)"
   ansible.builtin.copy:
     src: "ai/CLAUDE_professional.md"
     dest: "{{ claude_md_dest }}"
     mode: "{{ claude_md_mode }}"
   check_mode: true
   diff: true
+  register: claude_professional_check
+  when: integration_market_pay | default(false)
+  tags:
+    - configuration
+    - ai
+    - ai-drift
+
+- name: "CLAUDE.md (professional) differs -- pass -t ai-claude-write to apply"
+  ansible.builtin.debug:
+    msg: >-
+      ~/.claude/CLAUDE.md differs from the committed professional file (see
+      diff above). Re-run with `--tags ai-claude-write` to install it.
+  when:
+    - integration_market_pay | default(false)
+    - claude_professional_check.changed | default(false)
+  tags:
+    - configuration
+    - ai
+    - ai-drift
+
+- name: "Install professional CLAUDE.md to ~/.claude (writes; opt-in)"
+  ansible.builtin.copy:
+    src: "ai/CLAUDE_professional.md"
+    dest: "{{ claude_md_dest }}"
+    mode: "{{ claude_md_mode }}"
   when: integration_market_pay | default(false)
   tags:
     - never
-    - ai-drift
+    - ai-claude-write
 
-- name: "Trace drift: personal CLAUDE.md (read-only, never writes)"
+- name: "Check for changes: personal CLAUDE.md (read-only, never writes)"
   ansible.builtin.copy:
     src: "ai/CLAUDE_personal.md"
     dest: "{{ claude_md_dest }}"
     mode: "{{ claude_md_mode }}"
   check_mode: true
   diff: true
+  register: claude_personal_check
+  when: integration_personal_laptop | default(false)
+  tags:
+    - configuration
+    - ai
+    - ai-drift
+
+- name: "CLAUDE.md (personal) differs -- pass -t ai-claude-write to apply"
+  ansible.builtin.debug:
+    msg: >-
+      ~/.claude/CLAUDE.md differs from the committed personal file (see diff
+      above). Re-run with `--tags ai-claude-write` to install it.
+  when:
+    - integration_personal_laptop | default(false)
+    - claude_personal_check.changed | default(false)
+  tags:
+    - configuration
+    - ai
+    - ai-drift
+
+- name: "Install personal CLAUDE.md to ~/.claude (writes; opt-in)"
+  ansible.builtin.copy:
+    src: "ai/CLAUDE_personal.md"
+    dest: "{{ claude_md_dest }}"
+    mode: "{{ claude_md_mode }}"
   when: integration_personal_laptop | default(false)
   tags:
     - never
-    - ai-drift
+    - ai-claude-write
