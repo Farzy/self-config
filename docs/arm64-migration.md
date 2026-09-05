@@ -34,13 +34,19 @@ No app is force-pinned to Rosetta in LaunchServices — good.
 
 ### Ansible-managed paths that still hardcode `/usr/local`
 
-- `templates/dotfiles/.profile` — L65 (`PATH` prepend), L68 (`go/libexec/bin`), L71 (`RBENV_ROOT`), L105 (`virtualenvwrapper.sh`)
-- `templates/dotfiles/.zshrc` — L61 (`RBENV_ROOT`)
-- `templates/dotfiles/.gitconfig` — L68 (`git-credential-manager`)
-- `vars/laptop.yml` — the declared formula list (~50) is a subset of what's actually installed (~140); casks list omits `obsidian`, `hashicorp-vagrant`, `go-task`
+- `templates/dotfiles/.zshrc` — `RBENV_ROOT`, and the gcloud SDK path
+- `templates/dotfiles/.profile` / `.bash_profile` — same issues, but these were
+  **never deployed by `laptop_setup`** (the "Install personal config files"
+  loop only covers `.gitconfig*`, `.gitignore_global`, `.tmux.conf`, `.zshrc`)
+  and had drifted hard from the live files — so they were **removed** from the
+  role rather than fixed
+- `templates/dotfiles/.gitconfig` — `git-credential-manager` path turned out to
+  be correct (GCM's `.pkg` always lands in `/usr/local`); no change
+- `vars/laptop.yml` — the declared formula list (~50) is a subset of what's
+  actually installed (~145); the cask list omitted the GUI apps entirely
 
-The dotfile templates already prefer `/opt/homebrew` for `brew shellenv`, so the
-main risk is the four hardcoded paths above, not the brew bootstrap.
+The `.zshrc` template already prefers `/opt/homebrew` for `brew shellenv`, so
+the brew bootstrap itself was never at risk.
 
 ---
 
@@ -84,12 +90,9 @@ cask, and old binaries still need it. Confirm it is present:
 **Xcode Command Line Tools** — universal, keep. Update if stale:
 `softwareupdate -l` then install any "Command Line Tools" item.
 
-> **Side note (security):** `~/.zshrc` exports two classic GitHub PATs
-> (`GITHUB_TOKEN`, `HOMEBREW_GITHUB_API_TOKEN`), templated from Ansible Vault
-> (`github_token`, `github_homebrew_token`). They render into the plaintext
-> dotfile and were visible in this session. Rotate both at some point and
-> consider fine-grained tokens or `gh auth` for the API one. Not part of this
-> migration.
+> **Side note:** shell startup exports a couple of API tokens (Vault-templated,
+> not committed). Unrelated to the migration; if you ever rebuild that setup,
+> fine-grained tokens or `gh auth` are preferable to classic PATs.
 
 ---
 
@@ -149,96 +152,75 @@ project `.venv` pythons (phase 8).
 
 ---
 
-## 4. Fix the Ansible role (so the next converge doesn't re-pin Intel paths)
+## 4. Fix the Ansible role — DONE 2026-09-05
 
-Branch first (`self-config` uses PRs, never commits to `main`):
+All on branch `feat/arm64-homebrew-migration` (`self-config` uses PRs, never
+commits to `main`).
 
-```bash
-cd ~/src/personal/self-config
-git switch -c feat/arm64-homebrew-migration
-```
+### 4a. `homebrew_prefix` fact — `roles/laptop_setup/tasks/main.yml`
 
-### 4a. Prefix var — `ansible/vars/laptop.yml` — DONE
-
-Added next to `is_macos` (a computed var, not a task — `ansible_facts` is already
-templated lazily there):
+A `stat /opt/homebrew/bin/brew` fact (tags `always`):
 
 ```yaml
-homebrew_prefix: "{{ '/opt/homebrew' if ansible_facts['architecture'] == 'arm64' else '/usr/local' }}"
+homebrew_prefix: "{{ '/opt/homebrew' if _brew_arm.stat.exists else '/usr/local' }}"
 ```
 
-### 4b. `templates/dotfiles/.zshrc` — DONE, applied
+> An earlier attempt used a computed var `'/opt/homebrew' if
+> ansible_facts['architecture'] == 'arm64' else '/usr/local'` — **wrong**:
+> `ansible_facts['architecture']` reads `x86_64` whenever Ansible's Python runs
+> under Rosetta (which it does until phase 9), so it resolved to `/usr/local` on
+> this arm machine. The `stat` form is safe here because this playbook only ever
+> runs where Homebrew already exists (ansible ← uv ← Homebrew).
 
-`export RBENV_ROOT=/usr/local/var/rbenv` → `export RBENV_ROOT=$HOME/.rbenv`
+### 4b. `templates/dotfiles/.zshrc`
 
-### 4c. `templates/dotfiles/.profile` — edited, NOT deployed
+`RBENV_ROOT` → `$HOME/.rbenv`; the gcloud SDK is sourced from
+`{{ homebrew_prefix }}/share/google-cloud-sdk` (the `gcloud-cli` cask's layout,
+fixed in phase 9); the Go block keeps its `[[ -d "$HOME/go" ]]` guard and lost
+only the `g`-version-manager cruft.
 
-Same `RBENV_ROOT` fix plus `{{ homebrew_prefix }}` for the `PATH` prepend, the
-`go/libexec/bin` path, and a `[ -f … ]` guard on the legacy
-`virtualenvwrapper.sh` source. **But `laptop_setup` does not deploy `.profile`
-or `.bash_profile`** — the "Install personal config files" loop only covers
-`.gitconfig*`, `.gitignore_global`, `.tmux.conf`, `.zshrc`. The live `~/.profile`
-(148 lines) has diverged hard from the template (184) — effectively unmanaged.
-Only `bash -l` is affected. Separate cleanup: either re-add `.profile` +
-`.bash_profile` to the loop (after reconciling the live file) or hand-patch the
-three Intel paths in `~/.profile`.
+### 4c. `templates/dotfiles/.profile` / `.bash_profile` — removed
+
+`laptop_setup` never deployed these (the "Install personal config files" loop
+covers `.gitconfig*`, `.gitignore_global`, `.tmux.conf`, `.zshrc` only), and the
+live `~/.profile` had drifted far from the template. Rather than reconcile a
+dead template, both were deleted from the role. The live `~/.bash_profile` /
+`~/.profile` stay as-is, unmanaged; `bash -l` is the only shell affected.
 
 ### 4d. `templates/dotfiles/.gitconfig` — NO CHANGE NEEDED
 
 GCM's `.pkg` always installs to `/usr/local/share/gcm-core` + a
 `/usr/local/bin/git-credential-manager` symlink **regardless of Homebrew
 prefix**, and after the phase-3 cask reinstall that binary is arm64. The
-template's existing `helper = /usr/local/bin/git-credential-manager` is correct
-and survives phase 9 (GCM is not Homebrew-owned). Applying the template does
-drop two duplicate `helper =` lines the GCM pkg-postinstall appended — harmless.
+template's existing helper path is correct and survives phase 9.
 
-### 4e. `vars/laptop.yml` reconciliation (optional — kill the drift)
+### 4e. `vars/laptop.yml` + `hosts`
 
-The declared `laptop_setup_homebrew_packages` (~50) is a subset of what's
-installed (~145). A `-t packages` converge is currently a **no-op** (check-mode
-confirmed: `changed_pkgs: []`), so this is housekeeping, not blocking:
+- `laptop_serial_personal` → `GC29C491K2`; `laptop_hostname` personal branch →
+  `Serenity`.
+- `hosts`: `[laptops]` entry `delerium` → `serenity`; pin
+  `ansible_python_interpreter=/opt/homebrew/bin/python3.12` (see phase 8).
+- Added to `laptop_setup_homebrew_packages`: `go`, `rbenv`, `ruby-build`.
+- Added to `homebrew_cask_packages`: `docker-desktop`, `jetbrains-toolbox`,
+  `notion`, `obsidian`, `signal`, `vlc` (unconditional — they also land on the
+  professional laptop, which is fine).
 
-- Add relied-on formulae missing from the list: `go`, `tmux`, `tree`, `cmake`,
-  `gh`, `git`, `graphviz`, `kubeseal`, `syft`, `grype`, `trivy`, `make`,
-  `ninja`, `llvm`, `maturin`, `rbenv`, `ruby-build`.
-- Swap `gemini-cli` (deprecated) → `cask "antigravity-cli"`.
-- `homebrew_cask_packages`: add `obsidian`, `terraform-linters/tap/tflint`, and
-  the phase-10 apps (`signal`, `vlc`, `notion`, `docker-desktop`,
-  `jetbrains-toolbox`).
-- Also add `tap "terraform-linters/tap"` to the tap list.
+Still outstanding, not blocking: the declared formula list is still a subset of
+what's installed; `gemini-cli` (deprecated) could move to `cask
+"antigravity-cli"`.
 
-### 4f. Dry-run + apply — DONE for `-t configuration`
-
-This machine (`Serenity`, serial `GC29C491K2`) is not in inventory; the
-`[laptops]` entry `delerium` is `ansible_connection=local`, so:
+### 4f. Dry-run + apply
 
 ```bash
 cd ~/src/personal/self-config/ansible
-ansible-playbook playbooks/laptop.yml --limit delerium --check --diff -t configuration   # review
-ansible-playbook playbooks/laptop.yml --limit delerium        --diff -t configuration   # apply
+ansible-playbook playbooks/laptop.yml --limit serenity --check --diff -t configuration   # review
+ansible-playbook playbooks/laptop.yml --limit serenity        --diff -t configuration    # apply
 ```
 
-Applied: `~/.zshrc` (`RBENV_ROOT`), `~/.gitconfig` (dupe helpers removed).
-Personal integrations (`integration_personal_laptop`) stay **off** because
-`laptop_serial_personal` in `vars/laptop.yml` is still the old Delerium serial
-`C02YG6X6JG5J` — see "Inventory / serial drift" below.
-
----
-
-## Inventory / serial drift (decide separately)
-
-This M5 Pro is a **new machine**, not the Intel "Delerium":
-
-- serial `GC29C491K2` ≠ `laptop_serial_personal: "C02YG6X6JG5J"` in `vars/laptop.yml`
-- `LocalHostName`/`ComputerName` = `Serenity`; not in `ansible/hosts` `[laptops]`
-- so `integration_personal_laptop` is false → personal `AGENTS.md` / `CLAUDE.md`
-  drift-checks skip, `laptop_hostname` falls back to the OS hostname
-
-To adopt this machine properly: update `laptop_serial_personal` to `GC29C491K2`,
-add `serenity ansible_connection=local ansible_become=false` to `[laptops]` (and
-retire/keep `delerium`), and decide the `laptop_hostname` personal branch
-(`Delerium` → `Serenity`). Flipping the serial also enables the personal
-`AGENTS.md`/`CLAUDE.md` tasks — intended, but a behaviour change.
+`-t configuration` and `-t configuration,hostname` both settle at `changed=0`.
+Matching the serial enables `integration_personal_laptop` (personal
+`AGENTS.md` / `CLAUDE.md` drift-checks); matching `laptop_hostname` to the
+already-set machine name keeps the hostname tasks idempotent.
 
 ---
 

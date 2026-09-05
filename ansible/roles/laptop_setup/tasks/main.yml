@@ -1,4 +1,11 @@
 ---
+# homebrew_prefix is detected from the presence of arm Homebrew, NOT from the
+# hardware: this playbook is only ever run on a machine that already has
+# Homebrew, because its own toolchain depends on it -- ansible <- uv <- Homebrew,
+# with Homebrew bootstrapped by hand first. So "is arm Homebrew installed" and
+# "is this Apple Silicon" are the same question here. (`brew --prefix` is
+# PATH-dependent and unreliable from a non-login shell; ansible_facts's
+# architecture reads x86_64 whenever Ansible's Python runs under Rosetta.)
 - name: Detect Apple Silicon Homebrew
   ansible.builtin.stat:
     path: /opt/homebrew/bin/brew
@@ -8,9 +15,6 @@
 
 - name: Set homebrew_prefix fact
   ansible.builtin.set_fact:
-    # /opt/homebrew on Apple Silicon, /usr/local on Intel. Checked by file, not
-    # by `brew --prefix` (PATH-dependent) or ansible_facts['architecture']
-    # (reads x86_64 when Ansible's Python runs under Rosetta).
     homebrew_prefix: "{{ '/opt/homebrew' if _brew_arm.stat.exists else '/usr/local' }}"
   when: is_macos
   tags: always
@@ -75,6 +79,15 @@
     - configuration
   when: is_macos
 
+- name: Stat the Homebrew nvm loader
+  ansible.builtin.stat:
+    path: "{{ homebrew_prefix }}/opt/nvm/libexec/nvm.sh"
+  register: _brew_nvm
+  tags:
+    - packages
+    - configuration
+  when: is_macos
+
 - name: Link ~/.nvm shims to the Homebrew nvm
   ansible.builtin.file:
     src: "{{ homebrew_prefix }}/opt/nvm/libexec/{{ item }}"
@@ -87,7 +100,10 @@
   tags:
     - packages
     - configuration
-  when: is_macos
+  # `force: true` would happily create a link to a nonexistent target, which
+  # makes the oh-my-zsh nvm plugin silently skip loading. Only link once the
+  # formula is actually installed (i.e. after a `-t packages` run).
+  when: is_macos and _brew_nvm.stat.exists | default(false)
 
 - name: Install Oh My Zsh and configure ZSH
   ansible.builtin.include_tasks:

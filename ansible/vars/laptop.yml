@@ -191,6 +191,7 @@ laptop_setup_homebrew_packages:
   - pyenv-virtualenv
   - pwgen
   - python@3.11
+  # python@3.12 also backs serenity's ansible_python_interpreter pin in ./hosts.
   - python@3.12
   - qpdf
   - rbenv

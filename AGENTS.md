@@ -42,7 +42,8 @@ The project is structured to manage different environments, including web server
 *   `docs/` — deep dives that AGENTS.md and README.md only summarize:
     [ci-ansible.md](docs/ci-ansible.md) (CI/CD design),
     [fastmail-mcp.md](docs/fastmail-mcp.md), [minecraft.md](docs/minecraft.md),
-    [openclaw.md](docs/openclaw.md) for those services.
+    [openclaw.md](docs/openclaw.md) for those services,
+    [arm64-migration.md](docs/arm64-migration.md) (the Apple Silicon move).
 *   `.claude/skills/openclaw-ops/` — a Claude Code skill for editing,
     dry-run testing, and deploying the OpenClaw/fastmail-mcp Ansible config;
     prefer it over ad hoc `ansible-playbook` invocations for that host.

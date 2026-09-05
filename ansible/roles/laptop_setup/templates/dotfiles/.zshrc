@@ -47,8 +47,10 @@ fi
 {| endif |}
 
 # Go — toolchain from Homebrew; GOPATH/bin holds `go install`-ed binaries
-export GOPATH="$HOME/go"
-export PATH="$GOPATH/bin:$PATH"
+if [[ -d "$HOME/go" ]]; then
+    export GOPATH="$HOME/go"
+    export PATH="$GOPATH/bin:$PATH"
+fi
 
 # rbenv
 if type rbenv &>/dev/null; then
