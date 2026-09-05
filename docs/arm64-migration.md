@@ -413,77 +413,60 @@ Fresh login shell now resolves `node`/`npm`/`ruby`/`rustc`/`go`/`python3`/
 
 ---
 
-## 10. GUI apps — IN PROGRESS
+## 10. GUI apps — DONE 2026-09-05
 
 Casks added to `homebrew_cask_packages` (committed): `docker-desktop`,
 `jetbrains-toolbox`, `notion`, `obsidian`, `signal`, `vlc`.
 
-**Done:** `vlc`, `notion` → `brew install --cask --force` → arm64. (`obsidian`
-+ `ghostty` were already arm from phase 3.)
+- `vlc`, `notion` reinstalled arm64 via `brew install --cask --force`.
+- `signal`, `docker-desktop`, `jetbrains-toolbox` — quit first, then
+  `brew install --cask --force …` (the `community.general.homebrew` cask module
+  has no `--force`, so it errors on a pre-existing non-brew `.app`; this is a
+  one-time migration condition, `-t packages` is green afterward). All arm64.
+- **IntelliJ IDEA** + **RustRover** reinstalled as Apple Silicon via the (now
+  arm) JetBrains Toolbox. Config in `~/Library/Application Support/JetBrains`
+  survived. In RustRover, confirm Settings → Rust points at `~/.rustup`.
+- Docker Desktop: `~/Library/Containers/com.docker.docker` and the
+  `desktop-linux` context persisted; images intact.
+- `~/Applications/Air.app` was removed (its stale `/usr/local/bin/air` link was
+  swept in phase 11).
 
-**Still to do** (apps were running / need the GUI):
-
-```bash
-osascript -e 'quit app "Signal"' -e 'quit app "Docker Desktop"' -e 'quit app "JetBrains Toolbox"'
-brew install --cask --force signal docker-desktop jetbrains-toolbox
-# or, equivalently, once the three are quit:
-cd ~/src/personal/self-config/ansible
-ansible-playbook playbooks/laptop.yml --limit serenity -t packages
-```
-
-- **Docker Desktop:** `~/Library/Containers/com.docker.docker` and the
-  `desktop-linux` context persist; re-pull images only if the Linux VM resets.
-- **JetBrains Toolbox → IDEs:** Toolbox must be arm **first**. Then in Toolbox
-  uninstall + reinstall **IntelliJ IDEA** and **RustRover** — it offers the
-  Apple Silicon build automatically. Config in
-  `~/Library/Application Support/JetBrains` survives. In RustRover, confirm
-  Settings → Rust points at `~/.rustup` (arm `stable`).
-- **`~/Applications/Air.app`** (x86-only, not in Homebrew): check the vendor for
-  an Apple Silicon build; low priority.
-
-### Universal — quit and relaunch native
-
-iTerm2, Chrome, VS Code, Telegram, WhatsApp, Ghostty, Obsidian (all carry an
-arm64 slice). **Finder → Get Info → "Open using Rosetta" unchecked**, then ⌘Q
-(not just close the window) and reopen. Chrome is sticky — also quit every
-`Google Chrome Helper`. Verify with **Activity Monitor → Kind** column
-("Apple", not "Intel").
+**Universal apps** (iTerm2, Chrome, VS Code, Telegram, WhatsApp, Ghostty,
+Obsidian) carry an arm64 slice — quit fully (⌘Q; Chrome also needs its helpers
+killed) and relaunch. On Apple Silicon they run arm64 unless "Open using
+Rosetta" is ticked in Get Info. Confirm in **Activity Monitor → Kind** =
+"Apple".
 
 ---
 
-## 11. Final verification
+## 11. Final verification — DONE 2026-09-05
 
-```bash
-#!/usr/bin/env bash
-# ~/arm64-migration/verify.sh — re-audit
-set -u
-echo "== toolchain =="
-printf 'brew prefix : %s\n' "$(brew --prefix)"
-for x in "$(brew --prefix)/bin/bat" "$(nvm which current)" ~/.cargo/bin/cargo \
-         "$(rbenv which ruby)" "$(brew --prefix)/bin/python3.12" ~/.local/bin/uv; do
-  printf '%-46s %s\n' "$x" "$(file -b "$x" 2>/dev/null | grep -o 'arm64\|x86_64' || echo missing)"
-done
-rustc -vV | grep host
-node -p '"node " + process.arch'
+| Runtime | Result |
+|---|---|
+| node | `v24.20.0` arm64 (nvm) |
+| ruby | `3.4.10` `arm64-darwin25` (rbenv, `~/.rbenv`) |
+| rustc / cargo | `1.98.1` host `aarch64-apple-darwin` (rustup) |
+| go | `go1.27.1` `arm64` (Homebrew) |
+| python3 | `3.14.7` arm64 (Homebrew); 14 project venvs arm64 |
+| terraform | `1.14.8` `darwin_arm64` (tfenv) |
+| Homebrew | `/opt/homebrew` only; `/usr/local/{Homebrew,Cellar,Caskroom}` gone |
+| broken `/usr/local` symlinks | 0 (removed `hyperkit`, `air`) |
+| uv x86 managed CPythons | 0 |
+| Rosetta | kept (fallback for occasional x86) |
 
-echo "== no Intel Homebrew =="
-[ -d /usr/local/Homebrew ] && echo "STILL PRESENT: /usr/local/Homebrew" || echo "clean"
+**Apps** — single-arch **arm64**: Signal, Docker, VLC, Notion, JetBrains
+Toolbox, IntelliJ IDEA, RustRover. **Universal** (run arm64 after a native
+relaunch): iTerm2, Chrome, VS Code, Telegram, WhatsApp, Ghostty, Obsidian.
+Confirm running arch in **Activity Monitor → Kind** = "Apple".
 
-echo "== apps (static archs) =="
-for a in iTerm "Google Chrome" Signal Telegram WhatsApp "Visual Studio Code" \
-         Ghostty Obsidian VLC Notion "Docker Desktop" "JetBrains Toolbox"; do
-  p="/Applications/$a.app/Contents/MacOS"
-  exe="$p/$(defaults read "/Applications/$a.app/Contents/Info" CFBundleExecutable 2>/dev/null)"
-  printf '%-22s %s\n' "$a" "$(lipo -archs "$exe" 2>/dev/null || echo 'n/a')"
-done
+### Caught during phase 11
 
-echo "== still running translated? (want: only Rosetta helper, no app) =="
-pgrep -x oahd >/dev/null && echo "oahd present (fine if no x86 app is running)"
-```
-
-For **running** GUI apps, the reliable human check is **Activity Monitor → View
-→ Columns → Kind** ("Apple" vs "Intel" vs "Universal"). Anything still "Intel"
-after a relaunch needs the "Open using Rosetta" box cleared.
+- **tfenv terraform was x86_64.** The Homebrew `tfenv` shim uses
+  `TFENV_CONFIG_DIR=${XDG_CONFIG_HOME:-~/.config}/tfenv`, so versions live under
+  `~/.config/tfenv/versions/` (not `~/.tfenv/`). Fixed:
+  `rm -rf ~/.config/tfenv/versions/1.14.8 && tfenv install 1.14.8` → arm64.
+- `~/Applications/Air.app` was removed; its `/usr/local/bin/air` symlink and a
+  dead 2019 `hyperkit` link were swept.
 
 ---
 
