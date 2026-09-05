@@ -7,7 +7,7 @@ laptop_serial_professional: "FTV32FH396"
 integration_personal_laptop: "{{ (system_serial_number | default('')) == laptop_serial_personal }}"
 integration_market_pay: "{{ (system_serial_number | default('')) == laptop_serial_professional }}"
 
-# Safety gate for the "Install personal CLAUDE.md" task: CLAUDE_personal.md.j2
+# Safety gate for the "Install personal CLAUDE.md" task: CLAUDE_personal.md
 # started out as a placeholder, not the real content of Delerium's
 # ~/.claude/CLAUDE.md. It has since been seeded with the real content and
 # verified with the "ai-drift" trace tag (zero diff), so a normal apply can

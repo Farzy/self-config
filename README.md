@@ -121,12 +121,15 @@ on the command line.
 ### Tracing drift on vault-encrypted AI config files
 
 `~/.claude/CLAUDE.md` (professional:
-`roles/laptop_setup/templates/ai/CLAUDE_professional.md.j2`; personal:
-`roles/laptop_setup/templates/ai/CLAUDE_personal.md.j2`) are whole-file
-vault-encrypted templates. Because they hold hand-edited content (e.g.
-Claude's memory imports), a normal apply can silently delete anything on
-disk that hasn't made it back into the template. To check for that drift
-with zero risk of overwriting the live file, use the `ai-drift` tag:
+`roles/laptop_setup/templates/ai/CLAUDE_professional.md`; personal:
+`roles/laptop_setup/templates/ai/CLAUDE_personal.md`) are whole-file
+vault-encrypted files installed with `ansible.builtin.copy` (not `template`
+— they hold hand-edited content with no intentional Jinja, and `copy` still
+auto-decrypts a vault-encrypted `src` without evaluating `{{ }}`/`{% %}`
+markers in it). Because they hold hand-edited content (e.g. Claude's memory
+imports), a normal apply can silently delete anything on disk that hasn't
+made it back into the file. To check for that drift with zero risk of
+overwriting the live file, use the `ai-drift` tag:
 
     ansible-playbook --limit <host> -t ai-drift playbooks/laptop.yml
 
@@ -135,7 +138,7 @@ The two `Trace drift: ...` tasks behind that tag set `check_mode: true` and
 write, regardless of whether `--check`/`--diff` are passed on the command
 line — and the `never` tag keeps them out of normal runs (including
 `--tags all`) unless `ai-drift` is requested explicitly. If the diff shows
-content that only exists on disk, port it back into the template with
+content that only exists on disk, port it back into the file with
 `ansible-vault edit` before applying for real.
 
 > [!IMPORTANT]
@@ -144,11 +147,15 @@ content that only exists on disk, port it back into the template with
 > the same reasoning as the `--diff` suppression in
 > [Running Ansible from GitHub Actions](#running-ansible-from-github-actions).
 
-The personal template currently ships as a placeholder gated behind
-`claude_personal_md_ready: false` in `vars/laptop.yml`. To seed it, decrypt
-it with `ansible-vault view roles/laptop_setup/templates/ai/CLAUDE_personal.md.j2`
-for the step-by-step instructions, then flip that flag once its content
-matches the real file (verified with `ai-drift`).
+The personal template has been seeded with the real content of Delerium's
+`~/.claude/CLAUDE.md` and `claude_personal_md_ready` is `true` in
+`vars/laptop.yml`, so a normal apply now manages that file. Note that
+`AGENTS_personal.md` has no equivalent gate — it is installed to
+`~/.gemini/AGENTS.md` whenever `integration_personal_laptop` is true,
+regardless of `claude_personal_md_ready`. To re-seed either file after a
+manual edit to the live file, decrypt it with
+`ansible-vault edit --vault-id personal@~/.ansible-personal-key <path>` and
+confirm the update with `ai-drift` before relying on it.
 
 ### Running Ansible from GitHub Actions
 

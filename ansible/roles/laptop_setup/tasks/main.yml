@@ -92,8 +92,8 @@
     - ai
 
 - name: Install personal AGENTS.md to ~/.gemini
-  ansible.builtin.template:
-    src: "ai/AGENTS_personal.md.j2"
+  ansible.builtin.copy:
+    src: "ai/AGENTS_personal.md"
     dest: "~/.gemini/AGENTS.md"
     mode: "0644"
   tags:
@@ -102,8 +102,8 @@
   when: integration_personal_laptop | default(false)
 
 - name: Install professional AGENTS.md to ~/.gemini
-  ansible.builtin.template:
-    src: "ai/AGENTS_professional.md.j2"
+  ansible.builtin.copy:
+    src: "ai/AGENTS_professional.md"
     dest: "~/.gemini/AGENTS.md"
     mode: "0644"
   tags:
@@ -121,8 +121,8 @@
     - ai
 
 - name: Install professional CLAUDE.md to ~/.claude
-  ansible.builtin.template:
-    src: "ai/CLAUDE_professional.md.j2"
+  ansible.builtin.copy:
+    src: "ai/CLAUDE_professional.md"
     dest: "{{ claude_md_dest }}"
     mode: "{{ claude_md_mode }}"
   tags:
@@ -131,14 +131,14 @@
   when: integration_market_pay | default(false)
 
 # Gated on claude_personal_md_ready (see vars/laptop.yml) so this can be
-# scaffolded ahead of the real content: CLAUDE_personal.md.j2 starts out as a
-# placeholder, and applying it for real before it's seeded would overwrite
-# whatever is currently at ~/.claude/CLAUDE.md on the personal laptop. Use the
-# "ai-drift" trace tasks below to compare the placeholder against the live
-# file before flipping the flag.
+# scaffolded ahead of the real content: CLAUDE_personal.md has been seeded
+# with the real content of ~/.claude/CLAUDE.md and the flag is now true, so
+# this task manages the file going forward. If the live file is ever hand-
+# edited again, use the "ai-drift" trace tasks below to compare it against
+# the template before trusting a normal apply not to overwrite it.
 - name: Install personal CLAUDE.md to ~/.claude
-  ansible.builtin.template:
-    src: "ai/CLAUDE_personal.md.j2"
+  ansible.builtin.copy:
+    src: "ai/CLAUDE_personal.md"
     dest: "{{ claude_md_dest }}"
     mode: "{{ claude_md_mode }}"
   tags:
@@ -155,8 +155,8 @@
 # WARNING: diff: true here prints the vault-decrypted template content to the
 # terminal. Only run this locally -- never in CI or anywhere logs are kept.
 - name: "Trace drift: professional CLAUDE.md (read-only, never writes)"
-  ansible.builtin.template:
-    src: "ai/CLAUDE_professional.md.j2"
+  ansible.builtin.copy:
+    src: "ai/CLAUDE_professional.md"
     dest: "{{ claude_md_dest }}"
     mode: "{{ claude_md_mode }}"
   check_mode: true
@@ -167,8 +167,8 @@
     - ai-drift
 
 - name: "Trace drift: personal CLAUDE.md (read-only, never writes)"
-  ansible.builtin.template:
-    src: "ai/CLAUDE_personal.md.j2"
+  ansible.builtin.copy:
+    src: "ai/CLAUDE_personal.md"
     dest: "{{ claude_md_dest }}"
     mode: "{{ claude_md_mode }}"
   check_mode: true

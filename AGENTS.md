@@ -30,16 +30,19 @@ The project is structured to manage different environments, including web server
     `master_setup`, `iterm2_integration`, `docker`, `kind`, `kubectl`,
     `microk8s`, `minikube`, `minecraft_server`, `test`.
 *   `ansible/playbooks/` — one playbook per inventory group in `ansible/hosts`
-    (`laptop.yml`, `web.yml`, `openclaw.yml`, `k8s-server.yml`,
-    `minecraft.yml`, `quassel.yml`, `test.yml`). Groups are deliberately
+    (`laptops` → `laptop.yml`, `web` → `web.yml`, `openclaw` → `openclaw.yml`,
+    `k8s` → `k8s-server.yml`, `minecraft` → `minecraft.yml`,
+    `quassel` → `quassel.yml`), plus `test.yml`, which is not tied to a group
+    and runs against `hosts: all`. The real groups are deliberately
     non-overlapping so CI's `--limit` can never target a host with two
     playbooks at once.
-*   `ansible/vars/` — per-group variables, one file per playbook group that
-    needs vaulted secrets (`laptop.yml`, `openclaw.yml`, `minecraft.yml`,
-    `web.yml`).
+*   `ansible/vars/` — per-group variables loaded via each playbook's
+    `vars_files` (`laptop.yml`, `openclaw.yml`, `minecraft.yml`, `web.yml`).
+    All but `web.yml` also carry inline `!vault` secrets.
 *   `docs/` — deep dives that AGENTS.md and README.md only summarize:
-    [ci-ansible.md](docs/ci-ansible.md) (CI/CD design), plus
-    `fastmail-mcp.md`, `minecraft.md`, `openclaw.md` for those services.
+    [ci-ansible.md](docs/ci-ansible.md) (CI/CD design),
+    [fastmail-mcp.md](docs/fastmail-mcp.md), [minecraft.md](docs/minecraft.md),
+    [openclaw.md](docs/openclaw.md) for those services.
 *   `.claude/skills/openclaw-ops/` — a Claude Code skill for editing,
     dry-run testing, and deploying the OpenClaw/fastmail-mcp Ansible config;
     prefer it over ad hoc `ansible-playbook` invocations for that host.
@@ -54,17 +57,25 @@ The project is structured to manage different environments, including web server
 `integration_market_pay`. Most `laptop_setup` tasks are gated on one of these
 booleans instead of `ansible_facts`, so a task that looks unconditional in
 one file may still be a no-op depending on which laptop it runs on.
+`system_serial_number` itself is only set on macOS (`tasks/hostname.yml`, via
+`system_profiler`, `when: is_macos`) — on a Debian/WSL2 laptop both booleans
+evaluate to false and every gated task is silently skipped.
 
 ### Vault-encrypted whole-file AI assistant templates
 
-`roles/laptop_setup/templates/ai/{CLAUDE,AGENTS}_{personal,professional}.md.j2`
-are not ordinary Jinja templates: each whole file is Ansible Vault
-ciphertext (`ansible-vault encrypt`, vault-id `personal`), decrypted at
-template-render time. Never hand-edit the ciphertext directly — use
+`roles/laptop_setup/templates/ai/{CLAUDE,AGENTS}_{personal,professional}.md`
+are not ordinary templates: each whole file is Ansible Vault ciphertext
+(`ansible-vault encrypt`, vault-id `personal`), installed with
+`ansible.builtin.copy` (not `template`, since they hold hand-edited content
+with no intentional Jinja — `copy` still auto-decrypts a vaulted `src` but
+never evaluates `{{ }}`/`{% %}` in it). Never hand-edit the ciphertext
+directly — use
 `ansible-vault view|edit --vault-id personal@~/.ansible-personal-key <path>`.
-The personal variants start as placeholders gated behind
-`claude_personal_md_ready: false` in `vars/laptop.yml` until seeded with the
-real file content and verified with the `ai-drift` tag. Full procedure:
+Only the *personal CLAUDE.md* variant carries a safety gate,
+`claude_personal_md_ready` in `vars/laptop.yml` — it started as a placeholder
+and is now seeded and enabled. The `ai-drift` trace tag traces the CLAUDE.md
+variants only; `AGENTS_personal.md` has no such gate and is installed
+whenever `integration_personal_laptop` is true. Full procedure:
 [README.md § Tracing drift on vault-encrypted AI config files](README.md#tracing-drift-on-vault-encrypted-ai-config-files).
 
 ## Building and Running
