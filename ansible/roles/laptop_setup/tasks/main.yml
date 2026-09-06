@@ -19,6 +19,55 @@
   when: is_macos
   tags: always
 
+# Enable Touch ID for `sudo`. macOS 14+ sources /etc/pam.d/sudo_local from
+# /etc/pam.d/sudo, and that include survives OS updates -- unlike editing
+# /etc/pam.d/sudo directly, which every major update reverts. Apple ships
+# /etc/pam.d/sudo_local.template (its existence is our "mechanism present"
+# probe); we write the same file with the pam_tid line uncommented.
+#
+# This is opt-in only. "Enable Touch ID for sudo" is tagged `never`, so a normal
+# run skips it entirely -- it needs root, which would prompt for a sudo password
+# (or, once configured, Touch ID) on every unrelated `ansible-playbook` run.
+# Apply it deliberately:
+#
+#   ansible-playbook --ask-become-pass --tags sudo playbooks/laptop.yml
+#
+# Both tasks are `never` + `sudo`: skipped everywhere except that explicit
+# `--tags sudo` invocation, which pulls them both back in.
+#
+# The laptop hosts carry `ansible_become=false` in ./hosts (they are
+# ansible_connection=local and nothing else here needs root). That inventory
+# variable outranks a `become: true` task keyword, so the write task re-asserts
+# escalation with a task-level `ansible_become` var, which outranks inventory.
+- name: Check for the sudo_local include mechanism (macOS 14+)
+  ansible.builtin.stat:
+    path: /etc/pam.d/sudo_local.template
+  register: _sudo_local_template
+  when: is_macos
+  tags:
+    - never
+    - sudo
+
+- name: Enable Touch ID for sudo
+  ansible.builtin.copy:
+    dest: /etc/pam.d/sudo_local
+    # pam_reattach (auth optional, listed before pam_tid) would extend Touch ID
+    # to tmux/screen sessions -- it needs `brew install pam-reattach`, so it is
+    # left out of the default managed file.
+    content: |
+      # Managed by Ansible (laptop_setup) -- Touch ID for sudo.
+      auth       sufficient     pam_tid.so
+    owner: root
+    group: wheel
+    mode: "0444"
+  become: true
+  vars:
+    ansible_become: true
+  when: is_macos and _sudo_local_template.stat.exists | default(false)
+  tags:
+    - never
+    - sudo
+
 - name: Set hostname
   ansible.builtin.include_tasks:
     file: hostname.yml

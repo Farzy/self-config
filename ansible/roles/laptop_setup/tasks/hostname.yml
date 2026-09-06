@@ -26,7 +26,6 @@
   tags: [always, hostname]
 
 - name: Set macOS hostname
-  become: true
   when: is_macos
   tags: hostname
   block:
@@ -39,17 +38,27 @@
       changed_when: false
       check_mode: false
 
-    - name: Set ComputerName
-      ansible.builtin.command: "scutil --set ComputerName {{ laptop_hostname | trim }}"
-      when: "('ComputerName: ' + (laptop_hostname | trim)) not in current_hostname_settings.stdout_lines"
-      changed_when: true
+    # `scutil --set` needs root. The laptop hosts carry `ansible_become=false` in
+    # ./hosts, and an inventory variable outranks a bare `become: true` keyword --
+    # so escalation is re-asserted here with a block-level `ansible_become` var,
+    # which outranks inventory. Scoped to the writes: a normal run, where the
+    # names already match and these tasks are skipped, never prompts for sudo.
+    - name: Apply hostname settings
+      become: true
+      vars:
+        ansible_become: true
+      block:
+        - name: Set ComputerName
+          ansible.builtin.command: "scutil --set ComputerName {{ laptop_hostname | trim }}"
+          when: "('ComputerName: ' + (laptop_hostname | trim)) not in current_hostname_settings.stdout_lines"
+          changed_when: true
 
-    - name: Set LocalHostName
-      ansible.builtin.command: "scutil --set LocalHostName {{ laptop_hostname | trim }}"
-      when: "('LocalHostName: ' + (laptop_hostname | trim)) not in current_hostname_settings.stdout_lines"
-      changed_when: true
+        - name: Set LocalHostName
+          ansible.builtin.command: "scutil --set LocalHostName {{ laptop_hostname | trim }}"
+          when: "('LocalHostName: ' + (laptop_hostname | trim)) not in current_hostname_settings.stdout_lines"
+          changed_when: true
 
-    - name: Set HostName
-      ansible.builtin.command: "scutil --set HostName {{ laptop_hostname | trim }}"
-      when: "('HostName: ' + (laptop_hostname | trim)) not in current_hostname_settings.stdout_lines"
-      changed_when: true
+        - name: Set HostName
+          ansible.builtin.command: "scutil --set HostName {{ laptop_hostname | trim }}"
+          when: "('HostName: ' + (laptop_hostname | trim)) not in current_hostname_settings.stdout_lines"
+          changed_when: true

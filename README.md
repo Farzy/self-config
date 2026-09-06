@@ -74,6 +74,40 @@ Terraform / Ansible configuration for my servers
         git remote add -f ansible-role-nginx https://github.com/nginxinc/ansible-role-nginx.git
         git subtree add --prefix ansible/roles/nginxinc.nginx ansible-role-nginx master --squash
 
+* Enable Touch ID for `sudo` (macOS). The `laptop_setup` role can write
+  `/etc/pam.d/sudo_local` with `auth sufficient pam_tid.so` — the update-safe
+  include that macOS 14+ sources from `/etc/pam.d/sudo`.
+
+  This task is tagged `never`, so **normal runs skip it** — it needs root, and
+  leaving it in every run would prompt for a password (or Touch ID) on
+  unrelated `ansible-playbook` invocations. Run it explicitly, once, with
+  `--ask-become-pass`:
+
+        ansible-playbook --ask-become-pass --tags sudo playbooks/laptop.yml
+
+  To also get the Touch ID prompt inside `tmux`/`screen`, install
+  `pam-reattach` (`brew install pam-reattach`) and add
+  `auth optional <brew-prefix>/lib/pam/pam_reattach.so` above the `pam_tid`
+  line in `/etc/pam.d/sudo_local`.
+
+### macOS laptop hostname
+
+`laptop_setup` sets `ComputerName` / `LocalHostName` / `HostName` from
+`laptop_hostname` in `ansible/vars/laptop.yml` (which is chosen per host by
+serial number). The `scutil --set` calls need root, so a run that actually
+changes the name prompts once for `sudo`:
+
+        ansible-playbook --ask-become-pass --tags hostname --limit <host> playbooks/laptop.yml
+
+A normal run where the name already matches skips those tasks and does **not**
+prompt.
+
+> The laptop hosts are `ansible_connection=local ansible_become=false` in
+> `ansible/hosts`. An inventory variable outranks a bare `become: true` keyword,
+> so both the hostname writes and the Touch-ID task re-assert escalation with a
+> task/block-scoped `ansible_become: true` var (which outranks inventory). Keep
+> that pattern for any other laptop task that needs root.
+
 ### Ansible Linting
 
 To ensure code quality, `ansible-lint` is integrated into `pre-commit`. Due to internal API changes in `ansible-core`, specific versions are pinned in `.pre-commit-config.yaml` to maintain compatibility:
