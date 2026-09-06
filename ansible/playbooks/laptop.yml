@@ -11,14 +11,21 @@
         home_path: "{{ ansible_facts['user_dir'] }}"
         owner: "{{ ansible_facts['user_id'] }}"
         group: "{{ ansible_facts['user_gid'] }}"
-  # Homebrew is not on Ansible's minimal command/shell PATH. Prepend both prefixes
-  # so tasks that shell out to `brew`, `helm`, etc. resolve regardless of the
-  # invoking shell (Apple Silicon uses /opt/homebrew, Intel /usr/local).
-  environment:
-    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_facts['env']['PATH'] }}"
+    # Homebrew is not on Ansible's minimal command/shell PATH. Prepend both
+    # prefixes so tasks that shell out to `brew`, `helm`, etc. resolve regardless
+    # of the invoking shell (Apple Silicon uses /opt/homebrew, Intel /usr/local).
+    # Applied per-role below rather than at play level: a play-level `environment`
+    # also wraps the implicit "Gathering Facts" task, which runs before
+    # ansible_facts['env'] exists -- and on ansible-core 2.21 that reference then
+    # either hard-errors or silently collapses to an empty tail (dropping
+    # /usr/bin:/bin). By the time the roles run, facts are gathered.
+    laptop_brew_environment:
+      PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_facts['env']['PATH'] }}"
   roles:
     - role: laptop_setup
       tags: deploy
+      environment: "{{ laptop_brew_environment }}"
     - role: iterm2_integration
       tags: iterm2
+      environment: "{{ laptop_brew_environment }}"
   become: false
