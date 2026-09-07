@@ -63,6 +63,12 @@ if [[ -d "${KREW_ROOT:-$HOME/.krew}/bin" ]]; then
     export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 fi
 
+# Docker completion from https://docs.docker.com/engine/cli/completion/
+if command -v docker &> /dev/null; then
+    mkdir -p ~/.oh-my-zsh/completions
+    docker completion zsh > ~/.oh-my-zsh/completions/_docker
+fi
+
 # Automatic Poetry shell activation/deactivation
 _togglePoetryShell() {
   # deactivate shell if pyproject.toml doesn't exist and not in a subdir
@@ -326,16 +332,6 @@ compdef kgetall=kubectl
 
 # Google Cloud
 alias gctx=gcloudctx
-
-# Docker completion
-if command -v docker &> /dev/null; then
-    if [[ -d "${HOME}/.docker/completions" ]]; then
-        # The following lines have been added by Docker Desktop to enable Docker CLI completions.
-        fpath=(${HOME}/.docker/completions $fpath)
-        autoload -Uz compinit
-        compinit
-    fi
-fi
 
 {| if integration_market_pay -|}
 #export GOOGLE_CREDENTIALS=/Users/ffarid/src/market-pay/.secrets/mp-sa-key.json
