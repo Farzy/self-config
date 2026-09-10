@@ -34,21 +34,13 @@
   tags:
     - configuration
 
-- name: Install ZSH Autosuggestions plugin
-  ansible.builtin.git:
-    repo: "https://github.com/zsh-users/zsh-autosuggestions.git"
-    version: "master"
-    dest: "{{ laptop_setup_oh_my_zsh_home }}/custom/plugins/zsh-autosuggestions"
-    accept_hostkey: true
-  tags:
-    - configuration
-
-- name: Install ZSH Syntax Highlighting plugin
-  ansible.builtin.git:
-    repo: "https://github.com/zsh-users/zsh-syntax-highlighting.git"
-    version: "master"
-    dest: "{{ laptop_setup_oh_my_zsh_home }}/custom/plugins/zsh-syntax-highlighting"
-    accept_hostkey: true
+- name: Remove obsolete custom ZSH plugins now bundled with Oh My Zsh
+  ansible.builtin.file:
+    path: "{{ laptop_setup_oh_my_zsh_home }}/custom/plugins/{{ item }}"
+    state: absent
+  loop:
+    - zsh-autosuggestions
+    - zsh-syntax-highlighting
   tags:
     - configuration
 
