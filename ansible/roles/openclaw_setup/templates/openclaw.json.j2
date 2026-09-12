@@ -17,7 +17,7 @@
   "commands": {
     "ownerAllowFrom": {{ openclaw_setup_telegram_allow_from | to_json }}
   },
-{% set ns = namespace(models={}) %}
+{% set ns = namespace(models={}, allow_models=[]) %}
 {% if openclaw_setup_claude_cli_enabled %}
 {% set ns.models = ns.models | combine({openclaw_setup_model: {"agentRuntime": {"id": "claude-cli"}}}) %}
 {% endif %}
@@ -26,6 +26,12 @@
 {% set ns.models = ns.models | combine({"scaleway/" ~ scaleway_model_id: {"params": {"extra_body": {"thinking": {"type": "enabled"}, "reasoning_effort": "high"}}}}) %}
 {% endfor %}
 {% endif %}
+{# agents.defaults.modelPolicy.allow: primary + fallbacks, plus every model any
+   configured provider actually exposes (so a manually-selected, non-fallback
+   model like Mistral Small isn't silently blocked) — deduped since the
+   primary can legitimately also appear in the fallback list (e.g. the
+   documented "Reverting to Gemini as primary" path). #}
+{% set ns.allow_models = ([openclaw_setup_model] + (openclaw_setup_model_fallbacks | default([])) + (openclaw_setup_scaleway_models | map(attribute='id') | map('regex_replace', '^', 'scaleway/') | list if openclaw_setup_scaleway_enabled | default(false) else [])) | unique | list %}
   "agents": {
     "defaults": {
       "model": {
@@ -36,7 +42,7 @@
       "models": {{ ns.models | to_json }},
       "reasoningDefault": "{{ openclaw_setup_reasoning_default }}",
       "modelPolicy": {
-        "allow": {{ ([openclaw_setup_model] + (openclaw_setup_model_fallbacks | default([]))) | to_json }}
+        "allow": {{ ns.allow_models | to_json }}
       }
     },
     "entries": {

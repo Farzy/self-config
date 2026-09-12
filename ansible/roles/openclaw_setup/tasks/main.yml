@@ -594,6 +594,7 @@
     owner: root
     group: root
     mode: '0755'
+    validate: bash -n %s
 
 - name: Deploy OpenClaw systemd service
   ansible.builtin.template:
@@ -602,7 +603,9 @@
     owner: root
     group: root
     mode: '0644'
-  notify: Reload systemd
+  notify:
+    - Reload systemd
+    - Restart openclaw
 
 - name: Restrict ptrace scope to admin-only (YAMA security hardening)
   ansible.posix.sysctl:

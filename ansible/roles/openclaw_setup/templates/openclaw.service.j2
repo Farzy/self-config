@@ -8,7 +8,7 @@ User={{ openclaw_setup_user }}
 Group={{ openclaw_setup_group }}
 WorkingDirectory={{ openclaw_setup_home }}
 EnvironmentFile=/etc/openclaw/secrets.env
-{% if openclaw_setup_config_readonly %}
+{% if openclaw_setup_config_readonly | bool %}
 # Blocks OpenClaw's own config writers (setup, doctor --fix, plugin
 # install/update/enable/disable, `models auth paste-token`) for this
 # systemd-managed process — openclaw.json here is Ansible-managed, not
