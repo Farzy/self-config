@@ -209,8 +209,8 @@ fi
    rendering this file failed outright with "'openclaw_setup_user' is undefined".
    Guarded rather than defaulted so hosts that never run OpenClaw simply do not
    carry the block; .gitconfig in this same directory uses the same convention. #}
-if [[ $(id -un) == "{{ openclaw_setup_user }}" ]] && command -v openclaw &> /dev/null; then
-    eval "$(openclaw completion --shell zsh)"
+if [[ $(id -un) == "{{ openclaw_setup_user }}" ]]; then
+    [ -f "${HOME}/.openclaw/completions/openclaw.zsh" ] && source "${HOME}/.openclaw/completions/openclaw.zsh"
 fi
 {% endif %}
 

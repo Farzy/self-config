@@ -587,6 +587,14 @@
     mode: '0600'
   notify: Restart openclaw
 
+- name: Deploy openclaw-admin wrapper for manual admin commands needing secrets.env
+  ansible.builtin.template:
+    src: openclaw-admin.j2
+    dest: /usr/local/bin/openclaw-admin
+    owner: root
+    group: root
+    mode: '0755'
+    validate: bash -n %s
 
 - name: Deploy OpenClaw systemd service
   ansible.builtin.template:
@@ -595,7 +603,9 @@
     owner: root
     group: root
     mode: '0644'
-  notify: Reload systemd
+  notify:
+    - Reload systemd
+    - Restart openclaw
 
 - name: Restrict ptrace scope to admin-only (YAMA security hardening)
   ansible.posix.sysctl:
