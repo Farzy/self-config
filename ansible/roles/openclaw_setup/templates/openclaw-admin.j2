@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+#
+# Runs an `openclaw` CLI subcommand as the `claw` service user with the same
+# environment the systemd-managed gateway gets from /etc/openclaw/secrets.env
+# (GEMINI_API_KEY, CLAUDE_CODE_OAUTH_TOKEN, SCALEWAY_API_KEY,
+# ANSIBLE_VAULT_PASSWORD, NODE_COMPILE_CACHE, OPENCLAW_NO_RESPAWN, ...).
+#
+# One-off admin subcommands like `openclaw doctor --fix` spawn a fresh CLI
+# process rather than talking to the already-running gateway, so a plain
+# `sudo -u claw openclaw ...` sees none of that environment and misreports
+# normal config as broken (missing API keys, NODE_COMPILE_CACHE,
+# OPENCLAW_NO_RESPAWN, ...). This wrapper closes that gap: it must itself run
+# as root (via sudo) so it can read the root-only secrets file, then re-execs
+# the requested command as `claw` with -E to carry that environment through
+# and -H to reset HOME to claw's own home directory. -H is required alongside
+# -E: -E preserves the *whole* invoking (root) environment, HOME included, so
+# without -H openclaw resolves its state dir as /root/.openclaw (root's HOME)
+# instead of /home/claw/.openclaw and fails with a permission error reading a
+# database it never actually owns.
+#
+# Deliberately does NOT export OPENCLAW_CONFIG_READONLY — that flag lives only
+# on the systemd unit's own Environment= line (openclaw.service.j2), not in
+# secrets.env, specifically so manual commands run through this wrapper (or
+# any other interactive session) are never accidentally blocked by it.
+#
+# Also exports OPENCLAW_SERVICE_REPAIR_POLICY=external: our openclaw.service
+# is a plain system-level unit deployed by Ansible, not openclaw's own
+# built-in service installer, which expects to verify shutdown through a
+# `systemctl --user` unit + D-Bus user session bus for `claw` — neither of
+# which exists here (no lingering systemd user session for `claw`). Without
+# this, `doctor --fix` refuses with "Gateway service ownership or shutdown
+# could not be verified" even after a correct `systemctl stop openclaw`. The
+# "external" policy skips that native service-manager inspection/mutation
+# (state and agent-database lease checks still run) and leaves stop/start
+# responsibility with us — see docs/openclaw.md §8 for the stop/fix/start
+# sequence this still requires.
+#
+# Usage: sudo openclaw-admin <openclaw-subcommand-and-args...>
+#   sudo systemctl stop openclaw && sudo openclaw-admin doctor --fix && sudo systemctl start openclaw
+#   sudo openclaw-admin status --deep
+
+set -euo pipefail
+
+if [[ ${EUID} -ne 0 ]]; then
+  echo "openclaw-admin must be run as root (sudo openclaw-admin ...) — it reads root-only /etc/openclaw/secrets.env" >&2
+  exit 1
+fi
+
+set -a
+source /etc/openclaw/secrets.env
+set +a
+
+export OPENCLAW_SERVICE_REPAIR_POLICY=external
+
+exec sudo -H -u claw -E openclaw "$@"

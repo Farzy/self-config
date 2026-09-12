@@ -587,6 +587,13 @@
     mode: '0600'
   notify: Restart openclaw
 
+- name: Deploy openclaw-admin wrapper for manual admin commands needing secrets.env
+  ansible.builtin.template:
+    src: openclaw-admin.j2
+    dest: /usr/local/bin/openclaw-admin
+    owner: root
+    group: root
+    mode: '0755'
 
 - name: Deploy OpenClaw systemd service
   ansible.builtin.template:

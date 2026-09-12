@@ -13,7 +13,7 @@ This guide details the deployment, configuration, operational management, and tr
 * **Dedicated System Account**: User `claw` (`/home/claw`, default shell `/usr/bin/zsh`).
 * **LLM Provider**: Anthropic Claude (`anthropic/claude-sonnet-5`), routed through the `claude-cli` agent runtime (reuses a Claude Code login on the host instead of a separate API key — see [6.4](#64-claude-anthropic-model-via-claude-code-cli-reuse)), with optional Scaleway Generative APIs (`https://api.scaleway.ai/5e40a076-f4e5-4328-8052-1a543614ec45/v1`, supporting GLM 5.2, Qwen 3.6 Coder, and Mistral Small 3) available as an alternate provider.
 * **Embeddings Provider**: Google Gemini (`gemini-embedding-001`) is still used for `memory.search` — unrelated to the chat model, kept for semantic memory indexing (see [4.2](#42-memory-search--background-dreaming-configuration)).
-* **API Key Management**: Dedicated Gemini API key (embeddings only) and optional Scaleway API key stored encrypted with Ansible Vault in [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml). Claude auth uses a long-lived OAuth token (`CLAUDE_CODE_OAUTH_TOKEN`), also vault-encrypted.
+* **API Key Management**: Dedicated Gemini API key (embeddings only) and optional Scaleway API key stored encrypted with Ansible Vault in [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml). Claude auth uses a long-lived OAuth token (`CLAUDE_CODE_OAUTH_TOKEN`), also vault-encrypted.
 * **Control Channels**:
   - **Telegram**: Stock `@openclaw/telegram` plugin connected in live long-polling mode using an encrypted bot token.
   - **Signal**: Integration using `@openclaw/signal` plugin and native `signal-cli` (`v0.14.7`), enforcing Direct Message pairing policy (`dmPolicy: "pairing"`).
@@ -84,13 +84,13 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 ```
 
 ### Key Ansible Roles & Templates
-* **Playbook**: [ansible/playbooks/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/playbooks/openclaw.yml)
-* **Encrypted Vault Variables**: [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml)
-* **OpenClaw Role**: [ansible/roles/openclaw_setup/tasks/main.yml](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/tasks/main.yml)
-* **Configuration Template**: [ansible/roles/openclaw_setup/templates/openclaw.json.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.json.j2)
-* **Systemd Service Template**: [ansible/roles/openclaw_setup/templates/openclaw.service.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.service.j2)
-* **Secrets Environment Template**: [ansible/roles/openclaw_setup/templates/secrets.env.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/secrets.env.j2)
-* **Nginx SSL Proxy Template**: [ansible/roles/openclaw_setup/templates/nginx.conf.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/nginx.conf.j2)
+* **Playbook**: [ansible/playbooks/openclaw.yml](../ansible/playbooks/openclaw.yml)
+* **Encrypted Vault Variables**: [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml)
+* **OpenClaw Role**: [ansible/roles/openclaw_setup/tasks/main.yml](../ansible/roles/openclaw_setup/tasks/main.yml)
+* **Configuration Template**: [ansible/roles/openclaw_setup/templates/openclaw.json.j2](../ansible/roles/openclaw_setup/templates/openclaw.json.j2)
+* **Systemd Service Template**: [ansible/roles/openclaw_setup/templates/openclaw.service.j2](../ansible/roles/openclaw_setup/templates/openclaw.service.j2)
+* **Secrets Environment Template**: [ansible/roles/openclaw_setup/templates/secrets.env.j2](../ansible/roles/openclaw_setup/templates/secrets.env.j2)
+* **Nginx SSL Proxy Template**: [ansible/roles/openclaw_setup/templates/nginx.conf.j2](../ansible/roles/openclaw_setup/templates/nginx.conf.j2)
 
 ### 4.1 Systemd Secrets Externalization & Security Sandboxing
 
@@ -102,9 +102,10 @@ To protect API tokens and sensitive credentials from unauthorized process access
 - **Ansible Vault Password Injection (`ANSIBLE_VAULT_PASSWORD`)**: The control node dynamically reads the local Ansible Vault key (`~/.ansible-personal-key`) during playbook deployment via Jinja2 file lookup (`{{ lookup('file', '~/.ansible-personal-key') | trim }}`) and injects it as `ANSIBLE_VAULT_PASSWORD` into `/etc/openclaw/secrets.env`. This allows OpenClaw subagents and tasks to execute Ansible operations using the standard Vault environment variable without hardcoding or committing plaintext keys to the repository.
 - **Notion Integration (`NOTION_API_TOKEN` & `NOTION_API_VERSION`)**: Managed securely via Ansible Vault (`openclaw_notion_api_token` in `ansible/vars/openclaw.yml`) and injected into `/etc/openclaw/secrets.env` along with `NOTION_API_VERSION=2026-03-11` for Notion API integrations.
 - Systemd loads `EnvironmentFile=/etc/openclaw/secrets.env` during unit startup before relinquishing root privileges to user `claw`.
+- **Running manual `openclaw` admin commands with this environment**: the `debian` account (the one `ssh claw` logs into — see [§8](#8-service-management--troubleshooting)) has no read access to `/etc/openclaw/secrets.env`, so a plain `sudo -u claw openclaw <cmd>` sees none of these variables — this silently breaks any one-off admin subcommand that spawns a fresh CLI process instead of talking to the already-running (systemd-managed) gateway, e.g. `openclaw doctor --fix` misreporting `NODE_COMPILE_CACHE`/`OPENCLAW_NO_RESPAWN` as unset even though they're set for the real service. Use the `openclaw-admin` wrapper deployed by this role (`/usr/local/bin/openclaw-admin`, templated from `openclaw-admin.j2`) instead: it runs as root (reads the secrets file), then re-execs the command as `claw` with `-E` to carry that environment through and `-H` to reset `HOME` to `claw`'s own home directory — without `-H`, `-E` also preserves root's `HOME=/root`, and `openclaw` resolves its state DB as `/root/.openclaw/...` instead of `/home/claw/.openclaw/...` and fails with a permission error. It also exports `OPENCLAW_SERVICE_REPAIR_POLICY=external`: our `openclaw.service` is a plain system-level unit deployed by Ansible, not openclaw's own built-in service installer, so `doctor --fix`'s native check for whether the gateway is truly stopped — which expects a `systemctl --user` unit plus a D-Bus user session bus for `claw`, neither of which exists here — fails with `Gateway service ownership or shutdown could not be verified` even right after a correct `systemctl stop openclaw`; the `external` policy tells Doctor to skip that native inspection (it still checks state/DB ownership) and leaves stop/start to us. Usage: `sudo openclaw-admin doctor --fix`. See [§8](#8-service-management--troubleshooting) for the worked example, including why the gateway must be stopped first.
 
 #### 2. Threat Model Defense & Harmonized Systemd Sandboxing
-The Systemd unit file ([ansible/roles/openclaw_setup/templates/openclaw.service.j2](file:///Users/ffarid/src/personal/self-config/ansible/roles/openclaw_setup/templates/openclaw.service.j2)) configures harmonized process sandboxing balancing security against Node.js runtime needs:
+The Systemd unit file ([ansible/roles/openclaw_setup/templates/openclaw.service.j2](../ansible/roles/openclaw_setup/templates/openclaw.service.j2)) configures harmonized process sandboxing balancing security against Node.js runtime needs:
 
 - **`ProtectSystem=strict`**: Mounts root `/`, `/usr`, `/boot`, `/etc` as read-only filesystem paths to prevent OS file tampering.
 - **`ReadWritePaths=/home/claw /var/tmp/openclaw-compile-cache`**: Explicitly restricts write permissions strictly to `/home/claw` and the compilation cache directory.
@@ -203,7 +204,7 @@ The server includes modern CLI tools configured with standard short names:
    rm -f /tmp/temp-telegram-bot-token
    ```
 3. **Append to Vault Variables & Deploy**:
-   Append the encrypted block to [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml) and re-deploy:
+   Append the encrypted block to [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml) and re-deploy:
    ```bash
    uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
    ```
@@ -263,7 +264,7 @@ To allow OpenClaw agents to interact securely with private GitHub repositories:
    ```
 
 3. **Append to Vault Variables & Deploy**:
-   Append `openclaw_github_pat` to [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml) and deploy:
+   Append `openclaw_github_pat` to [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml) and deploy:
    ```bash
    uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
    ```
@@ -288,7 +289,7 @@ OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `c
    ```
 
 3. **Append to Vault Variables & Deploy**:
-   Append the encrypted block to [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml) and re-deploy:
+   Append the encrypted block to [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml) and re-deploy:
    ```bash
    uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
    ```
@@ -333,8 +334,19 @@ OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `c
 * **`openclaw_setup_reasoning_default`** (default: `"stream"`) — rendered as `agents.defaults.reasoningDefault`.
 * **`openclaw_setup_scaleway_api`** (default: `"openai-responses"`) — rendered as `models.providers.scaleway.api`, alongside the existing `baseUrl`/`apiKey`/`models` fields.
 * **`openclaw_setup_telegram_thread_bindings_enabled`** (default: `true`) — rendered as `channels.telegram.threadBindings.enabled`.
+* **`agents.defaults.modelPolicy.allow`** — no dedicated variable: rendered directly as `[openclaw_setup_model] + openclaw_setup_model_fallbacks`, so the allow-list always exactly matches the primary model plus the fallback chain above, by construction. A separate allow-list variable existed briefly and was removed after it drifted out of sync with the fallback chain (missing `google/gemini-3.1-pro-preview`) the first time `openclaw doctor --fix` touched it — deriving it removes the possibility of that drift rather than requiring the two lists to be kept in sync by hand.
 
 These four settings previously existed only as manual drift on the live server (set outside Ansible) and were wiped by a plain redeploy; they're now first-class template inputs so `ansible-playbook --diff` stays a true no-op when nothing has actually changed.
+
+---
+
+### 4.3 Config Writes & `OPENCLAW_CONFIG_READONLY`
+
+Since the 2026.9.4 release, OpenClaw supports `OPENCLAW_CONFIG_READONLY=1`, which blocks the process's own config writers — `openclaw setup`, `openclaw configure`, `openclaw doctor --fix`, plugin install/update/uninstall/enable/disable, and mutating `openclaw update` flows — while leaving read-only commands (`config get`, `config file`, `config schema`, `config validate`) and ordinary runtime state untouched. It's meant for deployments where config is externally managed, which describes this host exactly: `openclaw.json` is fully rendered by [`openclaw.json.j2`](../ansible/roles/openclaw_setup/templates/openclaw.json.j2), never by OpenClaw's own interactive setup/config commands.
+
+- **Toggle**: `openclaw_setup_config_readonly` (`ansible/roles/openclaw_setup/defaults/main.yml`, default `true`).
+- **Where it's set**: as `Environment=OPENCLAW_CONFIG_READONLY=1` directly in [`openclaw.service.j2`](../ansible/roles/openclaw_setup/templates/openclaw.service.j2)'s `[Service]` block — **deliberately not** in `secrets.env.j2`. That file is loaded by systemd but is also manually `source`d over SSH for one-off admin tasks (e.g. the `gog` verification in [§6.6](#66-gog-google-workspace-cli-oauth-setup)); if the readonly flag lived there, those manual sessions would silently inherit it too and any manual `openclaw doctor --fix` or `openclaw models auth paste-token` run in them would fail with no obvious cause.
+- **Practical effect**: the long-running systemd-managed gateway process can't rewrite its own config or auth-profile pointers, but manual admin commands run over `ssh claw` (e.g. §6.4 step 4's `models auth paste-token`, or crash-loop recovery in [§8](#8-service-management--troubleshooting)) are unaffected — those shells never inherit the systemd unit's `Environment=` line.
 
 ---
 
@@ -392,7 +404,7 @@ pattern (laptop-side secret → `ansible-vault encrypt_string` → deploy):
    you generate once, not something Google issues.
 
 4. **Append the three encrypted blocks to
-   [ansible/vars/openclaw.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/openclaw.yml)
+   [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml)
    and deploy**:
    ```bash
    uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
@@ -484,9 +496,12 @@ OpenClaw workspace skills are automatically provisioned via Ansible:
   ssh claw "sudo -u claw openclaw dashboard --no-open"
   ```
 * **Recovering from an `openclaw.json` schema migration crash-loop**:
-  An OpenClaw version bump can ship a breaking `openclaw.json` schema change (e.g. the 2026.8.1 release moved `agents.list` → `agents.entries`, `agents.defaults.memorySearch` → top-level `memory.search`, and flattened `channels.<name>.cliPath` under a `transport` object). If the live config still uses the old shape, the gateway can crash-loop on startup. `openclaw doctor --fix` auto-migrates the on-disk config to the new schema and writes timestamped `openclaw.json.bak.*` snapshots before each rewrite — diff those against `ansible/roles/openclaw_setup/templates/openclaw.json.j2` to confirm the Ansible template matches, then restart:
+  An OpenClaw version bump can ship a breaking `openclaw.json` schema change (e.g. the 2026.8.1 release moved `agents.list` → `agents.entries`, `agents.defaults.memorySearch` → top-level `memory.search`, and flattened `channels.<name>.cliPath` under a `transport` object). If the live config still uses the old shape, the gateway can crash-loop on startup. `openclaw doctor --fix` auto-migrates the on-disk config to the new schema and writes timestamped `openclaw.json.bak.*` snapshots before each rewrite — diff those against `ansible/roles/openclaw_setup/templates/openclaw.json.j2` to confirm the Ansible template matches. **Stop the systemd unit first**: `doctor --fix` refuses to touch the shared state database while it detects the gateway still owns it (`Doctor could not enter maintenance. Error: Gateway service ownership or shutdown could not be verified.`) — a bare `kill`/crash-loop restart loop doesn't count as a clean stop in its eyes, only `systemctl stop` does:
   ```bash
-  ssh claw "sudo -u claw openclaw doctor --fix"
-  ssh claw "sudo systemctl restart openclaw"
+  ssh claw "sudo systemctl stop openclaw"
+  ssh claw "sudo openclaw-admin doctor --fix"
+  ssh claw "sudo systemctl start openclaw"
   ```
+  Run the repair itself through `openclaw-admin` (see [§4.1](#41-systemd-secrets-externalization--security-sandboxing)), not a bare `sudo -u claw openclaw doctor --fix` — the `debian` account can't read `/etc/openclaw/secrets.env` directly, so the bare form sees none of the service's environment and `doctor` misreports perfectly normal config as broken (missing API keys, `NODE_COMPILE_CACHE`, `OPENCLAW_NO_RESPAWN`, ...). This still works normally even with `openclaw_setup_config_readonly: true` ([§4.3](#43-config-writes--openclaw_config_readonly)): `OPENCLAW_CONFIG_READONLY` is only set on the systemd unit's own `Environment=` line, never in `secrets.env`, so `openclaw-admin` never inherits it — no need to toggle anything off first.
+
   Update `openclaw.json.j2` (and `ansible/roles/openclaw_setup/defaults/main.yml: openclaw_setup_version`) to match so the next Ansible deploy doesn't regenerate the old schema and re-trigger the same migration.

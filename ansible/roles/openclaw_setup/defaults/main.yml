@@ -65,4 +65,12 @@ openclaw_setup_memory_search_extra_paths:
 openclaw_setup_dreaming_enabled: true
 openclaw_setup_memory_wiki_enabled: true
 
-openclaw_setup_version: "2026.9.2"
+# Blocks OpenClaw's own config writers (setup, doctor --fix, plugin
+# install/update/enable/disable, `models auth paste-token`, mutating `update`
+# flows) on the systemd-managed gateway process, via OPENCLAW_CONFIG_READONLY=1
+# (openclaw.service.j2). Introduced in the 2026.9.4 release for deployments
+# where config is externally managed — a good fit since openclaw.json here is
+# fully Ansible/Jinja-templated already. See docs/openclaw.md §4.3.
+openclaw_setup_config_readonly: true
+
+openclaw_setup_version: "2026.9.4"

@@ -34,7 +34,10 @@
 {% endif %}
       },
       "models": {{ ns.models | to_json }},
-      "reasoningDefault": "{{ openclaw_setup_reasoning_default }}"
+      "reasoningDefault": "{{ openclaw_setup_reasoning_default }}",
+      "modelPolicy": {
+        "allow": {{ ([openclaw_setup_model] + (openclaw_setup_model_fallbacks | default([]))) | to_json }}
+      }
     },
     "entries": {
       "main": {
