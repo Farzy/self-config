@@ -282,7 +282,7 @@ compdef tf=terraform
 compdef tg=terragrunt
 
 # FZF
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+command -v fzf > /dev/null && source <(fzf --zsh)
 
 # Direnv activation
 command -v direnv > /dev/null && eval "$(direnv hook zsh)"

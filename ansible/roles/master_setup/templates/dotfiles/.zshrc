@@ -186,7 +186,7 @@ source /etc/profile.d/apps-bin-path.sh
 alias gctx=gcloudctx
 
 # FZF
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+command -v fzf > /dev/null && source <(fzf --zsh)
 
 # Direnv activation
 command -v direnv &> /dev/null && eval "$(direnv hook zsh)"
