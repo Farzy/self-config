@@ -248,6 +248,18 @@
   changed_when: true
   notify: Restart fastmail-mcp
 
+- name: Flush handlers so the health check runs against the new build
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify supergateway answers on the health endpoint after (re)install
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ fastmail_mcp_port }}/healthz"
+    status_code: 200
+  register: fastmail_mcp_supergateway_health
+  until: fastmail_mcp_supergateway_health.status == 200
+  retries: 6
+  delay: 5
+
 - name: Create Fastmail MCP downloads directory
   ansible.builtin.file:
     path: "{{ fastmail_mcp_home }}/downloads"

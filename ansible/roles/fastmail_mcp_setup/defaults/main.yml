@@ -25,4 +25,6 @@ fastmail_mcp_supergateway_source: "npm"
 # https://github.com/supercorp-ai/supergateway/pull/182
 fastmail_mcp_supergateway_git_repo: "https://github.com/supercorp-ai/supergateway.git"
 fastmail_mcp_supergateway_git_version: "09d5ef289c611e5c72e334d5b28d58d5c11fcdd0"
+# Name is historical: this held the patched fork before PR #182 landed upstream.
+# Kept as-is so existing checkouts and the global git safe.directory entry stay valid.
 fastmail_mcp_supergateway_build_dir: "/opt/supergateway-patched"
