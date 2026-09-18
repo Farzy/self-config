@@ -70,9 +70,9 @@ To upgrade `fastmail-mcp` to a new release:
    ```
 3. Ansible will pull the new tag, re-run `npm install` & `npm run build`, restart `fastmail-mcp.service`, and verify health.
 
-To upgrade `supergateway`:
+When `fastmail_mcp_supergateway_source` is set to `"npm"`, upgrade `supergateway` by:
 1. Update `fastmail_mcp_supergateway_version` in `defaults/main.yml` to the desired version.
-2. Run the same Ansible playbook — Ansible will reinstall the pinned npm package and restart the service.
+2. Run the same Ansible playbook — Ansible will reinstall the pinned npm package and restart the service. When `source` is set to `"git"`, the npm version variable is ignored and Ansible builds from the pinned upstream commit defined in the role defaults.
 
 ---
 

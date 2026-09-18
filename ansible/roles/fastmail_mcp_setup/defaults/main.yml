@@ -9,17 +9,22 @@ fastmail_mcp_supergateway_version: "3.4.3"
 
 # supergateway crash-loops on a second concurrent SSE connection
 # ("Already connected to a transport"; https://github.com/supercorp-ai/supergateway/issues/112).
-# No fixed release exists on npm yet, so this lets us install a patched build instead of
-# the registry version while we wait on upstream. Set to "npm" (default) to install
+# No fixed release exists on npm yet (latest stable is still 3.4.3; the fix only landed
+# in the 4.0.0-rc.1 pre-release under the "next" dist-tag), so this lets us build straight
+# from the upstream repo instead of the registry version. Set to "npm" (default) to install
 # fastmail_mcp_supergateway_version from the registry as before, or "git" to build and
 # install fastmail_mcp_supergateway_git_version from fastmail_mcp_supergateway_git_repo.
-# Revert to "npm" once a fixed release ships, then bump fastmail_mcp_supergateway_version.
+# Revert to "npm" once a fixed *stable* release ships, then bump
+# fastmail_mcp_supergateway_version.
 fastmail_mcp_supergateway_source: "npm"
 
 # Only used when fastmail_mcp_supergateway_source == "git".
-# Farzad's fork, branched off community PR #113 (per-session Server instances) with an
-# extra fix for a reentrant-recursion crash in cleanupSession() found while testing it:
-# https://github.com/Farzy/supergateway/tree/fix/sse-reconnection-crash
-fastmail_mcp_supergateway_git_repo: "https://github.com/Farzy/supergateway.git"
-fastmail_mcp_supergateway_git_version: "fix/sse-reconnection-crash"
+# Upstream official repo, pinned to the merge commit of PR #182 ("give every SSE session
+# its own Server"), which fixes the crash and supersedes community PR #113 (including the
+# cleanupSession() reentrant-recursion issue Farzad flagged on that thread):
+# https://github.com/supercorp-ai/supergateway/pull/182
+fastmail_mcp_supergateway_git_repo: "https://github.com/supercorp-ai/supergateway.git"
+fastmail_mcp_supergateway_git_version: "09d5ef289c611e5c72e334d5b28d58d5c11fcdd0"
+# Name is historical: this held the patched fork before PR #182 landed upstream.
+# Kept as-is so existing checkouts and the global git safe.directory entry stay valid.
 fastmail_mcp_supergateway_build_dir: "/opt/supergateway-patched"
