@@ -35,7 +35,20 @@ docker_admin_users: []
 # is stopped by a Docker upgrade. It is not guaranteed across major Docker
 # upgrades, and is ignored in swarm mode.
 #
-# Hosts that already carry hand-written settings (log rotation, address pools,
-# ...) must list them here as well, or they are dropped on the next run.
+# `log-driver`/`log-opts` cap each container's json-file log at 3 x 10 MB. The
+# stock json-file driver never rotates, so a chatty container eventually fills
+# the disk. Same values as claw's hand-written daemon.json.
+#
+# Reload (SIGHUP) does NOT apply the log settings: they take effect once dockerd
+# is next restarted (e.g. by a Docker package upgrade, now safe thanks to
+# live-restore) and only for containers created afterwards. Existing containers
+# keep their current, unrotated logging until they are recreated.
+#
+# Hosts that already carry other hand-written settings (address pools, ...) must
+# list them here as well, or they are dropped on the next run.
 docker_daemon_config:
   live-restore: true
+  log-driver: json-file
+  log-opts:
+    max-size: 10m
+    max-file: "3"

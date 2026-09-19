@@ -75,8 +75,10 @@ reboots after upgrades that leave `/var/run/reboot-required`.
 
 The `docker` role fully manages `/etc/docker/daemon.json` from the
 `docker_daemon_config` mapping (default `live-restore: true`, so a Docker
-package upgrade does not stop containers), applied with a `reload`, never a
-restart. Keys not in the mapping are removed, so a host with hand-written
+package upgrade does not stop containers, plus json-file log rotation, 3 x
+10 MB), applied with a `reload`, never a restart. Reload does not apply the log
+settings: they take effect at the next dockerd restart, for newly created
+containers only. Keys not in the mapping are removed, so a host with hand-written
 settings must list them there first. `claw` is not managed by this role (it has
 its own hand-written `daemon.json`, already with `live-restore`).
 
