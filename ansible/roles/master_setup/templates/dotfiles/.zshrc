@@ -214,14 +214,25 @@ if [[ $(id -un) == "{{ openclaw_setup_user }}" ]]; then
     # (docs/openclaw.md §4.4).
     [ -d "{{ openclaw_setup_npm_prefix }}/bin" ] && export PATH="{{ openclaw_setup_npm_prefix }}/bin:${PATH}"
     [ -f "${HOME}/.openclaw/completions/openclaw.zsh" ] && source "${HOME}/.openclaw/completions/openclaw.zsh"
-fi
 
-# GitHub CLI authentication: gh reads GH_TOKEN/GITHUB_TOKEN automatically, so no
-# `gh auth login` and no token ever stored on disk in a dedicated gh config file.
-# Value comes from the openclaw_setup role's secrets.env (Ansible Vault, not git-tracked).
-if [[ $(id -un) == "{{ openclaw_setup_user }}" ]] && [ -r /etc/openclaw/secrets.env ]; then
-    export GITHUB_TOKEN="$(grep -m1 '^GITHUB_TOKEN=' /etc/openclaw/secrets.env | cut -d= -f2-)"
-    export GH_TOKEN="${GITHUB_TOKEN}"
+    # GitHub CLI authentication: gh — and git, through the `gh auth git-credential`
+    # helper in .gitconfig — reads GH_TOKEN from the environment, so this account
+    # needs no `gh auth login` and keeps no token in a gh config file. The value
+    # comes from the openclaw_setup role's secrets.env (Ansible Vault, not
+    # git-tracked). Surrounding double quotes are stripped because systemd's
+    # EnvironmentFile format allows them, and an empty value is not exported:
+    # gh treats an empty GH_TOKEN as "authenticated" and then fails every call.
+    # See docs/openclaw.md §6.3.
+    if [ -r /etc/openclaw/secrets.env ]; then
+        _gh_token="$(sed -n 's/^GITHUB_TOKEN=//p' /etc/openclaw/secrets.env | head -n1)"
+        _gh_token="${_gh_token#\"}"
+        _gh_token="${_gh_token%\"}"
+        if [ -n "${_gh_token}" ]; then
+            export GITHUB_TOKEN="${_gh_token}"
+            export GH_TOKEN="${_gh_token}"
+        fi
+        unset _gh_token
+    fi
 fi
 {% endif %}
 
