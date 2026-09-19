@@ -2,7 +2,35 @@
 openclaw_setup_user: claw
 openclaw_setup_group: claw
 openclaw_setup_home: /home/claw
-openclaw_setup_compile_cache: /var/tmp/openclaw-compile-cache
+# Under $HOME rather than /var/tmp: the unit's PrivateTmp=true gives the gateway
+# a private /var/tmp, so a cache there was never the host directory — it was an
+# empty per-start copy thrown away on every restart. $HOME is already in the
+# unit's ReadWritePaths, so no extra sandbox exception is needed either.
+openclaw_setup_compile_cache: "{{ openclaw_setup_home }}/.cache/openclaw/compile-cache"
+
+# TMPDIR for the gateway. Not the unit's PrivateTmp /tmp: systemd deletes that
+# directory as soon as the service stops, and OpenClaw's update helper keeps its
+# staged runtime, parameters and log under os.tmpdir() while it stops, swaps and
+# restarts the very service that owns it. Kept 0700 under $HOME instead.
+openclaw_setup_tmp_dir: "{{ openclaw_setup_home }}/.cache/openclaw/tmp"
+
+# claw-owned npm global prefix OpenClaw is installed into, so its own updater —
+# running as claw — can stage and swap the package tree (a root-owned
+# /usr/lib/node_modules install can only ever be replaced by root). ~/.npm-global
+# is one of the user bin roots OpenClaw's service PATH logic already knows.
+# See docs/openclaw.md §4.4.
+openclaw_setup_npm_prefix: "{{ openclaw_setup_home }}/.npm-global"
+
+# Native OpenClaw service identity. OpenClaw's updater and Doctor only manage a
+# systemd *user* unit with this exact name; they refuse to drive system-scope
+# units, and treat a system unit named either this or the legacy
+# `openclaw.service` as a conflicting owner. Not meant to be overridden.
+openclaw_setup_systemd_unit: openclaw-gateway.service
+
+# Release channel `openclaw update` (and the agent's `update.run`) follows.
+# Background auto-updates stay disabled in openclaw.json.j2 regardless: updates
+# only ever happen when explicitly requested. See docs/openclaw.md §4.4.
+openclaw_setup_update_channel: stable
 openclaw_setup_domain: claw.farzad.tech
 openclaw_setup_avatar: ""
 
@@ -68,9 +96,19 @@ openclaw_setup_memory_wiki_enabled: true
 # Blocks OpenClaw's own config writers (setup, doctor --fix, plugin
 # install/update/enable/disable, `models auth paste-token`, mutating `update`
 # flows) on the systemd-managed gateway process, via OPENCLAW_CONFIG_READONLY=1
-# (openclaw.service.j2). Introduced in the 2026.9.4 release for deployments
-# where config is externally managed — a good fit since openclaw.json here is
-# fully Ansible/Jinja-templated already. See docs/openclaw.md §4.3.
-openclaw_setup_config_readonly: true
+# (openclaw-gateway.service.j2). Introduced in the 2026.9.4 release for
+# deployments where config is externally managed.
+#
+# Off by default because it is incompatible with self-update: `openclaw update`
+# refuses to start at all while it is set, and the update helper inherits the
+# gateway's environment, so `update.run` from chat would be refused too. Setting
+# it to true freezes the install at its current version (Ansible can still
+# bootstrap an absent install, but not upgrade one). See docs/openclaw.md §4.3.
+openclaw_setup_config_readonly: false
 
+# Minimum OpenClaw version, not an exact pin. Ansible installs it when OpenClaw
+# is absent and upgrades to it (through OpenClaw's own updater) when the host is
+# older, but never downgrades: once a newer release has migrated the SQLite
+# state, an older package cannot be restored safely. A host that self-updated
+# past this value fails the play until it is bumped — see docs/openclaw.md §4.4.
 openclaw_setup_version: "2026.9.4"

@@ -210,6 +210,9 @@ fi
    Guarded rather than defaulted so hosts that never run OpenClaw simply do not
    carry the block; .gitconfig in this same directory uses the same convention. #}
 if [[ $(id -un) == "{{ openclaw_setup_user }}" ]]; then
+    # OpenClaw is installed in this user's own npm prefix so it can update itself
+    # (docs/openclaw.md §4.4).
+    [ -d "{{ openclaw_setup_npm_prefix }}/bin" ] && export PATH="{{ openclaw_setup_npm_prefix }}/bin:${PATH}"
     [ -f "${HOME}/.openclaw/completions/openclaw.zsh" ] && source "${HOME}/.openclaw/completions/openclaw.zsh"
 fi
 {% endif %}

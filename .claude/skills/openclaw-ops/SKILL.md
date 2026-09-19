@@ -33,8 +33,9 @@ subdirectory** — `ansible.cfg` there sets `inventory = ./hosts` and
 Two accounts on `claw.farzad.tech` (SSH alias `claw`):
 
 - `ssh claw@claw` — the `claw` account itself, unprivileged. It's in the
-  `systemd-journal` group only, so `journalctl -u openclaw` / `journalctl -u
-  fastmail-mcp` work without sudo; nothing else does.
+  `systemd-journal` group only, so `journalctl --user -u openclaw-gateway` (the
+  gateway is a systemd *user* unit of `claw`) / `journalctl -u fastmail-mcp` work
+  without sudo; nothing else does.
 - `ssh debian@claw` — the admin account, can `sudo` to `root`. Use this for
   anything beyond reading logs: restarting services by hand, inspecting
   `/home/claw/.openclaw/openclaw.json` as root, editing files outside what
@@ -50,7 +51,8 @@ run.
 - `ansible/roles/openclaw_setup/`
   - `defaults/main.yml` — all `openclaw_setup_*` variables (model, port, plugins toggles, memory search, signal/telegram allowlists, version pin).
   - `templates/openclaw.json.j2` — renders `~/.openclaw/openclaw.json` on the host. Plugin toggles live under `plugins.entries.<name>.enabled`; skill toggles under `skills.entries.<name>.enabled`.
-  - `templates/openclaw.service.j2`, `templates/nginx.conf.j2`, `templates/secrets.env.j2`.
+  - `templates/openclaw-gateway.service.j2` (systemd *user* unit, root-owned in `~claw/.config/systemd/user/`), `templates/openclaw-admin.j2`, `templates/nginx.conf.j2`, `templates/secrets.env.j2`.
+  - `openclaw_setup_version` is a **minimum**: the role bootstraps/upgrades up to it but fails if the host self-updated past it (bump it — see `docs/openclaw.md` §4.4).
   - `handlers/main.yml` — service restart handlers triggered by template changes.
 - `ansible/roles/fastmail_mcp_setup/`
   - `defaults/main.yml` — `fastmail_mcp_*` variables, including the `fastmail_mcp_supergateway_source: npm|git` switch for the patched supergateway build.
@@ -107,8 +109,9 @@ ansible-playbook playbooks/openclaw.yml -v --diff -t fastmail_mcp
   confirm exactly what changed on the host, matching what the dry run showed.
 - Config template changes to `openclaw_setup` normally trigger a service
   restart via the role's handlers — check the play recap (`changed=`) and, if
-  in doubt, confirm with `ssh claw@claw journalctl -u openclaw -n 50` (or
-  `-u fastmail-mcp` for that role); use `ssh debian@claw sudo systemctl status
-  openclaw` if you need more than the journal.
+  in doubt, confirm with `ssh claw@claw journalctl --user -u openclaw-gateway -n 50`
+  (or `journalctl -u fastmail-mcp` for that role); use `ssh debian@claw sudo
+  systemctl --user -M claw@ status openclaw-gateway` if you need more than the
+  journal. Run `openclaw` CLI commands as `ssh debian@claw sudo openclaw-admin …`.
 - Always run the matching `--check --diff` dry run first unless the user has
   explicitly said to apply directly.

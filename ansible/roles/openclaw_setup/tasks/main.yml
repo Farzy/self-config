@@ -11,6 +11,16 @@
     home: "{{ openclaw_setup_home }}"
     shell: /usr/bin/zsh
     state: present
+  register: openclaw_setup_user_result
+
+# The gateway runs under this user's systemd manager, reached through
+# /run/user/<uid>; every user-scope task and handler needs the numeric uid.
+# Empty in a --check run against a host where the user does not exist yet (the
+# user module then reports no uid); every consumer is skipped there anyway,
+# since the user unit cannot be in place either.
+- name: Record the openclaw user's uid for its systemd user manager
+  ansible.builtin.set_fact:
+    openclaw_setup_uid: "{{ openclaw_setup_user_result.uid | default('') }}"
 
 - name: Deploy SSH authorized key for openclaw user
   ansible.posix.authorized_key:
@@ -33,12 +43,16 @@
 # largely the same content `adm` would expose. Accepted trade-off to avoid
 # granting sudo or `adm`. Placed before the group snapshot so the deny-list
 # assertion validates the state the role actually converges to.
+#
+# Notifies the user-manager restart, not the gateway restart: supplementary
+# groups are fixed when user@<uid>.service starts, so restarting only the unit
+# would not pick up the new group.
 - name: Add openclaw user to systemd-journal group for read-only journal access
   ansible.builtin.user:
     name: "{{ openclaw_setup_user }}"
     groups: systemd-journal
     append: true
-  notify: Restart openclaw
+  notify: Restart openclaw user manager
 
 - name: Get active groups for openclaw user
   ansible.builtin.command:
@@ -112,14 +126,37 @@
     - .zshrc
     - .gitconfig
 
+# Created as the openclaw user so any missing parents (~/.cache/openclaw) are
+# owned by it too.
 - name: Create compilation cache directory
   ansible.builtin.file:
     path: "{{ openclaw_setup_compile_cache }}"
     state: directory
-
     owner: "{{ openclaw_setup_user }}"
     group: "{{ openclaw_setup_group }}"
     mode: '0755'
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+
+# The gateway's TMPDIR (see openclaw_setup_tmp_dir): private to the user, and
+# unlike PrivateTmp's /tmp it survives the service stop in the middle of an
+# update.
+- name: Create the OpenClaw gateway temporary directory
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_tmp_dir }}"
+    state: directory
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0700'
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+
+# Superseded by the cache under $HOME above; the old path sat behind the unit's
+# PrivateTmp and never reached the service anyway.
+- name: Remove the legacy /var/tmp compile cache
+  ansible.builtin.file:
+    path: /var/tmp/openclaw-compile-cache
+    state: absent
 
 - name: Enable lingering for openclaw user
   ansible.builtin.command:
@@ -528,28 +565,168 @@
       openclaw.json.j2 emits the 2026.8.1 schema (agents.entries, memory.search,
       channels.signal.transport); pin openclaw_setup_version >= 2026.8.1 or revert the template.
 
-- name: Install OpenClaw globally via npm
-  community.general.npm:
-    name: openclaw
-    version: "{{ openclaw_setup_version }}"
-    global: true
+# --- OpenClaw installation (claw-owned, self-updatable) --------------------
+#
+# OpenClaw lives in a claw-owned npm prefix rather than root's /usr, so its own
+# updater — which runs as claw, from chat (`update.run`) or `openclaw update` —
+# can stage and swap the package tree. Ansible bootstraps it and enforces
+# openclaw_setup_version as a *minimum*: it upgrades an older install through
+# that same updater, and refuses to converge a host that is ahead of the repo
+# instead of silently downgrading it across a state migration.
+# See docs/openclaw.md §4.4.
+
+# Makes every npm run as claw (interactive shells, the agent, the updater's own
+# package-manager probe) agree on the global root this role installs into.
+- name: Point the openclaw user's npm global prefix at its own directory
+  ansible.builtin.copy:
+    content: |
+      # Managed by Ansible (openclaw_setup role). OpenClaw is installed here so
+      # its own updater can replace it — see docs/openclaw.md §4.4.
+      prefix={{ openclaw_setup_npm_prefix }}
+    dest: "{{ openclaw_setup_home }}/.npmrc"
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0644'
+
+- name: Create the openclaw user's npm global prefix
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_npm_prefix }}"
+    state: directory
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0755'
+
+- name: Check for an OpenClaw install in the openclaw user's npm prefix
+  ansible.builtin.stat:
+    path: "{{ openclaw_setup_npm_prefix }}/lib/node_modules/openclaw/package.json"
+  register: openclaw_setup_package_stat
+
+- name: Read the installed OpenClaw package manifest
+  ansible.builtin.slurp:
+    src: "{{ openclaw_setup_npm_prefix }}/lib/node_modules/openclaw/package.json"
+  register: openclaw_setup_package_manifest
+  when: openclaw_setup_package_stat.stat.exists
+
+# Empty string when absent, which is what every guard below keys off.
+- name: Record the installed OpenClaw version
+  ansible.builtin.set_fact:
+    openclaw_setup_installed_version: >-
+      {{ (openclaw_setup_package_manifest.content | b64decode | from_json).version
+         if openclaw_setup_package_stat.stat.exists else '' }}
+
+# The one case Ansible must not "fix": OpenClaw upgraded itself on request, and
+# the new release may have migrated the SQLite state and openclaw.json schema.
+# Re-rendering the old template, or downgrading the package, could then leave
+# the gateway crash-looping. Reconciling is a one-line bump, plus a template
+# update if the schema changed — see docs/openclaw.md §4.4.
+- name: Refuse to converge a host that self-updated past the repo's pin
+  ansible.builtin.assert:
+    that:
+      - >-
+        openclaw_setup_installed_version | length == 0 or
+        openclaw_setup_installed_version is version(openclaw_setup_version, '<=')
+    fail_msg: >-
+      OpenClaw {{ openclaw_setup_installed_version }} is installed but the repo pins
+      openclaw_setup_version {{ openclaw_setup_version }}. It most likely updated
+      itself on request. Bump openclaw_setup_version to {{ openclaw_setup_installed_version }}
+      (and update openclaw.json.j2 if the new release changed the config schema)
+      before converging — Ansible never downgrades. See docs/openclaw.md §4.4.
+
+- name: Assert a pending upgrade is not blocked by the read-only config flag
+  ansible.builtin.assert:
+    that:
+      - not (openclaw_setup_config_readonly | bool)
+    fail_msg: >-
+      OpenClaw {{ openclaw_setup_installed_version }} is older than
+      openclaw_setup_version {{ openclaw_setup_version }}, but `openclaw update`
+      refuses to run while openclaw_setup_config_readonly is true. Turn it off to
+      let Ansible upgrade the install.
+  when:
+    - openclaw_setup_installed_version | length > 0
+    - openclaw_setup_installed_version is version(openclaw_setup_version, '<')
+
+# Only for a host with no install yet. Everything after that goes through
+# OpenClaw's own updater, which validates the candidate before activating it.
+# --allow-scripts (npm >= 11.16) explicitly approves OpenClaw's own lifecycle
+# scripts (Node version check, dist inventory), the same approval OpenClaw's
+# updater passes. On npm 11 that is a policy, not a sandbox: other packages'
+# install scripts still run, with a notice, unless strict-allow-scripts is
+# set; npm 12 blocks them. Left non-strict so an optional native dependency
+# cannot fail the bootstrap.
+- name: Bootstrap OpenClaw into the openclaw user's npm prefix
+  ansible.builtin.command:
+    argv:
+      - npm
+      - install
+      - --global
+      - --prefix
+      - "{{ openclaw_setup_npm_prefix }}"
+      - --no-fund
+      - --no-audit
+      - --allow-scripts=openclaw
+      - "openclaw@{{ openclaw_setup_version }}"
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  when: openclaw_setup_installed_version | length == 0
+  changed_when: true
   notify: Restart openclaw
+
+# Surfaces the bootstrap and the upgrade as pending changes in --check runs (the
+# drift check), where their command tasks are skipped and would stay silent.
+- name: Report a pending OpenClaw install or upgrade
+  ansible.builtin.debug:
+    msg: >-
+      {{ ('Would bootstrap OpenClaw ' ~ openclaw_setup_version ~ ' into ' ~ openclaw_setup_npm_prefix)
+         if openclaw_setup_installed_version | length == 0 else
+         ('Would upgrade OpenClaw ' ~ openclaw_setup_installed_version ~ ' -> '
+          ~ openclaw_setup_version ~ ' through `openclaw update`') }}
+  changed_when: true
+  when:
+    - ansible_check_mode
+    - >-
+      openclaw_setup_installed_version | length == 0 or
+      openclaw_setup_installed_version is version(openclaw_setup_version, '<')
+
+# Raising openclaw_setup_version above the installed release upgrades through
+# OpenClaw's own updater, the same path the agent's `update.run` takes: staged
+# install, canary boot on copied state, then stop/swap/restart with automatic
+# rollback while the schema allows it. Run in the user's manager (not via sudo)
+# so it has the same runtime dir, user bus and service environment the updater
+# expects; a transient unit also survives the gateway stop it performs.
+#
+# Deliberately before openclaw.json.j2 is rendered: the updater's Doctor pass
+# migrates the live config to the new release's schema first, and only then
+# does the (bumped) template land, followed by the end-of-play restart. The
+# other order would briefly run the old binary against a new-schema config.
+- name: Upgrade OpenClaw to the pinned minimum through its own updater
+  ansible.builtin.command:
+    argv:
+      - systemd-run
+      - --user
+      - "--machine={{ openclaw_setup_user }}@"
+      - --quiet
+      - --pipe
+      - --wait
+      - --collect
+      - --property=EnvironmentFile=/etc/openclaw/secrets.env
+      - "--working-directory={{ openclaw_setup_home }}"
+      - "--setenv=PATH={{ openclaw_setup_npm_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
+      - "{{ openclaw_setup_npm_prefix }}/bin/openclaw"
+      - update
+      - --tag
+      - "{{ openclaw_setup_version }}"
+      - --yes
+      - --json
+  when:
+    - openclaw_setup_installed_version | length > 0
+    - openclaw_setup_installed_version is version(openclaw_setup_version, '<')
+  changed_when: true
 
 - name: Install Claude Code CLI globally via npm
   community.general.npm:
     name: "@anthropic-ai/claude-code"
     global: true
   when: openclaw_setup_claude_cli_enabled
-
-
-- name: Create OpenClaw compile cache directory
-  ansible.builtin.file:
-    path: "{{ openclaw_setup_compile_cache }}"
-    state: directory
-
-    owner: "{{ openclaw_setup_user }}"
-    group: "{{ openclaw_setup_group }}"
-    mode: '0755'
 
 - name: Create OpenClaw config directory
   ansible.builtin.file:
@@ -570,21 +747,29 @@
     validate: python3 -c "import json,sys; json.load(open(sys.argv[1]))" %s
   notify: Restart openclaw
 
+# Root-owned, so the agent cannot rewrite its own credentials or endpoints, and
+# outside $HOME, so it never lands in state backups or memory indexing. Readable
+# by the openclaw group because the gateway's systemd *user* manager runs as
+# that user and reads EnvironmentFile= itself, as does OpenClaw's updater when
+# it rebuilds the service environment. Little new exposure: while the gateway
+# runs, any process running as that user can already read the same values from
+# its /proc/<pid>/environ. What changes is that they stay readable while the
+# gateway is stopped or crash-looping. See docs/openclaw.md §4.1.
 - name: Create OpenClaw secrets directory
   ansible.builtin.file:
     path: /etc/openclaw
     state: directory
     owner: root
-    group: root
-    mode: '0700'
+    group: "{{ openclaw_setup_group }}"
+    mode: '0750'
 
 - name: Deploy OpenClaw secrets environment file
   ansible.builtin.template:
     src: secrets.env.j2
     dest: /etc/openclaw/secrets.env
     owner: root
-    group: root
-    mode: '0600'
+    group: "{{ openclaw_setup_group }}"
+    mode: '0640'
   notify: Restart openclaw
 
 - name: Deploy openclaw-admin wrapper for manual admin commands needing secrets.env
@@ -596,16 +781,74 @@
     mode: '0755'
     validate: bash -n %s
 
-- name: Deploy OpenClaw systemd service
+# Root-owned inside a claw-owned directory on purpose: OpenClaw reads the unit
+# from this exact path, and treats one it does not own as a sealed definition —
+# still restarted and verified during updates, never rewritten by OpenClaw.
+# Advisory only against the openclaw user itself, who controls its own user
+# manager (see the template header); Ansible re-asserts it on every converge.
+- name: Deploy the OpenClaw gateway systemd user unit
   ansible.builtin.template:
-    src: openclaw.service.j2
-    dest: /etc/systemd/system/openclaw.service
+    src: openclaw-gateway.service.j2
+    dest: "{{ openclaw_setup_home }}/.config/systemd/user/{{ openclaw_setup_systemd_unit }}"
     owner: root
     group: root
     mode: '0644'
-  notify:
-    - Reload systemd
-    - Restart openclaw
+  register: openclaw_setup_user_unit_result
+  notify: Restart openclaw
+
+# A --check run against a host that still runs the legacy system unit does not
+# write the unit above, and systemctl then fails with "Could not find the
+# requested service" instead of reporting a pending change. The user-scope tasks
+# and handlers key off this to stay check-mode safe for the drift check.
+- name: Check whether the OpenClaw gateway user unit is in place
+  ansible.builtin.stat:
+    path: "{{ openclaw_setup_home }}/.config/systemd/user/{{ openclaw_setup_systemd_unit }}"
+  register: openclaw_setup_user_unit_stat
+
+# --- One-shot migration: system unit -> user unit ---------------------------
+#
+# The gateway used to run as /etc/systemd/system/openclaw.service. It must be
+# gone before the user unit starts: both bind the same port, and OpenClaw
+# refuses to activate its user unit while a system unit named `openclaw.service`
+# exists, so leaving it would also break every later self-update.
+- name: Check for the legacy OpenClaw system unit
+  ansible.builtin.stat:
+    path: /etc/systemd/system/openclaw.service
+  register: openclaw_setup_legacy_unit_stat
+
+- name: Stop and disable the legacy OpenClaw system unit
+  ansible.builtin.systemd_service:
+    name: openclaw.service
+    state: stopped
+    enabled: false
+  when: openclaw_setup_legacy_unit_stat.stat.exists
+
+- name: Remove the legacy OpenClaw system unit
+  ansible.builtin.file:
+    path: /etc/systemd/system/openclaw.service
+    state: absent
+
+# Explicit tasks rather than handlers: both managers must know the new layout
+# before the user unit starts further down, while handlers — the gateway
+# restart in particular — must keep running at the end of the play, after any
+# upgrade, not in the middle of it.
+- name: Make the system manager forget the legacy unit
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: openclaw_setup_legacy_unit_stat.stat.exists
+
+- name: Make the openclaw user manager load the gateway unit
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ openclaw_setup_uid }}"
+  when:
+    - openclaw_setup_user_unit_result is changed
+    - openclaw_setup_user_unit_stat.stat.exists
+# --- End of one-shot migration ----------------------------------------------
 
 - name: Restrict ptrace scope to admin-only (YAMA security hardening)
   ansible.posix.sysctl:
@@ -643,11 +886,33 @@
     state: link
   notify: Reload nginx
 
-- name: Ensure OpenClaw is started and enabled
-  ansible.builtin.service:
-    name: openclaw
+- name: Ensure the OpenClaw gateway user unit is started and enabled
+  ansible.builtin.systemd_service:
+    name: "{{ openclaw_setup_systemd_unit }}"
+    scope: user
     state: started
     enabled: true
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ openclaw_setup_uid }}"
+  when: openclaw_setup_user_unit_stat.stat.exists
+
+# Last, once the gateway runs from the claw-owned prefix: the root-owned copy
+# would otherwise shadow it as /usr/bin/openclaw for every other account, and
+# OpenClaw's updater warns when the shell's `openclaw` and the service disagree.
+# One-shot: the stat keeps npm from running as root on every later converge.
+- name: Check for the legacy root-owned global OpenClaw install
+  ansible.builtin.stat:
+    path: /usr/lib/node_modules/openclaw
+  register: openclaw_setup_legacy_package_stat
+
+- name: Remove the legacy root-owned global OpenClaw install
+  community.general.npm:
+    name: openclaw
+    global: true
+    state: absent
+  when: openclaw_setup_legacy_package_stat.stat.exists
 
 - name: Ensure Nginx is started and enabled
   ansible.builtin.service:

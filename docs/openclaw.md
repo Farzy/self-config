@@ -9,7 +9,7 @@ This guide details the deployment, configuration, operational management, and tr
 * **Cloud Provider**: Scaleway (`PLAY2-PICO` instance, Debian Bookworm).
 * **Hostname / Domain**: `claw.farzad.tech` (IP: `163.172.189.14`).
 * **Web Gateway**: Nginx reverse proxy with TLS certificate managed by Certbot (Let's Encrypt), forwarding `https://claw.farzad.tech` to `http://127.0.0.1:3000`.
-* **Runtime Environment**: Node.js 26.x (`node_26.x` APT repository), OpenClaw systemd service (`openclaw.service`).
+* **Runtime Environment**: Node.js 26.x (`node_26.x` APT repository). OpenClaw is installed in the `claw`-owned npm prefix `/home/claw/.npm-global` and runs as the systemd **user** unit `openclaw-gateway.service` of `claw` (lingering), which is what lets it update itself on request — see [4.4](#44-self-update-on-request).
 * **Dedicated System Account**: User `claw` (`/home/claw`, default shell `/usr/bin/zsh`).
 * **LLM Provider**: Anthropic Claude (`anthropic/claude-sonnet-5`), routed through the `claude-cli` agent runtime (reuses a Claude Code login on the host instead of a separate API key — see [6.4](#64-claude-anthropic-model-via-claude-code-cli-reuse)), with optional Scaleway Generative APIs (`https://api.scaleway.ai/5e40a076-f4e5-4328-8052-1a543614ec45/v1`, supporting GLM 5.2, Qwen 3.6 Coder, and Mistral Small 3) available as an alternate provider.
 * **Embeddings Provider**: Google Gemini (`gemini-embedding-001`) is still used for `memory.search` — unrelated to the chat model, kept for semantic memory indexing (see [4.2](#42-memory-search--background-dreaming-configuration)).
@@ -88,7 +88,8 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 * **Encrypted Vault Variables**: [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml)
 * **OpenClaw Role**: [ansible/roles/openclaw_setup/tasks/main.yml](../ansible/roles/openclaw_setup/tasks/main.yml)
 * **Configuration Template**: [ansible/roles/openclaw_setup/templates/openclaw.json.j2](../ansible/roles/openclaw_setup/templates/openclaw.json.j2)
-* **Systemd Service Template**: [ansible/roles/openclaw_setup/templates/openclaw.service.j2](../ansible/roles/openclaw_setup/templates/openclaw.service.j2)
+* **Systemd User Unit Template**: [ansible/roles/openclaw_setup/templates/openclaw-gateway.service.j2](../ansible/roles/openclaw_setup/templates/openclaw-gateway.service.j2)
+* **Admin Wrapper Template**: [ansible/roles/openclaw_setup/templates/openclaw-admin.j2](../ansible/roles/openclaw_setup/templates/openclaw-admin.j2)
 * **Secrets Environment Template**: [ansible/roles/openclaw_setup/templates/secrets.env.j2](../ansible/roles/openclaw_setup/templates/secrets.env.j2)
 * **Nginx SSL Proxy Template**: [ansible/roles/openclaw_setup/templates/nginx.conf.j2](../ansible/roles/openclaw_setup/templates/nginx.conf.j2)
 
@@ -97,30 +98,41 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 To protect API tokens and sensitive credentials from unauthorized process access or shell environment leaks, OpenClaw isolates credentials into a restricted secrets file and applies Systemd process sandboxing:
 
 #### 1. Secrets File Isolation (`/etc/openclaw/secrets.env`)
-- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`GEMINI_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`, `ANSIBLE_VAULT_PASSWORD`, `NOTION_API_TOKEN`, `SCALEWAY_API_KEY`) are templated into `/etc/openclaw/secrets.env`.
-- Directory `/etc/openclaw` (`root:root`, mode `0700`) and file `/etc/openclaw/secrets.env` (`root:root`, mode `0600`) permissions are strictly locked down to `root`, preventing all unprivileged users (including `claw`) from reading raw tokens.
+- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`OPENCLAW_GATEWAY_TOKEN`, `TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`, `ANSIBLE_VAULT_PASSWORD`, `NOTION_API_TOKEN`, `SCALEWAY_API_KEY`) are templated into `/etc/openclaw/secrets.env`, the only file this role *renders* with them in plaintext. Known other copies: `gh auth login --with-token` (run by the role) stores the GitHub PAT in `~claw/.config/gh/hosts.yml`, and `models auth paste-token` ([6.4](#64-claude-anthropic-model-via-claude-code-cli-reuse)) stores the Claude token in the agent's SQLite store.
+- **No plaintext credentials in `openclaw.json`**: the gateway token, Telegram bot token and Scaleway API key are written as env SecretRefs (`{"source": "env", "provider": "default", "id": "OPENCLAW_GATEWAY_TOKEN"}`, …) that OpenClaw resolves from the service environment at startup. `openclaw.json` lives in the agent-readable state dir, and OpenClaw's updater and Doctor copy it into `openclaw.json.bak.*` and rollback snapshots — plaintext there would multiply with every update. Check with `sudo openclaw-admin secrets audit --check`.
+- Directory `/etc/openclaw` is `root:claw` `0750`, file `/etc/openclaw/secrets.env` is `root:claw` `0640`. **Root-owned** so the agent cannot rewrite its own credentials or endpoints, and **outside `$HOME`** so it never lands in state backups, memory indexing or anything the agent syncs. **Group-readable by `claw`** because the gateway is a systemd *user* unit: `claw`'s user manager reads `EnvironmentFile=` itself (a system unit had PID 1 read it as root), as does OpenClaw's updater when it rebuilds the service environment.
+- **What this does and does not protect** (OpenClaw's own position: SecretRefs are not a process-isolation boundary — see `docs/gateway/secrets/runtime-model.md` in the package). Any process running as `claw` can read every one of these values from the gateway's `/proc/<pid>/environ` (verified on this host: `kernel.yama.ptrace_scope=2` restricts ptrace *attach*, not same-uid `environ` reads), and the agent's own exec children inherit them. So the file mode was never what kept secrets from the agent while the gateway runs. The one real delta of making it `claw`-readable: the values stay readable while the gateway is stopped or crash-looping, when there is no live process to scrape — a small difference, and one the user-unit model requires. Protecting a credential *from the agent itself* takes OS isolation, sandboxed exec, or OpenClaw's egress proxy with protected store secrets — not file permissions.
 - **Ansible Vault Password Injection (`ANSIBLE_VAULT_PASSWORD`)**: The control node dynamically reads the local Ansible Vault key (`~/.ansible-personal-key`) during playbook deployment via Jinja2 file lookup (`{{ lookup('file', '~/.ansible-personal-key') | trim }}`) and injects it as `ANSIBLE_VAULT_PASSWORD` into `/etc/openclaw/secrets.env`. This allows OpenClaw subagents and tasks to execute Ansible operations using the standard Vault environment variable without hardcoding or committing plaintext keys to the repository.
 - **Notion Integration (`NOTION_API_TOKEN` & `NOTION_API_VERSION`)**: Managed securely via Ansible Vault (`openclaw_notion_api_token` in `ansible/vars/openclaw.yml`) and injected into `/etc/openclaw/secrets.env` along with `NOTION_API_VERSION=2026-03-11` for Notion API integrations.
-- Systemd loads `EnvironmentFile=/etc/openclaw/secrets.env` during unit startup before relinquishing root privileges to user `claw`.
-- **Running manual `openclaw` admin commands with this environment**: the `debian` account (the one `ssh claw` logs into — see [§8](#8-service-management--troubleshooting)) has no read access to `/etc/openclaw/secrets.env`, so a plain `sudo -u claw openclaw <cmd>` sees none of these variables — this silently breaks any one-off admin subcommand that spawns a fresh CLI process instead of talking to the already-running (systemd-managed) gateway, e.g. `openclaw doctor --fix` misreporting `NODE_COMPILE_CACHE`/`OPENCLAW_NO_RESPAWN` as unset even though they're set for the real service. Use the `openclaw-admin` wrapper deployed by this role (`/usr/local/bin/openclaw-admin`, templated from `openclaw-admin.j2`) instead: it must itself run as root (reads the root-only secrets file), then runs the command as `claw` via `systemd-run --property=EnvironmentFile=/etc/openclaw/secrets.env --setenv=HOME=... --uid=...` rather than bash `source`-ing the file — systemd's own `EnvironmentFile=` parser does no shell expansion or command substitution on the values, so a secret containing `$`, a backtick, or `$(...)` can't be interpreted differently here (or executed as root) than it is for the real service; `HOME` is set explicitly since `systemd-run` otherwise leaves it unset for a transient unit's target user. It also exports `OPENCLAW_SERVICE_REPAIR_POLICY=external`: our `openclaw.service` is a plain system-level unit deployed by Ansible, not openclaw's own built-in service installer, so `doctor --fix`'s native check for whether the gateway is truly stopped — which expects a `systemctl --user` unit plus a D-Bus user session bus for `claw`, neither of which exists here — fails with `Gateway service ownership or shutdown could not be verified` even right after a correct `systemctl stop openclaw`; the `external` policy tells Doctor to skip that native inspection (it still checks state/DB ownership) and leaves stop/start to us. Usage: `sudo openclaw-admin doctor --fix`. See [§8](#8-service-management--troubleshooting) for the worked example, including why the gateway must be stopped first.
+- `claw`'s systemd user manager loads `EnvironmentFile=/etc/openclaw/secrets.env` when it starts the `openclaw-gateway.service` user unit.
+- **Running manual `openclaw` admin commands: always use `sudo openclaw-admin <cmd>`**, never a plain `sudo -u claw openclaw <cmd>`. The plain form now fails outright — sudo's `secure_path` does not include `claw`'s npm prefix — and even with a full path it would see none of the service environment: Doctor misreports normal config as broken (`NODE_COMPILE_CACHE`, `OPENCLAW_NO_RESPAWN`, API keys unset), and anything that talks to the gateway has no token, since `openclaw.json` only references it as an env SecretRef. The wrapper (`/usr/local/bin/openclaw-admin`, templated from `openclaw-admin.j2`) runs the command as a transient unit in `claw`'s own user manager — `systemd-run --user --machine=claw@ --pipe --wait --property=EnvironmentFile=/etc/openclaw/secrets.env …` — rather than via sudo or a bash `source`:
+  - systemd's `EnvironmentFile=` parser does no shell expansion or command substitution, so a secret containing `$`, a backtick or `$(...)` is read exactly as the gateway reads it, and nothing is ever `source`d as root;
+  - the command gets `claw`'s runtime dir and user bus, which OpenClaw needs to inspect its `openclaw-gateway.service` user unit;
+  - it runs the absolute path in `claw`'s prefix and **never as root** — that tree is writable by `claw`, so running it with root privileges would hand the agent a privilege escalation. For the same reason nothing puts `openclaw` on root's `PATH`.
+
+  It also sets `OPENCLAW_SERVICE_REPAIR_POLICY=external`: the unit is authored by Ansible (root-owned, "sealed" from OpenClaw's point of view), so manual Doctor runs stay diagnostic-only for the service lifecycle — no reinstalling or rewriting the unit — while state and database checks still run, and stop/start stays with us. stdin is passed through (`--pipe`), so `… | sudo openclaw-admin models auth paste-token` works. See [§8](#8-service-management--troubleshooting) for the Doctor stop/fix/start sequence.
 
 #### 2. Threat Model Defense & Harmonized Systemd Sandboxing
-The Systemd unit file ([ansible/roles/openclaw_setup/templates/openclaw.service.j2](../ansible/roles/openclaw_setup/templates/openclaw.service.j2)) configures harmonized process sandboxing balancing security against Node.js runtime needs:
+The systemd user unit ([ansible/roles/openclaw_setup/templates/openclaw-gateway.service.j2](../ansible/roles/openclaw_setup/templates/openclaw-gateway.service.j2)) configures harmonized process sandboxing balancing security against Node.js runtime needs.
 
+> **Scope of this sandbox.** It contains the gateway process and whatever runs inside it by accident; it is not a boundary against a compromised agent. `claw` has linger and therefore its own user manager, so any code running as `claw` can start an unsandboxed process with `systemd-run --user` — which is exactly how the updater escapes the gateway's lifecycle. That was already true with the old system unit, since linger was enabled then too.
+>
+> **User units need `PrivateUsers=true` for any of this to apply.** An unprivileged user manager cannot create mount namespaces on its own, and systemd then **silently skips** every namespace-based setting — `ProtectSystem`, `PrivateTmp`, `ProtectKernelTunables`, `ProtectHostname`… Verified on this host (systemd 252): without it, the root file system stays writable inside the unit and the journal only logs `namespace setup is prohibited … ignoring`. With it, `/` and `/proc/sys` are mounted read-only as intended, and everything the updater needs — the user bus, `systemctl --user`, `systemd-run --user --scope`, journal reads — still works. Don't remove it without re-checking `/proc/<pid>/mountinfo`.
+
+- **`PrivateUsers=true`**: Runs the gateway in a user namespace that maps only `claw`; required for the settings below. Other users' files appear as `nobody:nogroup`, but kernel access checks are unchanged (journal reads through `systemd-journal` still work).
 - **`ProtectSystem=strict`**: Mounts root `/`, `/usr`, `/boot`, `/etc` as read-only filesystem paths to prevent OS file tampering.
-- **`ReadWritePaths=/home/claw /var/tmp/openclaw-compile-cache`**: Explicitly restricts write permissions strictly to `/home/claw` and the compilation cache directory.
+- **`ReadWritePaths=/home/claw`**: Restricts writes to `/home/claw`, which holds everything the gateway legitimately writes: state, config, workspace, the npm prefix the updater swaps, the Node compile cache (`~/.cache/openclaw/compile-cache`) and its `TMPDIR` (`~/.cache/openclaw/tmp`).
 - **`ProtectHome=false`**: Set to `false` to permit user `claw` to read and write its database, configuration, and workspace files under `/home/claw/`.
-- **`PrivateTmp=true`**: Provides an isolated `/tmp` namespace preventing token leakage in shared temporary folders.
+- **`PrivateTmp=true`**: Provides an isolated `/tmp` namespace preventing token leakage in shared temporary folders. OpenClaw itself uses `TMPDIR=~/.cache/openclaw/tmp` instead: systemd deletes the PrivateTmp directory as soon as the service stops, which is exactly what the update helper does mid-update while its staged files live in `os.tmpdir()`.
 - **`MemoryDenyWriteExecute=false`**: Set to `false` because the Node.js V8 engine requires W^X JIT (Just-In-Time) compilation memory allocations to execute.
 - **`NoNewPrivileges=true`**: Set to `true` to prevent child processes from gaining elevated privileges via `setuid` binaries (user `claw` is unprivileged and has zero sudo access).
 - **`ProtectKernelTunables=true`**: Protects `/proc/sys`, `/sys`, and kernel variables from modification.
-- **`ProtectKernelModules=true`**: Prevents loading or unloading Linux kernel modules at runtime.
 - **`ProtectControlGroups=true`**: Mounts control group hierarchies (`/sys/fs/cgroup`) as read-only.
 - **`RestrictRealtime=true`**: Prevents the service from acquiring realtime scheduling priorities to avoid CPU starvation attacks.
-- **`CapabilityBoundingSet=` & `AmbientCapabilities=`**: Empty set drops all Linux kernel capabilities from the process bounding set.
 - **`RestrictSUIDSGID=true`**: Prevents creation or execution of SUID/SGID binaries by child processes.
 - **`ProtectHostname=true`**: Isolates UTS namespace to prevent modifications to system hostname or domain name.
 - **`LockPersonality=true`**: Locks execution domain to prevent personality switching.
+- **Dropped with the move to a user unit**: `CapabilityBoundingSet=`, `AmbientCapabilities=`, `ProtectKernelModules=`, `ProtectClock=` and `ProtectKernelLogs=` make a user unit fail with `status=218/CAPABILITIES` — a user manager cannot drop capabilities. Nothing is lost: each works by removing capabilities, which an unprivileged `claw` process never holds, and `NoNewPrivileges=true` already prevents gaining any through setuid or file-capability binaries.
 - **RAM Dump Protection (`kernel.yama.ptrace_scope = 2`)**: Configures kernel YAMA ptrace scope to admin-only (root with `CAP_SYS_PTRACE`), preventing unprivileged processes from attaching debuggers (`gdb`, `strace`) or inspecting `/proc/<pid>/mem` to extract in-memory tokens.
 
 
@@ -157,11 +169,54 @@ To leverage semantic search and automatic long-term memory consolidation, OpenCl
 
 ### 4.3 Config Writes & `OPENCLAW_CONFIG_READONLY`
 
-Since the 2026.9.4 release, OpenClaw supports `OPENCLAW_CONFIG_READONLY=1`, which blocks the process's own config writers — `openclaw setup`, `openclaw configure`, `openclaw doctor --fix`, plugin install/update/uninstall/enable/disable, and mutating `openclaw update` flows — while leaving read-only commands (`config get`, `config file`, `config schema`, `config validate`) and ordinary runtime state untouched. It's meant for deployments where config is externally managed, which describes this host exactly: `openclaw.json` is fully rendered by [`openclaw.json.j2`](../ansible/roles/openclaw_setup/templates/openclaw.json.j2), never by OpenClaw's own interactive setup/config commands.
+Since the 2026.9.4 release, OpenClaw supports `OPENCLAW_CONFIG_READONLY=1`, which blocks the process's own config writers — `openclaw setup`, `openclaw configure`, `openclaw doctor --fix`, plugin install/update/uninstall/enable/disable, and mutating `openclaw update` flows — while leaving read-only commands (`config get`, `config file`, `config schema`, `config validate`) and ordinary runtime state untouched. It's meant for deployments where config is externally managed.
 
-- **Toggle**: `openclaw_setup_config_readonly` (`ansible/roles/openclaw_setup/defaults/main.yml`, default `true`).
-- **Where it's set**: as `Environment=OPENCLAW_CONFIG_READONLY=1` directly in [`openclaw.service.j2`](../ansible/roles/openclaw_setup/templates/openclaw.service.j2)'s `[Service]` block — **deliberately not** in `secrets.env.j2`. That file is loaded by systemd but is also manually `source`d over SSH for one-off admin tasks (e.g. the `gog` verification in [§6.6](#66-gog-google-workspace-cli-oauth-setup)); if the readonly flag lived there, those manual sessions would silently inherit it too and any manual `openclaw doctor --fix` or `openclaw models auth paste-token` run in them would fail with no obvious cause.
-- **Practical effect**: the long-running systemd-managed gateway process can't rewrite its own config or auth-profile pointers, but manual admin commands run over `ssh claw` (e.g. §6.4 step 4's `models auth paste-token`, or crash-loop recovery in [§8](#8-service-management--troubleshooting)) are unaffected — those shells never inherit the systemd unit's `Environment=` line.
+**It is off by default here, because it is incompatible with self-update.** A non-dry-run `openclaw update` asserts config writability before it does anything and refuses outright while the flag is set, and the update helper inherits the gateway's environment, so `update.run` from chat would be refused too. Ansible still owns `openclaw.json` — every converge re-renders it — but between converges OpenClaw may now write it, in practice when an update's Doctor pass migrates the schema. The weekly drift check surfaces any such difference, and [4.4](#44-self-update-on-request) covers reconciling it.
+
+- **Toggle**: `openclaw_setup_config_readonly` (`ansible/roles/openclaw_setup/defaults/main.yml`, default `false`). Setting it to `true` freezes the install at its current version: Ansible can still bootstrap an absent install, but the role then refuses to upgrade one.
+- **Where it's set**: as `Environment=OPENCLAW_CONFIG_READONLY=1` directly in [`openclaw-gateway.service.j2`](../ansible/roles/openclaw_setup/templates/openclaw-gateway.service.j2)'s `[Service]` block — **deliberately not** in `secrets.env.j2`, which `openclaw-admin` also loads: manual `doctor --fix` or `models auth paste-token` runs through it must never inherit the flag.
+
+### 4.4 Self-Update on Request
+
+OpenClaw can upgrade itself when you ask it to — "update yourself to the latest version" over Telegram or Signal, or **Update now** in the Control UI. Background auto-updates stay off (`update.auto.enabled: false` in `openclaw.json.j2`), so it never happens unprompted. The channel is `openclaw_setup_update_channel` (default `stable`).
+
+**What makes it possible** — three things the previous deployment prevented:
+
+1. **`claw` owns the install.** OpenClaw lives in the npm prefix `/home/claw/.npm-global` (`openclaw_setup_npm_prefix`, set in `~/.npmrc` by Ansible) instead of root's `/usr/lib/node_modules`, so the updater, which runs as `claw`, can stage and swap the package tree.
+2. **It runs as OpenClaw's native service shape**: the systemd *user* unit `openclaw-gateway.service`, with the service identity markers `openclaw gateway install` writes (`OPENCLAW_SERVICE_MARKER`, `OPENCLAW_SERVICE_KIND`, `OPENCLAW_SYSTEMD_UNIT`). OpenClaw's updater only ever drives a user unit through `systemctl --user` — its code says outright "OpenClaw does not manage system-scope units" — and it treats a system unit named `openclaw-gateway.service` *or* `openclaw.service` as a conflicting owner that blocks activation. The role therefore removes the old `/etc/systemd/system/openclaw.service`.
+3. **`OPENCLAW_CONFIG_READONLY` is off** (see [4.3](#43-config-writes--openclaw_config_readonly)).
+
+The unit file itself is deployed **root-owned** in `~claw/.config/systemd/user/`. OpenClaw reads the unit from that exact path and treats one it does not own as a *sealed* definition: during an update it still stops, restarts and verifies the service, but OpenClaw's own code never rewrites the file. The seal is **advisory against OpenClaw, not a boundary against `claw`**: a user manager is controlled by its user, who can replace the file (the directory is theirs) or override it with drop-ins in `~/.config/systemd/user.control` — making the directory root-owned would not change that. Ansible re-asserts the unit on every converge, and the weekly drift check reports any change in between.
+
+**What an update does** (OpenClaw's own updater — nothing custom here): the gateway hands `update.run` to a detached helper (`systemd-run --user --scope`) that stages the new package in a temporary prefix, validates it, and boots a canary on a *copy* of the config and SQLite state while the old gateway keeps serving. Only then does it stop the service, swap the package, run the required Doctor migrations, restart and verify (`/readyz`, version handshake, channel readiness). A failed validation leaves the old gateway untouched. A failed activation rolls back automatically *if* the database schema and config are unchanged; otherwise it stops and reports. Follow a run with `sudo openclaw-admin update status` or the helper log path it prints. **Before a release you have doubts about, take a backup**: the updater's own snapshots are disposable, not a recovery point.
+
+**Reconciling with Ansible afterwards.** `openclaw_setup_version` is a **minimum**, not an exact pin:
+
+| Installed vs `openclaw_setup_version` | What the role does |
+|---|---|
+| absent | Bootstraps it with `npm install --global --prefix … openclaw@<pin>` as `claw` (first install only). |
+| older | Upgrades through the same updater the agent uses — `openclaw update --tag <pin> --yes --json`, run as a transient unit in `claw`'s user manager. So bumping the pin in the repo is also a supported way to upgrade. |
+| equal | Nothing. |
+| **newer** | **Fails the play** with a message telling you to bump the pin. |
+
+The last row is deliberate. After a self-update the new release may have migrated the SQLite state and the `openclaw.json` schema (the 2026.8.1 release did — see [§8](#8-service-management--troubleshooting)). Re-rendering the old template, or downgrading the package, could then crash-loop the gateway, and OpenClaw warns that downgrades across a state migration are unsafe. So after asking OpenClaw to update itself:
+
+1. Set `openclaw_setup_version` to the new version (`sudo openclaw-admin --version`).
+2. Run `ansible-playbook playbooks/openclaw.yml --check --diff -t openclaw`. Any `openclaw.json` diff is either a schema migration the updater applied, to port into `openclaw.json.j2`, or harmless writer metadata. Don't use `--diff` in CI logs — see [docs/ci-ansible.md](ci-ansible.md).
+3. Converge, and commit the bump.
+
+Until step 1 is merged, the weekly drift check goes red on that assertion — which is the intended signal that the repo lags the host.
+
+**First cutover from the old system unit** (one-time; about 30 seconds of gateway downtime). The role bootstraps the new install while the old gateway still runs, then stops and removes `openclaw.service`, starts `openclaw-gateway.service`, and finally uninstalls the old root-owned copy under `/usr/lib/node_modules`. Afterwards:
+
+```bash
+ssh claw "sudo systemctl --user -M claw@ status openclaw-gateway"
+ssh claw "sudo openclaw-admin gateway status --deep"      # managed user service, owned by this install
+ssh claw "sudo openclaw-admin update --dry-run --json"     # update admission works (no change made)
+ssh claw "sudo openclaw-admin secrets audit --check"       # no plaintext residue
+```
+
+To back out, check out the previous revision of this repo and converge it: that reinstalls the system unit and the root-owned package. First run `sudo systemctl --user -M claw@ disable --now openclaw-gateway`, so the two don't fight over port 18789.
 
 ---
 
@@ -225,7 +280,7 @@ The server includes modern CLI tools configured with standard short names:
    - The bot will reply with a 6-character pairing code.
    - Approve the code on the server:
      ```bash
-     ssh claw "sudo -u claw openclaw pairing approve <CODE>"
+     ssh claw "sudo openclaw-admin pairing approve <CODE>"
      ```
 
 ---
@@ -242,7 +297,7 @@ The server includes modern CLI tools configured with standard short names:
 2. **Verify Signal Channel**:
    Check channel readiness and status:
    ```bash
-   ssh claw "sudo -u claw openclaw channels status"
+   ssh claw "sudo openclaw-admin channels status"
    ```
 
 3. **DM Pairing Procedure**:
@@ -251,7 +306,7 @@ The server includes modern CLI tools configured with standard short names:
    - The bot will reply with a 6-character pairing code.
    - Approve the pairing request on the server:
      ```bash
-     ssh claw "sudo -u claw openclaw pairing approve <CODE>"
+     ssh claw "sudo openclaw-admin pairing approve <CODE>"
      ```
 
 ---
@@ -310,18 +365,18 @@ OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `c
    ```bash
    ssh claw "sudo bash -c '
      grep ^CLAUDE_CODE_OAUTH_TOKEN= /etc/openclaw/secrets.env | cut -d= -f2- \
-       | sudo -u claw openclaw models auth paste-token --provider anthropic
+       | openclaw-admin models auth paste-token --provider anthropic
    '"
    ```
    This writes the actual token only into `~/.openclaw/agents/main/agent/openclaw-agent.sqlite` (never into `openclaw.json`). It also adds a non-secret pointer, `agents` → `auth.profiles.anthropic:manual = {"provider": "anthropic", "mode": "token"}`, to `openclaw.json` itself — that pointer **is** templated (`openclaw.json.j2`, gated on `openclaw_setup_claude_cli_enabled`) specifically so a future `ansible-playbook` run doesn't overwrite it and silently reintroduce this exact bug. The token in the sqlite store is untouched by Ansible either way (it's not a file the role manages).
 
 5. **Whitelist the token through OpenClaw's own subprocess env sanitization (required — steps 1–4 alone still silently fall back to Gemini)**:
-   OpenClaw hard-codes `CLAUDE_CODE_OAUTH_TOKEN` into `CLAUDE_CLI_CLEAR_ENV` (`extensions/anthropic/cli-shared.ts` in the npm package) and strips it — along with every other Anthropic auth env var — before spawning the `claude` CLI subprocess for every `claude-cli` turn. This is deliberate: OpenClaw's docs say it "never forwards a copied token for this path," so the CLI is expected to already be natively logged in on the host via its own persisted credentials. A systemd-managed headless box has no such interactive login to reuse, so without this step every `claude-cli` turn fails with `error=FailoverError` / `detail=Not logged in · Please run /login` (visible in `journalctl -u openclaw`) and falls straight through to Gemini — invisibly, since the gateway logs "model configured, enabled automatically" at startup regardless. There's a documented escape hatch: `OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV`, a comma/space-separated allowlist of env vars to preserve despite `clearEnv`. `secrets.env.j2` sets `OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV=CLAUDE_CODE_OAUTH_TOKEN` whenever the token is defined — no separate action needed beyond deploying.
+   OpenClaw hard-codes `CLAUDE_CODE_OAUTH_TOKEN` into `CLAUDE_CLI_CLEAR_ENV` (`extensions/anthropic/cli-shared.ts` in the npm package) and strips it — along with every other Anthropic auth env var — before spawning the `claude` CLI subprocess for every `claude-cli` turn. This is deliberate: OpenClaw's docs say it "never forwards a copied token for this path," so the CLI is expected to already be natively logged in on the host via its own persisted credentials. A systemd-managed headless box has no such interactive login to reuse, so without this step every `claude-cli` turn fails with `error=FailoverError` / `detail=Not logged in · Please run /login` (visible in `journalctl _SYSTEMD_USER_UNIT=openclaw-gateway.service`) and falls straight through to Gemini — invisibly, since the gateway logs "model configured, enabled automatically" at startup regardless. There's a documented escape hatch: `OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV`, a comma/space-separated allowlist of env vars to preserve despite `clearEnv`. `secrets.env.j2` sets `OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV=CLAUDE_CODE_OAUTH_TOKEN` whenever the token is defined — no separate action needed beyond deploying.
 
 6. **Verify — with an actual live call, not just a status check**:
    `openclaw models auth list` (expect `anthropic:manual [anthropic/token]`) and `openclaw models status`'s `Runtime auth: ... status=usable` line both look green even when the subprocess env-stripping bug above is still active — they only confirm a profile *exists*, not that a `claude-cli` turn actually succeeds. Likewise `status --deep`'s "Model selection" table reflects each session's *last actual turn*, so a session shown on a fallback model may just predate a fix. The only real proof is a completed turn with no fallback:
    ```bash
-   ssh claw "sudo -u claw openclaw agent --session-key agent:main:verify --message 'reply with exactly: OK' --model anthropic/claude-sonnet-5 --json" \
+   ssh claw "sudo openclaw-admin agent --session-key agent:main:verify --message 'reply with exactly: OK' --model anthropic/claude-sonnet-5 --json" \
      | python3 -c "import json,sys; r=json.load(sys.stdin)['result']; print(r['payloads'][0]['text']); print(r['meta']['systemPromptReport']['provider'])"
    # expect: OK / claude-cli  (not gemini-3.1-pro-preview or scaleway/*)
    ```
@@ -473,35 +528,41 @@ OpenClaw workspace skills are automatically provisioned via Ansible:
 > *not* the unprivileged `claw` service user. That is why `sudo` is used here for
 > system-level operations. The `claw` service user itself has zero sudo; it reads the
 > journal directly via its `systemd-journal` group membership (see §3).
+>
+> The gateway is a systemd **user** unit of `claw`, so root reaches it through that
+> user's manager: `systemctl --user -M claw@ …`. Every `openclaw` CLI command goes
+> through `sudo openclaw-admin …` (see [§4.1](#41-systemd-secrets-externalization--security-sandboxing)) —
+> a plain `sudo -u claw openclaw …` no longer finds the binary or the service environment.
 
 * **Check Systemd Status**:
   ```bash
-  ssh claw "sudo systemctl status openclaw"
+  ssh claw "sudo systemctl --user -M claw@ status openclaw-gateway"
   ```
 * **View Live Gateway Logs**:
   ```bash
-  ssh claw "sudo journalctl -u openclaw -f"
+  ssh claw "sudo journalctl _SYSTEMD_USER_UNIT=openclaw-gateway.service -f"
   ```
+  Use the field match: as root, `journalctl --user-unit=…` also filters on the caller's own uid and shows nothing. As `claw` itself, `journalctl --user -u openclaw-gateway -f` works.
 * **Run OpenClaw Deep Diagnostics**:
   ```bash
-  ssh claw "sudo -u claw openclaw status --deep"
+  ssh claw "sudo openclaw-admin status --deep"
   ```
 * **Restart OpenClaw Gateway**:
   ```bash
-  ssh claw "sudo systemctl restart openclaw"
+  ssh claw "sudo systemctl --user -M claw@ restart openclaw-gateway"
   ```
 * **Display Dashboard URL on Headless Servers (`--no-open`)**:
   Running `openclaw dashboard` on a remote server attempts to invoke desktop GUI helpers (`xdg-open`) and will delay ~10–12 seconds on headless systems. Pass `--no-open` to output the Gateway URL and token details instantly:
   ```bash
-  ssh claw "sudo -u claw openclaw dashboard --no-open"
+  ssh claw "sudo openclaw-admin dashboard --no-open"
   ```
 * **Recovering from an `openclaw.json` schema migration crash-loop**:
   An OpenClaw version bump can ship a breaking `openclaw.json` schema change (e.g. the 2026.8.1 release moved `agents.list` → `agents.entries`, `agents.defaults.memorySearch` → top-level `memory.search`, and flattened `channels.<name>.cliPath` under a `transport` object). If the live config still uses the old shape, the gateway can crash-loop on startup. `openclaw doctor --fix` auto-migrates the on-disk config to the new schema and writes timestamped `openclaw.json.bak.*` snapshots before each rewrite — diff those against `ansible/roles/openclaw_setup/templates/openclaw.json.j2` to confirm the Ansible template matches. **Stop the systemd unit first**: `doctor --fix` refuses to touch the shared state database while it detects the gateway still owns it (`Doctor could not enter maintenance. Error: Gateway service ownership or shutdown could not be verified.`) — a bare `kill`/crash-loop restart loop doesn't count as a clean stop in its eyes, only `systemctl stop` does:
   ```bash
-  ssh claw "sudo systemctl stop openclaw"
+  ssh claw "sudo systemctl --user -M claw@ stop openclaw-gateway"
   ssh claw "sudo openclaw-admin doctor --fix"
-  ssh claw "sudo systemctl start openclaw"
+  ssh claw "sudo systemctl --user -M claw@ start openclaw-gateway"
   ```
-  Run the repair itself through `openclaw-admin` (see [§4.1](#41-systemd-secrets-externalization--security-sandboxing)), not a bare `sudo -u claw openclaw doctor --fix` — the `debian` account can't read `/etc/openclaw/secrets.env` directly, so the bare form sees none of the service's environment and `doctor` misreports perfectly normal config as broken (missing API keys, `NODE_COMPILE_CACHE`, `OPENCLAW_NO_RESPAWN`, ...). This still works normally even with `openclaw_setup_config_readonly: true` ([§4.3](#43-config-writes--openclaw_config_readonly)): `OPENCLAW_CONFIG_READONLY` is only set on the systemd unit's own `Environment=` line, never in `secrets.env`, so `openclaw-admin` never inherits it — no need to toggle anything off first.
+  Run the repair itself through `openclaw-admin` (see [§4.1](#41-systemd-secrets-externalization--security-sandboxing)), not a bare `sudo -u claw openclaw doctor --fix` — the bare form sees none of the service's environment and `doctor` misreports perfectly normal config as broken (missing API keys, `NODE_COMPILE_CACHE`, `OPENCLAW_NO_RESPAWN`, ...). This still works normally even with `openclaw_setup_config_readonly: true` ([§4.3](#43-config-writes--openclaw_config_readonly)): `OPENCLAW_CONFIG_READONLY` is only set on the systemd unit's own `Environment=` line, never in `secrets.env`, so `openclaw-admin` never inherits it — no need to toggle anything off first.
 
-  Update `openclaw.json.j2` (and `ansible/roles/openclaw_setup/defaults/main.yml: openclaw_setup_version`) to match so the next Ansible deploy doesn't regenerate the old schema and re-trigger the same migration.
+  Update `openclaw.json.j2` (and `ansible/roles/openclaw_setup/defaults/main.yml: openclaw_setup_version`) to match so the next Ansible deploy doesn't regenerate the old schema and re-trigger the same migration. When the new version arrived through a self-update, the updater normally runs these Doctor migrations itself; the reconciliation steps are in [4.4](#44-self-update-on-request).
