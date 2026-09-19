@@ -39,10 +39,6 @@
   tags:
     - debian
 
-# - name: Install Git config
-#   template: src=gitconfig.j2 dest={{ me.home }}/.gitconfig mode="0600" owner=farzy group=farzy
-#   tags: configuration
-
 - name: Include Zsh specific tasks
   ansible.builtin.include_tasks:
     file: zsh.yml
