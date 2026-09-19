@@ -1,0 +1,30 @@
+---
+# Starting the gateway user unit, and retiring the legacy root-owned install.
+
+- name: Ensure the OpenClaw gateway user unit is started and enabled
+  ansible.builtin.systemd_service:
+    name: "{{ openclaw_setup_systemd_unit }}"
+    scope: user
+    state: started
+    enabled: true
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ openclaw_setup_uid }}"
+  when: openclaw_setup_user_unit_stat.stat.exists
+
+# Last, once the gateway runs from the claw-owned prefix: the root-owned copy
+# would otherwise shadow it as /usr/bin/openclaw for every other account, and
+# OpenClaw's updater warns when the shell's `openclaw` and the service disagree.
+# One-shot: the stat keeps npm from running as root on every later converge.
+- name: Check for the legacy root-owned global OpenClaw install
+  ansible.builtin.stat:
+    path: /usr/lib/node_modules/openclaw
+  register: openclaw_setup_legacy_package_stat
+
+- name: Remove the legacy root-owned global OpenClaw install
+  community.general.npm:
+    name: openclaw
+    global: true
+    state: absent
+  when: openclaw_setup_legacy_package_stat.stat.exists

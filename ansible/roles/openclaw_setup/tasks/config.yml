@@ -1,0 +1,68 @@
+---
+# openclaw.json, plus the credential-store audit gate that judges the converged
+# file. See docs/openclaw.md §4.1.
+
+- name: Assert the pinned openclaw version understands the templated config schema
+  ansible.builtin.assert:
+    that:
+      - openclaw_setup_version is version('2026.8.1', '>=')
+    fail_msg: >-
+      openclaw.json.j2 emits the 2026.8.1 schema (agents.entries, memory.search,
+      channels.signal.transport); pin openclaw_setup_version >= 2026.8.1 or revert the template.
+
+- name: Create OpenClaw config directory
+  ansible.builtin.file:
+
+    path: "{{ openclaw_setup_home }}/.openclaw"
+    state: directory
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0700'
+
+- name: Deploy openclaw.json configuration
+  ansible.builtin.template:
+    src: openclaw.json.j2
+    dest: "{{ openclaw_setup_home }}/.openclaw/openclaw.json"
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0600'
+    validate: python3 -c "import json,sys; json.load(open(sys.argv[1]))" %s
+  notify: Restart openclaw
+
+# Runs after openclaw.json is rendered, not inside the block above: `models auth
+# logout` drops the profile pointer from openclaw.json and the template restores
+# it, so gating earlier could abort the play with the pointer still missing —
+# the silent-fallback state docs/openclaw.md §6.4 describes. It also means the
+# audit judges the converged file.
+- name: Re-audit OpenClaw's credential stores
+  ansible.builtin.command:
+    argv: "{{ openclaw_setup_cli_argv + ['secrets', 'audit', '--check', '--json'] }}"
+  register: openclaw_setup_secrets_reaudit
+  changed_when: false
+  failed_when: false
+  # Reads OpenClaw's credential stores; the assert below reports what matters.
+  no_log: true
+  when:
+    - openclaw_setup_installed_version | length > 0
+    - not ansible_check_mode
+
+- name: Assert OpenClaw's credential stores are clean
+  vars:
+    # The probe runs with failed_when: false, so a run that never produced JSON
+    # (no systemd-run, missing EnvironmentFile, transient unit refused to start)
+    # also lands here; rendering must not fail on it and hide the cause.
+    openclaw_setup_reaudit_stdout: "{{ openclaw_setup_secrets_reaudit.stdout | default('', true) }}"
+    openclaw_setup_reaudit_findings: >-
+      {{ (openclaw_setup_reaudit_stdout | from_json).findings | default([], true)
+         if openclaw_setup_reaudit_stdout | length > 0 else [] }}
+  ansible.builtin.assert:
+    that:
+      - openclaw_setup_secrets_reaudit.rc | default(1) == 0
+    fail_msg: >-
+      `openclaw secrets audit --check` did not come back clean.
+      Findings: {{ openclaw_setup_reaudit_findings | map(attribute='jsonPath') | join(', ') | default('none reported', true) }}.
+      {{ openclaw_setup_secrets_reaudit.stderr | default('', true) }}
+      Inspect with `sudo openclaw-admin secrets audit` on the host. See docs/openclaw.md §4.1.
+  when:
+    - openclaw_setup_installed_version | length > 0
+    - not ansible_check_mode
