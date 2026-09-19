@@ -348,12 +348,15 @@
     patterns: hosts.yml
     contains: '^\s*oauth_token:'
   register: openclaw_setup_gh_stored_login
+  # Same gate as GITHUB_TOKEN/GH_TOKEN in secrets.env.j2: without the PAT there
+  # is no environment credential to replace the stored login with.
+  when: openclaw_github_pat is defined and openclaw_github_pat | length > 0
 
 - name: Remove the stored gh login
   ansible.builtin.file:
     path: "{{ item.path }}"
     state: absent
-  loop: "{{ openclaw_setup_gh_stored_login.files }}"
+  loop: "{{ openclaw_setup_gh_stored_login.files | default([]) }}"
   loop_control:
     label: "{{ item.path }}"
 
@@ -575,6 +578,31 @@
       openclaw.json.j2 emits the 2026.8.1 schema (agents.entries, memory.search,
       channels.signal.transport); pin openclaw_setup_version >= 2026.8.1 or revert the template.
 
+# Root-owned, so the agent cannot rewrite its own credentials or endpoints, and
+# outside $HOME, so it never lands in state backups or memory indexing. Readable
+# by the openclaw group because the gateway's systemd *user* manager runs as
+# that user and reads EnvironmentFile= itself, as does OpenClaw's updater when
+# it rebuilds the service environment. Little new exposure: while the gateway
+# runs, any process running as that user can already read the same values from
+# its /proc/<pid>/environ. What changes is that they stay readable while the
+# gateway is stopped or crash-looping. See docs/openclaw.md §4.1.
+- name: Create OpenClaw secrets directory
+  ansible.builtin.file:
+    path: /etc/openclaw
+    state: directory
+    owner: root
+    group: "{{ openclaw_setup_group }}"
+    mode: '0750'
+
+- name: Deploy OpenClaw secrets environment file
+  ansible.builtin.template:
+    src: secrets.env.j2
+    dest: /etc/openclaw/secrets.env
+    owner: root
+    group: "{{ openclaw_setup_group }}"
+    mode: '0640'
+  notify: Restart openclaw
+
 # --- OpenClaw installation (claw-owned, self-updatable) --------------------
 #
 # OpenClaw lives in a claw-owned npm prefix rather than root's /usr, so its own
@@ -680,6 +708,18 @@
   when: openclaw_setup_installed_version | length == 0
   changed_when: true
   notify: Restart openclaw
+
+# Without this, a brand-new host would render the auth.profiles pointer into
+# openclaw.json but skip the credential-store block below (gated on the fact
+# computed before the bootstrap), leaving a pointer to a profile that does not
+# exist until the next converge — the silent-fallback state docs/openclaw.md
+# §6.4 describes.
+- name: Record the bootstrapped OpenClaw version
+  ansible.builtin.set_fact:
+    openclaw_setup_installed_version: "{{ openclaw_setup_version }}"
+  when:
+    - openclaw_setup_installed_version | length == 0
+    - not ansible_check_mode
 
 # Surfaces the bootstrap and the upgrade as pending changes in --check runs (the
 # drift check), where their command tasks are skipped and would stay silent.
@@ -809,6 +849,8 @@
       register: openclaw_setup_secrets_audit
       changed_when: false
       check_mode: false
+      # Reads OpenClaw's credential stores; only ever consumed by from_json.
+      no_log: true
 
     - name: List OpenClaw auth profiles
       ansible.builtin.command:
@@ -816,6 +858,7 @@
       register: openclaw_setup_auth_profiles
       changed_when: false
       check_mode: false
+      no_log: true
 
     - name: Work out what the credential stores need
       vars:
@@ -835,6 +878,7 @@
         openclaw_setup_models_json_residue: >-
           {{ openclaw_setup_audit_findings
              | selectattr('code', 'equalto', 'PLAINTEXT_FOUND')
+             | selectattr('file', 'defined')
              | selectattr('file', 'search', '/agent/models[.]json$')
              | map(attribute='file') | unique | list }}
 
@@ -875,27 +919,6 @@
       loop: "{{ openclaw_setup_models_json_residue }}"
       notify: Restart openclaw
 
-    - name: Re-audit OpenClaw's credential stores
-      ansible.builtin.command:
-        argv: "{{ openclaw_setup_cli_argv + ['secrets', 'audit', '--check', '--json'] }}"
-      register: openclaw_setup_secrets_reaudit
-      changed_when: false
-      failed_when: false
-      when: not ansible_check_mode
-
-    - name: Assert OpenClaw's credential stores are clean
-      vars:
-        openclaw_setup_reaudit_findings: "{{ (openclaw_setup_secrets_reaudit.stdout | from_json).findings | default([]) }}"
-      ansible.builtin.assert:
-        that:
-          - openclaw_setup_secrets_reaudit.rc == 0
-        fail_msg: >-
-          `openclaw secrets audit --check` still reports
-          {{ openclaw_setup_reaudit_findings | map(attribute='code') | join(', ') }} at
-          {{ openclaw_setup_reaudit_findings | map(attribute='jsonPath') | join(', ') }}.
-          Inspect with `sudo openclaw-admin secrets audit` on the host. See docs/openclaw.md §4.1.
-      when: not ansible_check_mode
-
     - name: Report pending credential-store cleanup
       ansible.builtin.debug:
         msg: >-
@@ -904,7 +927,7 @@
       changed_when: true
       when:
         - ansible_check_mode
-        - (openclaw_setup_secrets_audit.stdout | from_json).status != 'clean'
+        - (openclaw_setup_secrets_audit.stdout | from_json).status | default('', true) != 'clean'
 
 # Earlier openclaw.json copies from before the SecretRef switch — Doctor and
 # updater backups — still hold the gateway token, Telegram bot token and
@@ -915,6 +938,8 @@
   ansible.builtin.find:
     paths: "{{ openclaw_setup_home }}/.openclaw"
     patterns: "openclaw.json.bak*,openclaw.json.clobbered*"
+    # Doctor and the updater also leave copies in subdirectories.
+    recurse: true
     contains: '"(token|botToken|apiKey)"\s*:\s*"'
     # re.search over the whole (small) file; line-by-line mode uses re.match,
     # which is anchored and never matches an indented JSON key.
@@ -956,30 +981,43 @@
     validate: python3 -c "import json,sys; json.load(open(sys.argv[1]))" %s
   notify: Restart openclaw
 
-# Root-owned, so the agent cannot rewrite its own credentials or endpoints, and
-# outside $HOME, so it never lands in state backups or memory indexing. Readable
-# by the openclaw group because the gateway's systemd *user* manager runs as
-# that user and reads EnvironmentFile= itself, as does OpenClaw's updater when
-# it rebuilds the service environment. Little new exposure: while the gateway
-# runs, any process running as that user can already read the same values from
-# its /proc/<pid>/environ. What changes is that they stay readable while the
-# gateway is stopped or crash-looping. See docs/openclaw.md §4.1.
-- name: Create OpenClaw secrets directory
-  ansible.builtin.file:
-    path: /etc/openclaw
-    state: directory
-    owner: root
-    group: "{{ openclaw_setup_group }}"
-    mode: '0750'
+# Runs after openclaw.json is rendered, not inside the block above: `models auth
+# logout` drops the profile pointer from openclaw.json and the template restores
+# it, so gating earlier could abort the play with the pointer still missing —
+# the silent-fallback state docs/openclaw.md §6.4 describes. It also means the
+# audit judges the converged file.
+- name: Re-audit OpenClaw's credential stores
+  ansible.builtin.command:
+    argv: "{{ openclaw_setup_cli_argv + ['secrets', 'audit', '--check', '--json'] }}"
+  register: openclaw_setup_secrets_reaudit
+  changed_when: false
+  failed_when: false
+  # Reads OpenClaw's credential stores; the assert below reports what matters.
+  no_log: true
+  when:
+    - openclaw_setup_installed_version | length > 0
+    - not ansible_check_mode
 
-- name: Deploy OpenClaw secrets environment file
-  ansible.builtin.template:
-    src: secrets.env.j2
-    dest: /etc/openclaw/secrets.env
-    owner: root
-    group: "{{ openclaw_setup_group }}"
-    mode: '0640'
-  notify: Restart openclaw
+- name: Assert OpenClaw's credential stores are clean
+  vars:
+    # The probe runs with failed_when: false, so a run that never produced JSON
+    # (no systemd-run, missing EnvironmentFile, transient unit refused to start)
+    # also lands here; rendering must not fail on it and hide the cause.
+    openclaw_setup_reaudit_stdout: "{{ openclaw_setup_secrets_reaudit.stdout | default('', true) }}"
+    openclaw_setup_reaudit_findings: >-
+      {{ (openclaw_setup_reaudit_stdout | from_json).findings | default([], true)
+         if openclaw_setup_reaudit_stdout | length > 0 else [] }}
+  ansible.builtin.assert:
+    that:
+      - openclaw_setup_secrets_reaudit.rc | default(1) == 0
+    fail_msg: >-
+      `openclaw secrets audit --check` did not come back clean.
+      Findings: {{ openclaw_setup_reaudit_findings | map(attribute='jsonPath') | join(', ') | default('none reported', true) }}.
+      {{ openclaw_setup_secrets_reaudit.stderr | default('', true) }}
+      Inspect with `sudo openclaw-admin secrets audit` on the host. See docs/openclaw.md §4.1.
+  when:
+    - openclaw_setup_installed_version | length > 0
+    - not ansible_check_mode
 
 - name: Deploy openclaw-admin wrapper for manual admin commands needing secrets.env
   ansible.builtin.template:
