@@ -15,9 +15,12 @@
 
 # The gateway runs under this user's systemd manager, reached through
 # /run/user/<uid>; every user-scope task and handler needs the numeric uid.
+# Empty in a --check run against a host where the user does not exist yet (the
+# user module then reports no uid); every consumer is skipped there anyway,
+# since the user unit cannot be in place either.
 - name: Record the openclaw user's uid for its systemd user manager
   ansible.builtin.set_fact:
-    openclaw_setup_uid: "{{ openclaw_setup_user_result.uid }}"
+    openclaw_setup_uid: "{{ openclaw_setup_user_result.uid | default('') }}"
 
 - name: Deploy SSH authorized key for openclaw user
   ansible.posix.authorized_key:
@@ -644,8 +647,12 @@
 
 # Only for a host with no install yet. Everything after that goes through
 # OpenClaw's own updater, which validates the candidate before activating it.
-# --allow-scripts runs OpenClaw's own lifecycle (Node version check, dist
-# inventory) while leaving transitive dependency scripts blocked.
+# --allow-scripts (npm >= 11.16) explicitly approves OpenClaw's own lifecycle
+# scripts (Node version check, dist inventory), the same approval OpenClaw's
+# updater passes. On npm 11 that is a policy, not a sandbox: other packages'
+# install scripts still run, with a notice, unless strict-allow-scripts is
+# set; npm 12 blocks them. Left non-strict so an optional native dependency
+# cannot fail the bootstrap.
 - name: Bootstrap OpenClaw into the openclaw user's npm prefix
   ansible.builtin.command:
     argv:
@@ -663,6 +670,57 @@
   when: openclaw_setup_installed_version | length == 0
   changed_when: true
   notify: Restart openclaw
+
+# Surfaces the bootstrap and the upgrade as pending changes in --check runs (the
+# drift check), where their command tasks are skipped and would stay silent.
+- name: Report a pending OpenClaw install or upgrade
+  ansible.builtin.debug:
+    msg: >-
+      {{ ('Would bootstrap OpenClaw ' ~ openclaw_setup_version ~ ' into ' ~ openclaw_setup_npm_prefix)
+         if openclaw_setup_installed_version | length == 0 else
+         ('Would upgrade OpenClaw ' ~ openclaw_setup_installed_version ~ ' -> '
+          ~ openclaw_setup_version ~ ' through `openclaw update`') }}
+  changed_when: true
+  when:
+    - ansible_check_mode
+    - >-
+      openclaw_setup_installed_version | length == 0 or
+      openclaw_setup_installed_version is version(openclaw_setup_version, '<')
+
+# Raising openclaw_setup_version above the installed release upgrades through
+# OpenClaw's own updater, the same path the agent's `update.run` takes: staged
+# install, canary boot on copied state, then stop/swap/restart with automatic
+# rollback while the schema allows it. Run in the user's manager (not via sudo)
+# so it has the same runtime dir, user bus and service environment the updater
+# expects; a transient unit also survives the gateway stop it performs.
+#
+# Deliberately before openclaw.json.j2 is rendered: the updater's Doctor pass
+# migrates the live config to the new release's schema first, and only then
+# does the (bumped) template land, followed by the end-of-play restart. The
+# other order would briefly run the old binary against a new-schema config.
+- name: Upgrade OpenClaw to the pinned minimum through its own updater
+  ansible.builtin.command:
+    argv:
+      - systemd-run
+      - --user
+      - "--machine={{ openclaw_setup_user }}@"
+      - --quiet
+      - --pipe
+      - --wait
+      - --collect
+      - --property=EnvironmentFile=/etc/openclaw/secrets.env
+      - "--working-directory={{ openclaw_setup_home }}"
+      - "--setenv=PATH={{ openclaw_setup_npm_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
+      - "{{ openclaw_setup_npm_prefix }}/bin/openclaw"
+      - update
+      - --tag
+      - "{{ openclaw_setup_version }}"
+      - --yes
+      - --json
+  when:
+    - openclaw_setup_installed_version | length > 0
+    - openclaw_setup_installed_version is version(openclaw_setup_version, '<')
+  changed_when: true
 
 - name: Install Claude Code CLI globally via npm
   community.general.npm:
@@ -693,9 +751,10 @@
 # outside $HOME, so it never lands in state backups or memory indexing. Readable
 # by the openclaw group because the gateway's systemd *user* manager runs as
 # that user and reads EnvironmentFile= itself, as does OpenClaw's updater when
-# it rebuilds the service environment. This exposes nothing new: any process
-# running as that user could already read the same values from the gateway's
-# /proc/<pid>/environ. See docs/openclaw.md §4.1.
+# it rebuilds the service environment. Little new exposure: while the gateway
+# runs, any process running as that user can already read the same values from
+# its /proc/<pid>/environ. What changes is that they stay readable while the
+# gateway is stopped or crash-looping. See docs/openclaw.md §4.1.
 - name: Create OpenClaw secrets directory
   ansible.builtin.file:
     path: /etc/openclaw
@@ -724,7 +783,9 @@
 
 # Root-owned inside a claw-owned directory on purpose: OpenClaw reads the unit
 # from this exact path, and treats one it does not own as a sealed definition —
-# still restarted and verified during updates, never rewritten.
+# still restarted and verified during updates, never rewritten by OpenClaw.
+# Advisory only against the openclaw user itself, who controls its own user
+# manager (see the template header); Ansible re-asserts it on every converge.
 - name: Deploy the OpenClaw gateway systemd user unit
   ansible.builtin.template:
     src: openclaw-gateway.service.j2
@@ -732,9 +793,8 @@
     owner: root
     group: root
     mode: '0644'
-  notify:
-    - Reload openclaw user manager
-    - Restart openclaw
+  register: openclaw_setup_user_unit_result
+  notify: Restart openclaw
 
 # A --check run against a host that still runs the legacy system unit does not
 # write the unit above, and systemctl then fails with "Could not find the
@@ -767,12 +827,27 @@
   ansible.builtin.file:
     path: /etc/systemd/system/openclaw.service
     state: absent
-  notify: Reload systemd
 
-# The handler would only run at the end of the play, after the user unit below
-# has already started; systemd has to forget the unit now.
-- name: Flush handlers so systemd forgets the legacy unit before the user unit starts
-  ansible.builtin.meta: flush_handlers
+# Explicit tasks rather than handlers: both managers must know the new layout
+# before the user unit starts further down, while handlers — the gateway
+# restart in particular — must keep running at the end of the play, after any
+# upgrade, not in the middle of it.
+- name: Make the system manager forget the legacy unit
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: openclaw_setup_legacy_unit_stat.stat.exists
+
+- name: Make the openclaw user manager load the gateway unit
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ openclaw_setup_uid }}"
+  when:
+    - openclaw_setup_user_unit_result is changed
+    - openclaw_setup_user_unit_stat.stat.exists
 # --- End of one-shot migration ----------------------------------------------
 
 - name: Restrict ptrace scope to admin-only (YAMA security hardening)
@@ -823,60 +898,21 @@
     XDG_RUNTIME_DIR: "/run/user/{{ openclaw_setup_uid }}"
   when: openclaw_setup_user_unit_stat.stat.exists
 
-# Surfaces the bootstrap and the upgrade as pending changes in --check runs (the
-# drift check), where their command tasks are skipped and would stay silent.
-- name: Report a pending OpenClaw install or upgrade
-  ansible.builtin.debug:
-    msg: >-
-      {{ ('Would bootstrap OpenClaw ' ~ openclaw_setup_version ~ ' into ' ~ openclaw_setup_npm_prefix)
-         if openclaw_setup_installed_version | length == 0 else
-         ('Would upgrade OpenClaw ' ~ openclaw_setup_installed_version ~ ' -> '
-          ~ openclaw_setup_version ~ ' through `openclaw update`') }}
-  changed_when: true
-  when:
-    - ansible_check_mode
-    - >-
-      openclaw_setup_installed_version | length == 0 or
-      openclaw_setup_installed_version is version(openclaw_setup_version, '<')
-
-# Raising openclaw_setup_version above the installed release upgrades through
-# OpenClaw's own updater, the same path the agent's `update.run` takes: staged
-# install, canary boot on copied state, then stop/swap/restart with automatic
-# rollback while the schema allows it. Run in the user's manager (not via sudo)
-# so it has the same runtime dir, user bus and service environment the updater
-# expects; a transient unit also survives the gateway stop it performs.
-- name: Upgrade OpenClaw to the pinned minimum through its own updater
-  ansible.builtin.command:
-    argv:
-      - systemd-run
-      - --user
-      - "--machine={{ openclaw_setup_user }}@"
-      - --quiet
-      - --pipe
-      - --wait
-      - --collect
-      - --property=EnvironmentFile=/etc/openclaw/secrets.env
-      - "--working-directory={{ openclaw_setup_home }}"
-      - "--setenv=PATH={{ openclaw_setup_npm_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
-      - "{{ openclaw_setup_npm_prefix }}/bin/openclaw"
-      - update
-      - --tag
-      - "{{ openclaw_setup_version }}"
-      - --yes
-      - --json
-  when:
-    - openclaw_setup_installed_version | length > 0
-    - openclaw_setup_installed_version is version(openclaw_setup_version, '<')
-  changed_when: true
-
 # Last, once the gateway runs from the claw-owned prefix: the root-owned copy
 # would otherwise shadow it as /usr/bin/openclaw for every other account, and
 # OpenClaw's updater warns when the shell's `openclaw` and the service disagree.
+# One-shot: the stat keeps npm from running as root on every later converge.
+- name: Check for the legacy root-owned global OpenClaw install
+  ansible.builtin.stat:
+    path: /usr/lib/node_modules/openclaw
+  register: openclaw_setup_legacy_package_stat
+
 - name: Remove the legacy root-owned global OpenClaw install
   community.general.npm:
     name: openclaw
     global: true
     state: absent
+  when: openclaw_setup_legacy_package_stat.stat.exists
 
 - name: Ensure Nginx is started and enabled
   ansible.builtin.service:

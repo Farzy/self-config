@@ -8,8 +8,12 @@
 #
 # Deployed root-owned inside the user's unit directory on purpose: OpenClaw
 # treats a unit it does not own as a "sealed" definition — it still restarts and
-# health-checks the service during updates, but never rewrites this file. Ansible
-# stays the only author of the service definition.
+# health-checks the service during updates, but its own code never rewrites this
+# file. That seal is advisory against OpenClaw, not a boundary against the
+# {{ openclaw_setup_user }} user: a user manager is controlled by its user, who can
+# replace this file (the directory is theirs) or override it with drop-ins under
+# ~/.config/systemd/user.control. Ansible re-asserts it on every converge, and the
+# drift check reports any change. See docs/openclaw.md §4.4.
 #
 # The [Unit] and restart settings mirror what `openclaw gateway install`
 # generates (buildSystemdUnit), so update verification sees a familiar unit.
@@ -62,6 +66,10 @@ Environment=OPENCLAW_CONFIG_READONLY=1
 {% endif %}
 
 # --- SECURITY HARDENING & SANDBOXING ---
+#
+# This contains the gateway process; it is not a boundary against a compromised
+# agent, which can start unsandboxed processes through its own user manager
+# (`systemd-run --user`, the same way the updater escapes this unit's lifecycle).
 #
 # In a user unit, every namespace-based setting below (ProtectSystem, PrivateTmp,
 # ProtectKernelTunables, ...) is SILENTLY IGNORED unless PrivateUsers=true is also

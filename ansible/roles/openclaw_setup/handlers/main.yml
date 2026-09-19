@@ -3,23 +3,6 @@
   ansible.builtin.systemd:
     daemon_reload: true
 
-# The gateway is a systemd *user* unit of the openclaw user (see
-# openclaw-gateway.service.j2), so its handlers talk to that user's manager:
-# become the user and point systemctl at its runtime dir, which sudo does not
-# set. The manager itself runs permanently thanks to linger.
-#
-# The `when:` keeps --check runs against a not-yet-migrated host from failing
-# on a unit that check mode never wrote (see the stat task in tasks/main.yml).
-- name: Reload openclaw user manager
-  ansible.builtin.systemd_service:
-    daemon_reload: true
-    scope: user
-  become: true
-  become_user: "{{ openclaw_setup_user }}"
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ openclaw_setup_uid }}"
-  when: openclaw_setup_user_unit_stat.stat.exists | default(true)
-
 # Supplementary groups are fixed when user@<uid>.service starts, so a group
 # change (e.g. systemd-journal) only reaches the gateway after the whole user
 # manager restarts. Restarting it also restarts the gateway, which is enabled
@@ -28,12 +11,22 @@
   ansible.builtin.systemd_service:
     name: "user@{{ openclaw_setup_uid }}.service"
     state: restarted
+  when: openclaw_setup_uid | length > 0
 
 - name: Reload nginx
   ansible.builtin.service:
     name: nginx
     state: reloaded
 
+# The gateway is a systemd *user* unit of the openclaw user (see
+# openclaw-gateway.service.j2), so this talks to that user's manager: become the
+# user and point systemctl at its runtime dir, which sudo does not set. The
+# manager itself runs permanently thanks to linger. The user manager's own
+# daemon-reload is an explicit task in tasks/main.yml, since it must happen
+# before the unit starts rather than at the end of the play.
+#
+# The `when:` keeps --check runs against a not-yet-migrated host from failing
+# on a unit that check mode never wrote (see the stat task in tasks/main.yml).
 - name: Restart openclaw
   ansible.builtin.systemd_service:
     name: "{{ openclaw_setup_systemd_unit }}"
