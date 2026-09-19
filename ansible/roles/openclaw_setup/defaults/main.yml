@@ -111,4 +111,4 @@ openclaw_setup_config_readonly: false
 # older, but never downgrades: once a newer release has migrated the SQLite
 # state, an older package cannot be restored safely. A host that self-updated
 # past this value fails the play until it is bumped — see docs/openclaw.md §4.4.
-openclaw_setup_version: "2026.9.4"
+openclaw_setup_version: "2026.9.5"
