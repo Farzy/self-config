@@ -3,6 +3,17 @@
     updater and Doctor copy it into .bak and rollback snapshots. Verify with
     `sudo openclaw-admin secrets audit --check`. See docs/openclaw.md §4.1. #}
 {
+{#- Writer metadata OpenClaw's Doctor records after its config migrations. Mirrored
+    here so a converge does not strip the markers and make Doctor treat completed
+    migrations as pending again. After a self-update, port any new markers from the
+    live file (docs/openclaw.md §4.4). #}
+  "meta": {
+    "lastTouchedVersion": "{{ openclaw_setup_version }}",
+    "migrations": {
+      "modelPolicyAllowlist": true,
+      "utilityModelSeparation": true
+    }
+  },
   "update": {
     "channel": "{{ openclaw_setup_update_channel }}",
     "auto": {

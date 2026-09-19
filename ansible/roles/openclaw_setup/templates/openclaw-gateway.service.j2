@@ -103,8 +103,16 @@ MemoryDenyWriteExecute=false
 # Prevent child processes from gaining elevated privileges via setuid binaries (user claw is unprivileged and must never possess sudo access)
 NoNewPrivileges=true
 
-# Restrict creation or execution of SUID/SGID binaries by child processes
-RestrictSUIDSGID=true
+# Deliberately OFF. systemd enforces RestrictSUIDSGID with a seccomp filter that
+# inspects the mode argument of open/openat/chmod; openat2() carries its mode
+# inside a struct seccomp cannot read, so the filter blocks openat2() outright
+# with ENOSYS. Since 2026.9.5 OpenClaw's fs-safe layer defaults to native mode,
+# which confines file access with openat2(RESOLVE_BENEATH) and fails closed on
+# ENOSYS rather than falling back: the gateway could not even take its state
+# lock and crash-looped (claw, 2026-09-19). Keeping native containment for the
+# agent's file tools outweighs this option, which for an unprivileged uid under
+# NoNewPrivileges=true only prevented creating setuid-to-claw files.
+RestrictSUIDSGID=false
 
 # Prevent modification of system hostname or domain name by isolating UTS namespace
 ProtectHostname=true

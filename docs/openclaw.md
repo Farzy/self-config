@@ -129,7 +129,7 @@ The systemd user unit ([ansible/roles/openclaw_setup/templates/openclaw-gateway.
 - **`ProtectKernelTunables=true`**: Protects `/proc/sys`, `/sys`, and kernel variables from modification.
 - **`ProtectControlGroups=true`**: Mounts control group hierarchies (`/sys/fs/cgroup`) as read-only.
 - **`RestrictRealtime=true`**: Prevents the service from acquiring realtime scheduling priorities to avoid CPU starvation attacks.
-- **`RestrictSUIDSGID=true`**: Prevents creation or execution of SUID/SGID binaries by child processes.
+- **`RestrictSUIDSGID=false`** (deliberately off since 2026.9.5): systemd enforces this option with a seccomp filter on the mode argument of `open`/`openat`/`chmod`. `openat2()` passes its mode inside a struct seccomp cannot read, so the filter blocks `openat2()` entirely with `ENOSYS`. From 2026.9.5, OpenClaw's fs-safe layer defaults to native mode, which confines file access with `openat2(RESOLVE_BENEATH)` — race-free protection against `..` and symlink escapes for the agent's file tools — and fails closed on `ENOSYS`. With the option on, the gateway could not take its state lock and crash-looped (`openat2 beneath root: Function not implemented`). For an unprivileged uid already under `NoNewPrivileges=true`, the option only stopped `claw` from creating setuid-to-`claw` files, so native path containment is the better trade.
 - **`ProtectHostname=true`**: Isolates UTS namespace to prevent modifications to system hostname or domain name.
 - **`LockPersonality=true`**: Locks execution domain to prevent personality switching.
 - **Dropped with the move to a user unit**: `CapabilityBoundingSet=`, `AmbientCapabilities=`, `ProtectKernelModules=`, `ProtectClock=` and `ProtectKernelLogs=` make a user unit fail with `status=218/CAPABILITIES` — a user manager cannot drop capabilities. Nothing is lost: each works by removing capabilities, which an unprivileged `claw` process never holds, and `NoNewPrivileges=true` already prevents gaining any through setuid or file-capability binaries.
@@ -190,19 +190,23 @@ The unit file itself is deployed **root-owned** in `~claw/.config/systemd/user/`
 
 **What an update does** (OpenClaw's own updater — nothing custom here): the gateway hands `update.run` to a detached helper (`systemd-run --user --scope`) that stages the new package in a temporary prefix, validates it, and boots a canary on a *copy* of the config and SQLite state while the old gateway keeps serving. Only then does it stop the service, swap the package, run the required Doctor migrations, restart and verify (`/readyz`, version handshake, channel readiness). A failed validation leaves the old gateway untouched. A failed activation rolls back automatically *if* the database schema and config are unchanged; otherwise it stops and reports. Follow a run with `sudo openclaw-admin update status` or the helper log path it prints. **Before a release you have doubts about, take a backup**: the updater's own snapshots are disposable, not a recovery point.
 
+**Chat acknowledgements are not results.** When the agent says the update "kicked off successfully", only the handoff has started; validation and the swap follow over the next few minutes. Check the outcome with `sudo openclaw-admin update status`. A failed validation leaves the old gateway serving (`downtimeMs: null`), and the report lands in `~claw/.openclaw/logs/support/openclaw-update-failure-*.json`.
+
+**Known issue — the 2026.9.4 updater on this host.** Before swapping, the 2026.9.4 updater fingerprints the current package tree (about 546 MB, 36k files) under a hard, non-configurable 30 s budget (`MAX_SCAN_MS` in `update-runner-*.mjs`). With a cold page cache that scan takes about 19 s with native `sha256sum` alone on this 2-vCPU instance, and Node's per-file walk goes over the budget, so the swap fails with `Package rollback verification timed out` → `global-install-failed`. The live tree is left untouched. 2026.9.5 replaced the cap with the 20-minute runner timeout, so only the 9.4 → 9.5 hop is affected. Workaround for that hop: keep the tree in the page cache while the update runs (`find ~claw/.npm-global/lib/node_modules -type f -print0 | xargs -0 cat >/dev/null` in a loop), which brings the scan down to about 2 s.
+
 **Reconciling with Ansible afterwards.** `openclaw_setup_version` is a **minimum**, not an exact pin:
 
 | Installed vs `openclaw_setup_version` | What the role does |
 |---|---|
 | absent | Bootstraps it with `npm install --global --prefix … openclaw@<pin>` as `claw` (first install only). |
-| older | Upgrades through the same updater the agent uses — `openclaw update --tag <pin> --yes --json`, run as a transient unit in `claw`'s user manager. So bumping the pin in the repo is also a supported way to upgrade. |
+| older | Upgrades through the same updater the agent uses — `openclaw update --tag <pin> --yes --json`, run as a transient unit in `claw`'s user manager — then **waits** for the run to finish (polling `openclaw update status --json`, up to 30 min) and fails unless it succeeded at the pinned version. The wait is required: with a managed service, `openclaw update` hands off to a detached helper even when started from a terminal and returns immediately. So bumping the pin in the repo is also a supported way to upgrade. |
 | equal | Nothing. |
 | **newer** | **Fails the play** with a message telling you to bump the pin. |
 
 The last row is deliberate. After a self-update the new release may have migrated the SQLite state and the `openclaw.json` schema (the 2026.8.1 release did — see [§8](#8-service-management--troubleshooting)). Re-rendering the old template, or downgrading the package, could then crash-loop the gateway, and OpenClaw warns that downgrades across a state migration are unsafe. So after asking OpenClaw to update itself:
 
 1. Set `openclaw_setup_version` to the new version (`sudo openclaw-admin --version`).
-2. Run `ansible-playbook playbooks/openclaw.yml --check --diff -t openclaw`. Any `openclaw.json` diff is either a schema migration the updater applied, to port into `openclaw.json.j2`, or harmless writer metadata. Don't use `--diff` in CI logs — see [docs/ci-ansible.md](ci-ansible.md).
+2. Run `ansible-playbook playbooks/openclaw.yml --check --diff -t openclaw`. Any `openclaw.json` diff is a migration the updater applied: port it into `openclaw.json.j2`. That includes new `meta.migrations.*` markers, which the template mirrors so a converge doesn't make Doctor treat completed migrations as pending again; `meta.lastTouchedVersion` follows the pin automatically. Don't use `--diff` in CI logs — see [docs/ci-ansible.md](ci-ansible.md).
 3. Converge, and commit the bump.
 
 Until step 1 is merged, the weekly drift check goes red on that assertion — which is the intended signal that the repo lags the host.
