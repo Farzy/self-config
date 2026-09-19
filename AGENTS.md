@@ -73,6 +73,13 @@ playbook) adds Docker/NodeSource/GitHub CLI origins, and `..._auto_reboot`
 (default `true`, `..._reboot_time: "03:30"`, `..._reboot_with_users: false`)
 reboots after upgrades that leave `/var/run/reboot-required`.
 
+The `docker` role fully manages `/etc/docker/daemon.json` from the
+`docker_daemon_config` mapping (default `live-restore: true`, so a Docker
+package upgrade does not stop containers), applied with a `reload`, never a
+restart. Keys not in the mapping are removed, so a host with hand-written
+settings must list them there first. `claw` is not managed by this role (it has
+its own hand-written `daemon.json`, already with `live-restore`).
+
 ### Vault-encrypted whole-file AI assistant configs
 
 `roles/laptop_setup/files/ai/{CLAUDE,AGENTS}_{personal,professional}.md` are

@@ -25,3 +25,17 @@ docker_packages:
 # undefined" on the only playbook that uses this role. Empty by default so a
 # consumer has to name the accounts deliberately.
 docker_admin_users: []
+
+# Content of /etc/docker/daemon.json, as a mapping rendered to JSON. The file is
+# fully managed: keys not listed here are removed from the host.
+#
+# `live-restore` keeps containers running while dockerd is stopped or restarted
+# (package upgrades, including the unattended ones enabled by
+# master_setup_unattended_third_party). Without it every container on the host
+# is stopped by a Docker upgrade. It is not guaranteed across major Docker
+# upgrades, and is ignored in swarm mode.
+#
+# Hosts that already carry hand-written settings (log rotation, address pools,
+# ...) must list them here as well, or they are dropped on the next run.
+docker_daemon_config:
+  live-restore: true

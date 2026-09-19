@@ -1,0 +1,9 @@
+---
+# `reload` (SIGHUP), not `restart`: a restart would stop every container on hosts
+# where live-restore is not yet active, which is exactly what this role's
+# daemon.json is meant to prevent. dockerd applies a live-restore change on
+# reload without touching running containers.
+- name: Reload Docker daemon configuration
+  ansible.builtin.systemd_service:
+    name: docker
+    state: reloaded
