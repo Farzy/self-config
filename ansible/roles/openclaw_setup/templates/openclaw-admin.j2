@@ -2,58 +2,57 @@
 # {{ ansible_managed }}
 #
 # Runs an `openclaw` CLI subcommand as the `{{ openclaw_setup_user }}` service
-# user with the same environment the systemd-managed gateway gets from
-# /etc/openclaw/secrets.env (GEMINI_API_KEY, CLAUDE_CODE_OAUTH_TOKEN,
-# SCALEWAY_API_KEY, ANSIBLE_VAULT_PASSWORD, NODE_COMPILE_CACHE,
+# user with the same environment the gateway gets from /etc/openclaw/secrets.env
+# (OPENCLAW_GATEWAY_TOKEN, TELEGRAM_BOT_TOKEN, GEMINI_API_KEY,
+# CLAUDE_CODE_OAUTH_TOKEN, SCALEWAY_API_KEY, NODE_COMPILE_CACHE,
 # OPENCLAW_NO_RESPAWN, ...).
 #
-# One-off admin subcommands like `openclaw doctor --fix` spawn a fresh CLI
-# process rather than talking to the already-running gateway, so a plain
-# `sudo -u {{ openclaw_setup_user }} openclaw ...` sees none of that
-# environment and misreports normal config as broken (missing API keys,
-# NODE_COMPILE_CACHE, OPENCLAW_NO_RESPAWN, ...).
+# This is the supported way to run admin commands from the `debian` account.
+# A plain `sudo -u {{ openclaw_setup_user }} openclaw ...` fails twice over:
+# sudo's secure_path does not include the claw-owned npm prefix OpenClaw now
+# lives in, and even with a full path the process would see none of the service
+# environment. That breaks `doctor --fix` (misreports normal config as broken)
+# and anything that talks to the gateway, whose token openclaw.json only
+# references as an env SecretRef (see docs/openclaw.md §4.1).
 #
-# Uses `systemd-run --property=EnvironmentFile=...` rather than bash
-# `source`-ing the file directly: systemd's own EnvironmentFile= parser does
-# no shell expansion or command substitution on the values, but a bash
-# `source` does — a secret containing `$`, a backtick, or `$(...)` would
-# either resolve differently here than it does for the real service, or get
-# executed as root by this wrapper. Routing through systemd-run gives this
-# wrapper the exact same parse the systemd-managed gateway gets, and lets
-# systemd (not this script) do the privileged read of the root-only secrets
-# file, so no `sudo -u ... -E -H` dance is needed either.
+# Runs the command as a transient unit in {{ openclaw_setup_user }}'s own systemd
+# user manager (`systemd-run --user --machine=...@`) rather than through sudo:
+#   * systemd's EnvironmentFile= parser does no shell expansion or command
+#     substitution, so a secret containing `$`, a backtick, or `$(...)` is read
+#     exactly as the gateway reads it — and nothing is ever `source`d as root.
+#   * the command gets the user's runtime dir and user bus, which OpenClaw needs
+#     to inspect or drive its `{{ openclaw_setup_systemd_unit }}` user unit.
+#   * the command runs from an absolute path in the claw-owned prefix and never
+#     as root: that tree is writable by {{ openclaw_setup_user }}, so executing it
+#     with root privileges would hand the agent a privilege escalation.
 #
-# Sets OPENCLAW_SERVICE_REPAIR_POLICY=external: our openclaw.service is a
-# plain system-level unit deployed by Ansible, not openclaw's own built-in
-# service installer, which expects to verify shutdown through a
-# `systemctl --user` unit + D-Bus user session bus for
-# `{{ openclaw_setup_user }}` — neither of which exists here (no lingering
-# systemd user session). Without this, `doctor --fix` refuses with "Gateway
-# service ownership or shutdown could not be verified" even after a correct
-# `systemctl stop openclaw`. The "external" policy skips that native
-# service-manager inspection/mutation (state and agent-database lease checks
-# still run) and leaves stop/start responsibility with us — see
-# docs/openclaw.md §8 for the stop/fix/start sequence this still requires.
+# Sets OPENCLAW_SERVICE_REPAIR_POLICY=external: the gateway unit is authored by
+# Ansible (root-owned, "sealed" from OpenClaw's point of view), so manual Doctor
+# runs stay diagnostic-only for the service lifecycle — no reinstalling or
+# rewriting the unit, and stop/start stays with us. State and database checks
+# still run. See docs/openclaw.md §8 for the stop/fix/start sequence.
 #
-# Deliberately does NOT set OPENCLAW_CONFIG_READONLY — that flag lives only
-# on the systemd unit's own Environment= line (openclaw.service.j2), not
-# here, specifically so manual commands run through this wrapper are never
-# accidentally blocked by it.
+# Deliberately does NOT set OPENCLAW_CONFIG_READONLY, and never inherits it:
+# that flag, when enabled, lives only on the unit's own Environment= line.
 #
 # Usage: sudo openclaw-admin <openclaw-subcommand-and-args...>
-#   sudo systemctl stop openclaw && sudo openclaw-admin doctor --fix && sudo systemctl start openclaw
 #   sudo openclaw-admin status --deep
+#   sudo openclaw-admin pairing approve <CODE>
+#   sudo systemctl --user -M {{ openclaw_setup_user }}@ stop {{ openclaw_setup_systemd_unit }} \
+#     && sudo openclaw-admin doctor --fix \
+#     && sudo systemctl --user -M {{ openclaw_setup_user }}@ start {{ openclaw_setup_systemd_unit }}
 
 set -euo pipefail
 
 if [[ ${EUID} -ne 0 ]]; then
-  echo "openclaw-admin must be run as root (sudo openclaw-admin ...) — it reads root-only /etc/openclaw/secrets.env" >&2
+  echo "openclaw-admin must be run as root (sudo openclaw-admin ...) — it starts a unit in the {{ openclaw_setup_user }} user manager" >&2
   exit 1
 fi
 
-exec systemd-run --quiet --pipe --wait --same-dir \
-  --uid={{ openclaw_setup_user }} \
+exec systemd-run --user --machine={{ openclaw_setup_user }}@ \
+  --quiet --pipe --wait --collect \
+  --working-directory={{ openclaw_setup_home }} \
   --property=EnvironmentFile=/etc/openclaw/secrets.env \
-  --setenv=HOME={{ openclaw_setup_home }} \
+  --setenv=PATH={{ openclaw_setup_npm_prefix }}/bin:/usr/local/bin:/usr/bin:/bin \
   --setenv=OPENCLAW_SERVICE_REPAIR_POLICY=external \
-  openclaw "$@"
+  {{ openclaw_setup_npm_prefix }}/bin/openclaw "$@"

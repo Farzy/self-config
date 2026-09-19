@@ -354,7 +354,7 @@ LocalForward localhost:18789 localhost:18789
 ```
 *Note*: If port `18789` is already bound by another active SSH session, SSH will display `bind [127.0.0.1]:18789: Address already in use`. This warning is harmless.
 
-*Tip*: When requesting the Dashboard URL via CLI on headless Linux servers, always pass `--no-open` to prevent browser launcher timeout delays: `ssh claw "sudo -u claw openclaw dashboard --no-open"`.
+*Tip*: When requesting the Dashboard URL via CLI on headless Linux servers, always pass `--no-open` to prevent browser launcher timeout delays: `ssh claw "sudo openclaw-admin dashboard --no-open"`.
 
 
 ### Deployment with Ansible
@@ -373,7 +373,10 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 2. Pair your personal Signal DM:
    - Send any direct message to the bot's Signal account.
    - Note the 6-character pairing code returned by the bot.
-   - Approve pairing on the server: `sudo -u claw openclaw pairing approve <PAIRING_CODE>`
+   - Approve pairing on the server: `sudo openclaw-admin pairing approve <PAIRING_CODE>`
+
+OpenClaw runs as the systemd user unit `openclaw-gateway.service` of `claw` and can update itself when asked;
+run every `openclaw` CLI command through `sudo openclaw-admin`. See [docs/openclaw.md](docs/openclaw.md) §4.1 and §4.4.
 
 
 ## References

@@ -1,0 +1,124 @@
+# {{ ansible_managed }}
+#
+# OpenClaw gateway as a systemd *user* unit of `{{ openclaw_setup_user }}`
+# (lingering, so it runs without a login session). This is the service shape
+# OpenClaw's own updater drives: it stops, swaps and restarts the gateway through
+# `systemctl --user`, and refuses to manage system-scope units at all. See
+# docs/openclaw.md §4.4.
+#
+# Deployed root-owned inside the user's unit directory on purpose: OpenClaw
+# treats a unit it does not own as a "sealed" definition — it still restarts and
+# health-checks the service during updates, but never rewrites this file. Ansible
+# stays the only author of the service definition.
+#
+# The [Unit] and restart settings mirror what `openclaw gateway install`
+# generates (buildSystemdUnit), so update verification sees a familiar unit.
+
+[Unit]
+Description=OpenClaw Gateway
+After=network-online.target
+Wants=network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+ExecStart=/usr/bin/node {{ openclaw_setup_npm_prefix }}/lib/node_modules/openclaw/dist/index.js gateway --port {{ openclaw_setup_port }}
+Restart=always
+RestartSec=5
+RestartPreventExitStatus=78
+TimeoutStopSec=330
+TimeoutStartSec=30
+SuccessExitStatus=0 143
+OOMPolicy=continue
+KillMode=mixed
+WorkingDirectory={{ openclaw_setup_home }}
+
+# Secrets and runtime settings. Root-owned, readable by the {{ openclaw_setup_group }}
+# group only: a user manager runs as {{ openclaw_setup_user }} and reads this
+# file itself (unlike a system unit, where PID 1 read it as root). See
+# docs/openclaw.md §4.1.
+EnvironmentFile=/etc/openclaw/secrets.env
+
+# The claw-owned npm prefix first, so the agent's own `openclaw` calls resolve
+# to the installation this unit runs.
+Environment=PATH={{ openclaw_setup_npm_prefix }}/bin:/usr/local/bin:/usr/bin:/bin
+# Not PrivateTmp's /tmp, which systemd deletes when this service stops — exactly
+# what the update helper does mid-update while its files live in os.tmpdir().
+Environment=TMPDIR={{ openclaw_setup_tmp_dir }}
+Environment=OPENCLAW_GATEWAY_PORT={{ openclaw_setup_port }}
+# Service identity markers `openclaw gateway install` writes. They are what lets
+# the running gateway recognise itself as a managed service and hand
+# `update.run` off to the detached updater instead of refusing it.
+Environment=OPENCLAW_SYSTEMD_UNIT={{ openclaw_setup_systemd_unit }}
+Environment=OPENCLAW_SERVICE_MARKER=openclaw
+Environment=OPENCLAW_SERVICE_KIND=gateway
+{% if openclaw_setup_config_readonly | bool %}
+# Blocks OpenClaw's own config writers (setup, doctor --fix, plugin
+# install/update/enable/disable, `models auth paste-token`) for this process,
+# and with them every self-update. Deliberately not in secrets.env, which
+# openclaw-admin also loads: manual admin commands must NOT inherit this. See
+# docs/openclaw.md §4.3.
+Environment=OPENCLAW_CONFIG_READONLY=1
+{% endif %}
+
+# --- SECURITY HARDENING & SANDBOXING ---
+#
+# In a user unit, every namespace-based setting below (ProtectSystem, PrivateTmp,
+# ProtectKernelTunables, ...) is SILENTLY IGNORED unless PrivateUsers=true is also
+# set: an unprivileged user manager cannot create mount namespaces otherwise.
+# Verified on claw (systemd 252): without it the root file system stays
+# writable and the journal logs "namespace setup is prohibited ... ignoring".
+# Do not remove PrivateUsers without re-checking /proc/<pid>/mountinfo.
+
+# Run in a user namespace mapping only {{ openclaw_setup_user }}; required for the
+# settings below to take effect. Other users' files appear as nobody:nogroup, but
+# access checks are unchanged (journal reads through systemd-journal still work).
+PrivateUsers=true
+
+# Mount the whole file system read-only, including /usr and /etc
+ProtectSystem=strict
+
+# Allow writes to OpenClaw's home directory only: state, config, workspace, the
+# npm prefix the updater swaps, and the Node compile cache all live there
+ReadWritePaths={{ openclaw_setup_home }}
+
+# Keep ProtectHome off so the service can manage its own files under {{ openclaw_setup_home }}
+ProtectHome=false
+
+# Mount a private, isolated /tmp and /var/tmp namespace to prevent multi-tenant token leakage.
+# Kept for tools that hard-code /tmp; OpenClaw itself uses TMPDIR above.
+PrivateTmp=true
+
+# Set MemoryDenyWriteExecute to false because Node.js V8 engine requires W^X JIT compilation memory allocation
+MemoryDenyWriteExecute=false
+
+# Prevent child processes from gaining elevated privileges via setuid binaries (user claw is unprivileged and must never possess sudo access)
+NoNewPrivileges=true
+
+# Restrict creation or execution of SUID/SGID binaries by child processes
+RestrictSUIDSGID=true
+
+# Prevent modification of system hostname or domain name by isolating UTS namespace
+ProtectHostname=true
+
+# Prevent switching execution domain or architecture personality
+LockPersonality=true
+
+# Protect kernel variables (/proc/sys, /sys, /proc/sysrq-trigger) from modification
+ProtectKernelTunables=true
+
+# Mount control group hierarchies (/sys/fs/cgroup) as read-only
+ProtectControlGroups=true
+
+# Prevent the service from acquiring realtime scheduling priorities to avoid CPU starvation attacks
+RestrictRealtime=true
+
+# Not set, because a user manager cannot apply them (the unit fails with
+# status=218/CAPABILITIES): CapabilityBoundingSet=, AmbientCapabilities=,
+# ProtectKernelModules=, ProtectClock=, ProtectKernelLogs=. All of them work by
+# dropping capabilities, which an unprivileged {{ openclaw_setup_user }} process
+# does not hold in the first place, and NoNewPrivileges=true above already stops
+# it from gaining any through setuid or file-capability binaries.
+
+[Install]
+WantedBy=default.target

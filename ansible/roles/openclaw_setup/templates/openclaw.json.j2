@@ -1,4 +1,14 @@
+{#- Credentials are env SecretRefs resolved from /etc/openclaw/secrets.env, never
+    plaintext here: this file lives in the agent-readable state dir, and OpenClaw's
+    updater and Doctor copy it into .bak and rollback snapshots. Verify with
+    `sudo openclaw-admin secrets audit --check`. See docs/openclaw.md §4.1. #}
 {
+  "update": {
+    "channel": "{{ openclaw_setup_update_channel }}",
+    "auto": {
+      "enabled": false
+    }
+  },
   "gateway": {
     "mode": "local",
     "port": {{ openclaw_setup_port }},
@@ -11,7 +21,7 @@
     },
     "auth": {
       "mode": "token",
-      "token": "{{ openclaw_gateway_token }}"
+      "token": {"source": "env", "provider": "default", "id": "OPENCLAW_GATEWAY_TOKEN"}
     }
   },
   "commands": {
@@ -102,7 +112,7 @@
     }{% if openclaw_setup_telegram_enabled and openclaw_telegram_bot_token is defined %},
     "telegram": {
       "enabled": true,
-      "botToken": "{{ openclaw_telegram_bot_token }}",
+      "botToken": {"source": "env", "provider": "default", "id": "TELEGRAM_BOT_TOKEN"},
       "dmPolicy": "pairing",
       "allowFrom": {{ openclaw_setup_telegram_allow_from | to_json }},
       "threadBindings": {
@@ -118,7 +128,7 @@
       "scaleway": {
         "api": "{{ openclaw_setup_scaleway_api }}",
         "baseUrl": "https://api.scaleway.ai/{{ openclaw_scaleway_project_id | default(openclaw_setup_scaleway_project_id) }}/v1",
-        "apiKey": "{{ openclaw_scaleway_api_key | default(openclaw_setup_scaleway_api_key) | default('') }}",
+        "apiKey": {"source": "env", "provider": "default", "id": "SCALEWAY_API_KEY"},
         "models": {{ openclaw_setup_scaleway_models | to_json }}
       }
     }
