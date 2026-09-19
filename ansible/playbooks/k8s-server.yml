@@ -18,6 +18,7 @@
       tags: microk8s
       when: master_setup_install_microk8s
   vars:
+    master_setup_unattended_third_party: true
     default_user: debian
     # Previously the docker role hardcoded `{{ user_owner }}`, which is defined
     # nowhere in this repository — so its final task failed with

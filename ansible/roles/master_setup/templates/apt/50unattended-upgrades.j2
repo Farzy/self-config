@@ -1,3 +1,6 @@
+// {{ ansible_managed }}
+// Rendered from roles/master_setup/templates/apt/50unattended-upgrades.j2.
+//
 // Unattended-Upgrade::Origins-Pattern controls which packages are
 // upgraded.
 //
@@ -40,6 +43,15 @@ Unattended-Upgrade::Origins-Pattern {
 //      "o=Debian,a=stable-updates";
 //      "o=Debian,a=proposed-updates";
 //      "o=Debian Backports,a=${distro_codename}-backports,l=Debian Backports";
+{% if master_setup_unattended_third_party %}
+
+        // Third-party repositories (master_setup_unattended_third_party).
+        // Debian's own origins above only cover the distribution, so Docker,
+        // NodeSource, GitHub CLI... would otherwise never be upgraded.
+{% for pattern in master_setup_unattended_third_party_origins %}
+        "{{ pattern }}";
+{% endfor %}
+{% endif %}
 };
 
 // Python regular expressions, matching packages to exclude from upgrading
@@ -112,16 +124,16 @@ Unattended-Upgrade::Package-Blacklist {
 
 // Automatically reboot *WITHOUT CONFIRMATION* if
 //  the file /var/run/reboot-required is found after the upgrade
-//Unattended-Upgrade::Automatic-Reboot "false";
+Unattended-Upgrade::Automatic-Reboot "{{ master_setup_unattended_auto_reboot | bool | lower }}";
 
 // Automatically reboot even if there are users currently logged in
 // when Unattended-Upgrade::Automatic-Reboot is set to true
-//Unattended-Upgrade::Automatic-Reboot-WithUsers "true";
+Unattended-Upgrade::Automatic-Reboot-WithUsers "{{ master_setup_unattended_reboot_with_users | bool | lower }}";
 
 // If automatic reboot is enabled and needed, reboot at the specific
 // time instead of immediately
 //  Default: "now"
-//Unattended-Upgrade::Automatic-Reboot-Time "02:00";
+Unattended-Upgrade::Automatic-Reboot-Time "{{ master_setup_unattended_reboot_time }}";
 
 // Use apt bandwidth limit feature, this example limits the download
 // speed to 70kb/sec

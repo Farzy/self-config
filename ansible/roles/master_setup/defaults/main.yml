@@ -91,6 +91,37 @@ master_setup_user_dotfiles:
 
 master_setup_install_microk8s: false
 
+# --- unattended-upgrades (rendered to /etc/apt/apt.conf.d/50unattended-upgrades) ---
+
+# Also auto-upgrade packages from third-party APT repositories (Docker,
+# NodeSource, GitHub CLI...), not just Debian's own. Off by default because an
+# unattended Docker upgrade restarts dockerd and, without `live-restore`, every
+# container on the host; every playbook in this repository turns it on.
+master_setup_unattended_third_party: false
+
+# `Origins-Pattern` entries added when the flag above is on. Values come from
+# the `Origin:`/`Label:` fields of each repository's InRelease file. A pattern
+# that matches nothing on a given host is harmless, so this one list serves
+# every server. NodeSource pins the major stream in its repository URL
+# (node_26.x), so this never crosses a Node major version.
+master_setup_unattended_third_party_origins:
+  - "origin=Docker,label=Docker CE"
+  - "origin=. nodistro,label=. nodistro"
+  - "origin=gh,label=gh"
+
+# Reboot automatically when an upgrade leaves /var/run/reboot-required behind
+# (typically a new kernel). Without it the fix is installed but not running.
+master_setup_unattended_auto_reboot: true
+
+# When to reboot, in the host's local time (UTC on the servers). The
+# apt-daily-upgrade timer fires around 06:00-07:00 UTC, so "03:30" means the
+# reboot lands at the next 03:30 rather than in the middle of the day.
+master_setup_unattended_reboot_time: "03:30"
+
+# Reboot even if someone is logged in. False defers the reboot while an SSH
+# session is open, so a deliberate maintenance session is never cut short.
+master_setup_unattended_reboot_with_users: false
+
 # Public SSH keys authorised for the unattended CI deploy account (the account
 # GitHub Actions connects as, i.e. the host's `ansible_user`). Public keys are
 # not secrets, so these live in plain text in the per-host vars files.

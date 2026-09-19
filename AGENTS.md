@@ -62,6 +62,17 @@ one file may still be a no-op depending on which laptop it runs on.
 `system_profiler`, `when: is_macos`) — on a Debian/WSL2 laptop both booleans
 evaluate to false and every gated task is silently skipped.
 
+### Unattended upgrades (`master_setup`)
+
+`/etc/apt/apt.conf.d/50unattended-upgrades` is rendered from
+`roles/master_setup/templates/apt/50unattended-upgrades.j2` (it is deliberately
+not in `files/etcfiles/`, which is rsynced verbatim). It is driven by
+`master_setup_unattended_*` variables documented in the role's
+`defaults/main.yml`: `..._third_party` (default `false`, set to `true` in every
+playbook) adds Docker/NodeSource/GitHub CLI origins, and `..._auto_reboot`
+(default `true`, `..._reboot_time: "03:30"`, `..._reboot_with_users: false`)
+reboots after upgrades that leave `/var/run/reboot-required`.
+
 ### Vault-encrypted whole-file AI assistant configs
 
 `roles/laptop_setup/files/ai/{CLAUDE,AGENTS}_{personal,professional}.md` are

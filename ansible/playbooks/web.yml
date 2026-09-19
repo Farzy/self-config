@@ -22,6 +22,8 @@
         group: adm
         mode: '02775'
       tags: www
+  vars:
+    master_setup_unattended_third_party: true
   vars_files:
     - ../vars/web.yml
 

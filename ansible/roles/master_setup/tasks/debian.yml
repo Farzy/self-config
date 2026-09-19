@@ -49,7 +49,8 @@
 # GitHub runner), so a five-item loop spent ~10s doing nothing.
 #
 # Faithful conversion: files/etcfiles/ mirrors /etc/ exactly, contains precisely
-# the five files the old loop listed, and every one of them is 0644 root:root —
+# the files the old loop listed (minus 50unattended-upgrades, now a template, see
+# below), and every one of them is 0644 root:root —
 # so `perms: true` reproduces the old `mode` and rsync running as root under
 # sudo reproduces the old `owner`/`group`. There is no `--delete`, so nothing
 # else in /etc is touched.
@@ -76,7 +77,7 @@
     # which rejects it outright ("--chmod=F644: invalid argument"), and this
     # role is run from the laptop as well as from CI.
     #
-    # Dropping perms costs nothing real: the five files already exist at 0644 on
+    # Dropping perms costs nothing real: the files already exist at 0644 on
     # every managed host, rsync gives newly created files the source mode
     # (0644), and it leaves the mode of existing files untouched.
     checksum: true
@@ -92,6 +93,17 @@
   # synchronize runs rsync on the controller, so play-level become would
   # escalate on the wrong side; rsync_path handles the remote side.
   become: false
+  tags: configuration
+
+# A template rather than part of etcfiles/ because the origins and reboot
+# policy depend on the master_setup_unattended_* variables.
+- name: Install unattended-upgrades configuration
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/apt/50unattended-upgrades.j2"
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    owner: root
+    group: root
+    mode: '0644'
   tags: configuration
 
 - name: Install global gitconfig for all users

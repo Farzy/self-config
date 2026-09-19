@@ -18,6 +18,7 @@
       tags: iterm2
 
   vars:
+    master_setup_unattended_third_party: true
     iterm2_integration_users:
       - { name: "root", home_path: "/root", owner: "root", group: "root" }
       - { name: "debian", home_path: "/home/debian", owner: "debian", group: "debian" }
