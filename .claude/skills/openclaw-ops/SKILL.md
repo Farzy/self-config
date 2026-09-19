@@ -49,6 +49,9 @@ run.
 ## Where things live
 
 - `ansible/roles/openclaw_setup/`
+  - `tasks/main.yml` — imports one file per concern (`user.yml`, `packages.yml`, `signal-cli.yml`, `gog.yml`, `secrets-env.yml`, `install.yml`, `credential-stores.yml`, `config.yml`, `service.yml`, `nginx.yml`, `gateway.yml`, `skills.yml`); edit the file that owns the concern, not `main.yml`.
+  - `vars/main.yml` — internal constants, including how the role invokes the OpenClaw CLI on the host.
+  - `files/secrets-plan.json` — `openclaw secrets apply` plan (references only).
   - `defaults/main.yml` — all `openclaw_setup_*` variables (model, port, plugins toggles, memory search, signal/telegram allowlists, version pin).
   - `templates/openclaw.json.j2` — renders `~/.openclaw/openclaw.json` on the host. Plugin toggles live under `plugins.entries.<name>.enabled`; skill toggles under `skills.entries.<name>.enabled`.
   - `templates/openclaw-gateway.service.j2` (systemd *user* unit, root-owned in `~claw/.config/systemd/user/`), `templates/openclaw-admin.j2`, `templates/nginx.conf.j2`, `templates/secrets.env.j2`.

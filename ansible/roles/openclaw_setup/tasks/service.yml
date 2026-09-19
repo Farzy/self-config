@@ -1,0 +1,89 @@
+---
+# The openclaw-admin wrapper, the systemd *user* unit, the one-shot migration off
+# the old system unit, and host hardening. See docs/openclaw.md §4.4.
+
+- name: Deploy openclaw-admin wrapper for manual admin commands needing secrets.env
+  ansible.builtin.template:
+    src: openclaw-admin.j2
+    dest: /usr/local/bin/openclaw-admin
+    owner: root
+    group: root
+    mode: '0755'
+    validate: bash -n %s
+
+# Root-owned inside a claw-owned directory on purpose: OpenClaw reads the unit
+# from this exact path, and treats one it does not own as a sealed definition —
+# still restarted and verified during updates, never rewritten by OpenClaw.
+# Advisory only against the openclaw user itself, who controls its own user
+# manager (see the template header); Ansible re-asserts it on every converge.
+- name: Deploy the OpenClaw gateway systemd user unit
+  ansible.builtin.template:
+    src: openclaw-gateway.service.j2
+    dest: "{{ openclaw_setup_home }}/.config/systemd/user/{{ openclaw_setup_systemd_unit }}"
+    owner: root
+    group: root
+    mode: '0644'
+  register: openclaw_setup_user_unit_result
+  notify: Restart openclaw
+
+# A --check run against a host that still runs the legacy system unit does not
+# write the unit above, and systemctl then fails with "Could not find the
+# requested service" instead of reporting a pending change. The user-scope tasks
+# and handlers key off this to stay check-mode safe for the drift check.
+- name: Check whether the OpenClaw gateway user unit is in place
+  ansible.builtin.stat:
+    path: "{{ openclaw_setup_home }}/.config/systemd/user/{{ openclaw_setup_systemd_unit }}"
+  register: openclaw_setup_user_unit_stat
+
+# --- One-shot migration: system unit -> user unit ---------------------------
+#
+# The gateway used to run as /etc/systemd/system/openclaw.service. It must be
+# gone before the user unit starts: both bind the same port, and OpenClaw
+# refuses to activate its user unit while a system unit named `openclaw.service`
+# exists, so leaving it would also break every later self-update.
+- name: Check for the legacy OpenClaw system unit
+  ansible.builtin.stat:
+    path: /etc/systemd/system/openclaw.service
+  register: openclaw_setup_legacy_unit_stat
+
+- name: Stop and disable the legacy OpenClaw system unit
+  ansible.builtin.systemd_service:
+    name: openclaw.service
+    state: stopped
+    enabled: false
+  when: openclaw_setup_legacy_unit_stat.stat.exists
+
+- name: Remove the legacy OpenClaw system unit
+  ansible.builtin.file:
+    path: /etc/systemd/system/openclaw.service
+    state: absent
+
+# Explicit tasks rather than handlers: both managers must know the new layout
+# before the user unit starts further down, while handlers — the gateway
+# restart in particular — must keep running at the end of the play, after any
+# upgrade, not in the middle of it.
+- name: Make the system manager forget the legacy unit
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: openclaw_setup_legacy_unit_stat.stat.exists
+
+- name: Make the openclaw user manager load the gateway unit
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ openclaw_setup_uid }}"
+  when:
+    - openclaw_setup_user_unit_result is changed
+    - openclaw_setup_user_unit_stat.stat.exists
+# --- End of one-shot migration ----------------------------------------------
+
+- name: Restrict ptrace scope to admin-only (YAMA security hardening)
+  ansible.posix.sysctl:
+    name: kernel.yama.ptrace_scope
+    value: "2"
+    sysctl_set: true
+    state: present
+    reload: true

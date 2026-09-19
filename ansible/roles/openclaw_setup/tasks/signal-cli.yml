@@ -1,0 +1,50 @@
+---
+# signal-cli: pinned native build under /opt, symlinked into /usr/local/bin.
+
+- name: "Check if signal-cli is installed: {{ openclaw_setup_signal_cli_version }}"
+  ansible.builtin.stat:
+    path: "/opt/signal-cli-{{ openclaw_setup_signal_cli_version }}/signal-cli"
+  register: openclaw_setup_signal_cli_stat
+
+- name: Download signal-cli native binary
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/AsamK/signal-cli/releases/download/v{{
+      openclaw_setup_signal_cli_version }}/signal-cli-{{
+      openclaw_setup_signal_cli_version }}-Linux-native.tar.gz
+    dest: "/tmp/signal-cli-{{ openclaw_setup_signal_cli_version }}-Linux-native.tar.gz"
+    mode: '0644'
+  when: not openclaw_setup_signal_cli_stat.stat.exists
+
+- name: Create signal-cli install directory
+  ansible.builtin.file:
+    path: "/opt/signal-cli-{{ openclaw_setup_signal_cli_version }}"
+    state: directory
+    mode: '0755'
+  when: not openclaw_setup_signal_cli_stat.stat.exists
+
+- name: Extract signal-cli
+  ansible.builtin.unarchive:
+    src: "/tmp/signal-cli-{{ openclaw_setup_signal_cli_version }}-Linux-native.tar.gz"
+    dest: "/opt/signal-cli-{{ openclaw_setup_signal_cli_version }}"
+    remote_src: true
+  when: not openclaw_setup_signal_cli_stat.stat.exists
+  notify: Restart openclaw
+
+- name: Remove downloaded signal-cli archive
+  ansible.builtin.file:
+    path: "/tmp/signal-cli-{{ openclaw_setup_signal_cli_version }}-Linux-native.tar.gz"
+    state: absent
+  when: not openclaw_setup_signal_cli_stat.stat.exists
+
+- name: Remove legacy unversioned signal-cli binary
+  ansible.builtin.file:
+    path: /opt/signal-cli
+    state: absent
+
+- name: Symlink signal-cli to /usr/local/bin
+  ansible.builtin.file:
+    src: "/opt/signal-cli-{{ openclaw_setup_signal_cli_version }}/signal-cli"
+    dest: "{{ openclaw_setup_signal_cli_path }}"
+    state: link
+  notify: Restart openclaw

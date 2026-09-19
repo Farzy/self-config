@@ -1,0 +1,36 @@
+---
+# TLS certificate and the nginx reverse proxy in front of the gateway.
+
+- name: Check if SSL certificate exists
+  ansible.builtin.stat:
+
+    path: "/etc/letsencrypt/live/{{ openclaw_setup_domain }}/fullchain.pem"
+  register: openclaw_setup_cert_stat
+
+- name: Generate SSL certificate with Certbot
+  ansible.builtin.command:
+    cmd: "certbot --nginx -d {{ openclaw_setup_domain }} --non-interactive --agree-tos -m {{ openclaw_setup_email }}"
+  when: not openclaw_setup_cert_stat.stat.exists
+  changed_when: true
+
+- name: Deploy Nginx configuration
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: "/etc/nginx/sites-available/{{ openclaw_setup_domain }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload nginx
+
+- name: Enable Nginx configuration
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ openclaw_setup_domain }}"
+    dest: "/etc/nginx/sites-enabled/{{ openclaw_setup_domain }}"
+    state: link
+  notify: Reload nginx
+
+- name: Ensure Nginx is started and enabled
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
