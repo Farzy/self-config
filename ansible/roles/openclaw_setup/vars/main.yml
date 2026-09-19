@@ -1,0 +1,25 @@
+---
+# Internal constants of the openclaw_setup role — not configuration, so they
+# live here rather than in defaults/ and are not meant to be overridden.
+
+# `openclaw` as the openclaw user, inside its systemd user manager and with the
+# gateway's environment — the same invocation openclaw-admin uses. Running in
+# the user's manager (not via sudo) gives the CLI the runtime dir, user bus and
+# service environment it expects; EnvironmentFile= also lets the env SecretRefs
+# in openclaw.json and the auth store resolve. Callers append the subcommand.
+openclaw_setup_cli_argv:
+  - systemd-run
+  - --user
+  - "--machine={{ openclaw_setup_user }}@"
+  - --quiet
+  - --pipe
+  - --wait
+  - --collect
+  - --property=EnvironmentFile=/etc/openclaw/secrets.env
+  - "--working-directory={{ openclaw_setup_home }}"
+  - "--setenv=PATH={{ openclaw_setup_npm_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
+  - "{{ openclaw_setup_npm_prefix }}/bin/openclaw"
+
+# `openclaw secrets apply` plan (references only, no secret values) deployed from
+# files/secrets-plan.json. See docs/openclaw.md §4.1.
+openclaw_setup_secrets_plan_path: /etc/openclaw/secrets-plan.json

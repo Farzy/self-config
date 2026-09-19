@@ -337,15 +337,25 @@
     state: present
     update_cache: true
 
-- name: Authenticate GitHub CLI (gh) for claw user
-  ansible.builtin.shell:
-    cmd: "set -o pipefail; echo '{{ openclaw_github_pat }}' | gh auth login --with-token"
-    executable: /bin/bash
-  become: true
-  become_user: "{{ openclaw_setup_user }}"
-  args:
-    creates: "{{ openclaw_setup_home }}/.config/gh/hosts.yml"
-  when: openclaw_github_pat is defined
+# No `gh auth login`: that stored a second plaintext copy of the PAT in
+# ~/.config/gh/hosts.yml. gh — and git, through its `gh auth git-credential`
+# helper (.gitconfig) — reads GH_TOKEN from the gateway environment instead
+# (secrets.env.j2). Interactive `claw` shells have no GH_TOKEN; use
+# `sudo openclaw-admin` or export it for the session. See docs/openclaw.md §6.3.
+- name: Find a stored gh login holding the PAT in plaintext
+  ansible.builtin.find:
+    paths: "{{ openclaw_setup_home }}/.config/gh"
+    patterns: hosts.yml
+    contains: '^\s*oauth_token:'
+  register: openclaw_setup_gh_stored_login
+
+- name: Remove the stored gh login
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ openclaw_setup_gh_stored_login.files }}"
+  loop_control:
+    label: "{{ item.path }}"
 
 - name: Check if uv is installed
   ansible.builtin.stat:
@@ -705,23 +715,6 @@
     - not ansible_check_mode
     - openclaw_setup_installed_version | length > 0
     - openclaw_setup_installed_version is version(openclaw_setup_version, '<')
-  vars:
-    # `openclaw` as the openclaw user, inside its systemd user manager and with
-    # the gateway's environment — the same invocation openclaw-admin uses.
-    # Running in the user's manager (not via sudo) gives the CLI the runtime
-    # dir, user bus and service environment the updater expects.
-    openclaw_setup_cli_argv:
-      - systemd-run
-      - --user
-      - "--machine={{ openclaw_setup_user }}@"
-      - --quiet
-      - --pipe
-      - --wait
-      - --collect
-      - --property=EnvironmentFile=/etc/openclaw/secrets.env
-      - "--working-directory={{ openclaw_setup_home }}"
-      - "--setenv=PATH={{ openclaw_setup_npm_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
-      - "{{ openclaw_setup_npm_prefix }}/bin/openclaw"
   block:
     # The run ledger's latest entry before this update starts, so the wait
     # below can tell this update's run apart from an older one.
@@ -783,6 +776,166 @@
     name: "@anthropic-ai/claude-code"
     global: true
   when: openclaw_setup_claude_cli_enabled
+
+# --- OpenClaw credential stores: references only ---------------------------
+#
+# openclaw.json only carries env SecretRefs (openclaw.json.j2), but OpenClaw
+# keeps its own credential stores — auth profiles in SQLite, the generated
+# models.json — that Ansible does not render. `openclaw secrets audit` is the
+# gate: every converge (and every --check drift run) audits them, a finding is
+# fixed the way OpenClaw documents, and the audit must then come back clean.
+# See docs/openclaw.md §4.1.
+#
+# Deliberately before openclaw.json.j2 is rendered: `models auth logout` also
+# drops the profile from auth.profiles in openclaw.json, and the template run
+# below restores that pointer in the same converge.
+- name: Keep OpenClaw's credential stores reference-only
+  when: openclaw_setup_installed_version | length > 0
+  block:
+    - name: Deploy the OpenClaw secrets apply plan
+      ansible.builtin.copy:
+        src: secrets-plan.json
+        dest: "{{ openclaw_setup_secrets_plan_path }}"
+        owner: root
+        group: "{{ openclaw_setup_group }}"
+        mode: '0640'
+
+    # Read-only, so it also runs in --check: that is what makes leftover
+    # plaintext show up in the drift check. A non-zero exit (2: unresolved
+    # refs) means a broken SecretRef — fail rather than "fix" anything.
+    - name: Audit OpenClaw's credential stores
+      ansible.builtin.command:
+        argv: "{{ openclaw_setup_cli_argv + ['secrets', 'audit', '--json'] }}"
+      register: openclaw_setup_secrets_audit
+      changed_when: false
+      check_mode: false
+
+    - name: List OpenClaw auth profiles
+      ansible.builtin.command:
+        argv: "{{ openclaw_setup_cli_argv + ['models', 'auth', 'list', '--json'] }}"
+      register: openclaw_setup_auth_profiles
+      changed_when: false
+      check_mode: false
+
+    - name: Work out what the credential stores need
+      vars:
+        openclaw_setup_audit_findings: "{{ (openclaw_setup_secrets_audit.stdout | from_json).findings | default([]) }}"
+        openclaw_setup_profiles_raw: "{{ openclaw_setup_auth_profiles.stdout | from_json }}"
+      ansible.builtin.set_fact:
+        # Profiles holding a plaintext key or token.
+        openclaw_setup_plaintext_profiles: >-
+          {{ openclaw_setup_audit_findings
+             | selectattr('code', 'equalto', 'PLAINTEXT_FOUND')
+             | selectattr('profileId', 'defined')
+             | map(attribute='profileId') | unique | list }}
+        # `models auth list --json` is {agentId, profiles: [{id, provider, ...}], ...}.
+        openclaw_setup_auth_profile_ids: >-
+          {{ openclaw_setup_profiles_raw.profiles | default([]) | map(attribute='id') | list }}
+        # The generated model catalog, when it still holds a plaintext key.
+        openclaw_setup_models_json_residue: >-
+          {{ openclaw_setup_audit_findings
+             | selectattr('code', 'equalto', 'PLAINTEXT_FOUND')
+             | selectattr('file', 'search', '/agent/models[.]json$')
+             | map(attribute='file') | unique | list }}
+
+    # Also removes profiles this repo does not manage: nothing in
+    # openclaw.json.j2 uses the openai provider. Keep a provider's profile only
+    # once its credential is in the vault and referenced from secrets.env.
+    - name: Remove auth profiles holding plaintext or not managed here
+      ansible.builtin.command:
+        argv: "{{ openclaw_setup_cli_argv + ['models', 'auth', 'logout', item, '--yes'] }}"
+      loop: >-
+        {{ (openclaw_setup_plaintext_profiles
+            + (openclaw_setup_auth_profile_ids | select('in', ['openai:default']) | list))
+           | unique }}
+      changed_when: true
+      notify: Restart openclaw
+
+    # The claude-cli runtime needs an anthropic auth profile (docs §6.4); it is
+    # recreated as a tokenRef to CLAUDE_CODE_OAUTH_TOKEN, never as a pasted
+    # token. Must run after the logout above: logout removes a profile from
+    # every store, including an agent-local one this plan creates.
+    - name: Recreate the Claude auth profile as a reference to CLAUDE_CODE_OAUTH_TOKEN
+      ansible.builtin.command:
+        argv: "{{ openclaw_setup_cli_argv + ['secrets', 'apply', '--from', openclaw_setup_secrets_plan_path] }}"
+      when:
+        - openclaw_setup_claude_cli_enabled
+        - >-
+          'anthropic:manual' not in openclaw_setup_auth_profile_ids or
+          'anthropic:manual' in openclaw_setup_plaintext_profiles
+      changed_when: true
+      notify: Restart openclaw
+
+    # A generated cache, last written before openclaw.json switched to
+    # SecretRefs; the gateway regenerates it with non-secret markers.
+    - name: Remove the generated model catalog still holding a plaintext key
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ openclaw_setup_models_json_residue }}"
+      notify: Restart openclaw
+
+    - name: Re-audit OpenClaw's credential stores
+      ansible.builtin.command:
+        argv: "{{ openclaw_setup_cli_argv + ['secrets', 'audit', '--check', '--json'] }}"
+      register: openclaw_setup_secrets_reaudit
+      changed_when: false
+      failed_when: false
+      when: not ansible_check_mode
+
+    - name: Assert OpenClaw's credential stores are clean
+      vars:
+        openclaw_setup_reaudit_findings: "{{ (openclaw_setup_secrets_reaudit.stdout | from_json).findings | default([]) }}"
+      ansible.builtin.assert:
+        that:
+          - openclaw_setup_secrets_reaudit.rc == 0
+        fail_msg: >-
+          `openclaw secrets audit --check` still reports
+          {{ openclaw_setup_reaudit_findings | map(attribute='code') | join(', ') }} at
+          {{ openclaw_setup_reaudit_findings | map(attribute='jsonPath') | join(', ') }}.
+          Inspect with `sudo openclaw-admin secrets audit` on the host. See docs/openclaw.md §4.1.
+      when: not ansible_check_mode
+
+    - name: Report pending credential-store cleanup
+      ansible.builtin.debug:
+        msg: >-
+          Would clean {{ (openclaw_setup_secrets_audit.stdout | from_json).findings | default([])
+                         | map(attribute='jsonPath') | join(', ') }}
+      changed_when: true
+      when:
+        - ansible_check_mode
+        - (openclaw_setup_secrets_audit.stdout | from_json).status != 'clean'
+
+# Earlier openclaw.json copies from before the SecretRef switch — Doctor and
+# updater backups — still hold the gateway token, Telegram bot token and
+# Scaleway key as plaintext. Matched on structure (a credential field holding a
+# JSON string rather than a SecretRef object), so no value appears here; copies
+# written since hold references and are left alone.
+- name: Find old openclaw.json copies holding plaintext credentials
+  ansible.builtin.find:
+    paths: "{{ openclaw_setup_home }}/.openclaw"
+    patterns: "openclaw.json.bak*,openclaw.json.clobbered*"
+    contains: '"(token|botToken|apiKey)"\s*:\s*"'
+    # re.search over the whole (small) file; line-by-line mode uses re.match,
+    # which is anchored and never matches an indented JSON key.
+    read_whole_file: true
+  register: openclaw_setup_plaintext_config_copies
+
+- name: Remove old openclaw.json copies holding plaintext credentials
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ openclaw_setup_plaintext_config_copies.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+# The agent no longer gets the vault password (secrets.env.j2). This stray file
+# was not even the current password and decrypts none of the 35 distinct vault
+# values in this repository's history (checked 2026-09-19): nothing needs it.
+- name: Remove the stray vault key file from the openclaw user's home
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_home }}/.ansible-personal-key"
+    state: absent
 
 - name: Create OpenClaw config directory
   ansible.builtin.file:

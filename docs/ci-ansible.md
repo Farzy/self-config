@@ -310,36 +310,16 @@ Workflow-specific linters, both wired into `pre-commit`:
 ## 9. Controller-side paths: why the vault password lives at `~/.ansible-personal-key`
 
 CI writes the vault password to `~/.ansible-personal-key` on the runner rather
-than to a temporary file, because that exact path is a hard dependency of the
-Ansible tree, not just a config default.
+than to a temporary file, because that path is this repository's convention:
+`ansible.cfg`'s `vault_password_file` and `vault_identity_list` both name it,
+as do README.md, AGENTS.md and the vault commands in the docs. Putting the file
+there lets all of them resolve with no environment overrides at all.
 
-`openclaw_setup/templates/secrets.env.j2` reads it directly on the controller:
-
-```jinja
-ANSIBLE_VAULT_PASSWORD="{{ lookup('file', '~/.ansible-personal-key') | trim }}"
-```
-
-That value is shipped to `/etc/openclaw/secrets.env` so OpenClaw's own agents can
-run Ansible on the box (see [openclaw.md](openclaw.md) §"Ansible Vault Password
-Injection"). A `lookup()` runs on the controller and reads the literal path
-given — it does **not** consult `ANSIBLE_VAULT_PASSWORD_FILE`. The first
-check-mode run from CI got 80 tasks in and then failed on *Deploy OpenClaw
-secrets environment file* with:
-
-```
-The lookup plugin 'file' failed: Unable to access the file
-'~/.ansible-personal-key': File not found.
-```
-
-Putting the file where the repository already says it lives makes
-`ansible.cfg`'s `vault_password_file`, its
-`vault_identity_list = personal@~/.ansible-personal-key`, and that lookup all
-resolve with no environment overrides at all. It is shredded in the same
-`always()` step as the SSH key.
-
-> [!IMPORTANT]
-> When adding a role or template that needs something from the controller, a
-> `lookup()` on an absolute path is invisible to CI's environment. Either keep
-> the path repo-relative, or make CI provide it at the same location a laptop
-> would. `grep -rn "lookup('file'" ansible/roles/` finds them; every other one
-> in this tree is repo-relative.
+Until 2026-09-19 there was a harder reason: `openclaw_setup/templates/secrets.env.j2`
+read the file directly on the controller (`lookup('file', '~/.ansible-personal-key')`)
+to ship the password to the OpenClaw host as `ANSIBLE_VAULT_PASSWORD`. A
+controller-side `lookup()` reads the literal path and ignores
+`ANSIBLE_VAULT_PASSWORD_FILE`, which is why an earlier CI run failed 80 tasks
+in with "Unable to access the file '~/.ansible-personal-key'". That lookup is
+gone — the vault password no longer reaches any host (see
+[openclaw.md](openclaw.md) §4.5) — so only the convention remains.
