@@ -14,7 +14,7 @@ name: '🚀 Ansible Deploy'
 #     outright if the playbook resolves to a host with no pin.
 #   * Credentials are written outside the workspace with umask 077 and shredded
 #     in an always() step — the SSH key to $RUNNER_TEMP, the vault password to
-#     ~/.ansible-personal-key because a role template reads that exact path.
+#     ~/.ansible-personal-key because ansible.cfg names that exact path.
 #   * `--diff` is off by default (ansible.cfg turns it on) because rendered
 #     templates can contain vault-decrypted secrets, and these logs are public.
 
@@ -249,17 +249,11 @@ jobs:
         #
         # The vault password goes to ~/.ansible-personal-key specifically, not
         # to $RUNNER_TEMP. That exact path is this repository's convention —
-        # ansible.cfg, README.md, AGENTS.md and docs/openclaw.md all name it —
-        # and openclaw_setup/templates/secrets.env.j2 reads it *directly*:
-        #
-        #   ANSIBLE_VAULT_PASSWORD="{{ lookup('file', '~/.ansible-personal-key') | trim }}"
-        #
-        # A controller-side lookup like that bypasses ANSIBLE_VAULT_PASSWORD_FILE
-        # entirely, so pointing env vars at a temp file was not enough: the run
-        # got 80 tasks in and then failed on "Deploy OpenClaw secrets
-        # environment file". Honouring the convention makes ansible.cfg's
-        # vault_password_file, its vault_identity_list and that lookup all
-        # resolve with no overrides at all.
+        # ansible.cfg's vault_password_file and vault_identity_list, README.md
+        # and AGENTS.md all name it — so honouring it makes everything resolve
+        # with no overrides at all. (A role template used to read the file
+        # directly with a controller-side lookup; that is gone, see
+        # docs/ci-ansible.md §9.)
         run: |
           set -euo pipefail
           umask 077

@@ -98,11 +98,17 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 To protect API tokens and sensitive credentials from unauthorized process access or shell environment leaks, OpenClaw isolates credentials into a restricted secrets file and applies Systemd process sandboxing:
 
 #### 1. Secrets File Isolation (`/etc/openclaw/secrets.env`)
-- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`OPENCLAW_GATEWAY_TOKEN`, `TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`, `ANSIBLE_VAULT_PASSWORD`, `NOTION_API_TOKEN`, `SCALEWAY_API_KEY`) are templated into `/etc/openclaw/secrets.env`, the only file this role *renders* with them in plaintext. Known other copies: `gh auth login --with-token` (run by the role) stores the GitHub PAT in `~claw/.config/gh/hosts.yml`, and `models auth paste-token` ([6.4](#64-claude-anthropic-model-via-claude-code-cli-reuse)) stores the Claude token in the agent's SQLite store.
+- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`OPENCLAW_GATEWAY_TOKEN`, `TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`, `NOTION_API_TOKEN`, `SCALEWAY_API_KEY`) are templated into `/etc/openclaw/secrets.env`, the only place on the host where the role keeps them in plaintext. There is deliberately **no `ANSIBLE_VAULT_PASSWORD`** — see [4.5](#45-no-vault-password-on-the-host). `gh` no longer keeps its own login (the PAT copy in `~/.config/gh/hosts.yml` is removed; see [6.3](#63-github-personal-access-token-pat-integration)).
+- **OpenClaw's own credential stores hold references only.** Besides `openclaw.json`, OpenClaw keeps auth profiles in SQLite (`state/openclaw.sqlite`, and a per-agent `agents/main/agent/openclaw-agent.sqlite`) and a generated `agents/main/agent/models.json`. Ansible cannot template those, so the role audits them on every converge with `openclaw secrets audit` (read-only, so it also runs in `--check` and the drift check reports residue). On findings, it fixes them the way OpenClaw documents:
+  - it logs out every profile holding a plaintext key or token, plus profiles this repo does not manage (`openai:default` — no model in the config uses that provider);
+  - it recreates the Claude profile `anthropic:manual` as a `tokenRef` to `CLAUDE_CODE_OAUTH_TOKEN`, from the committed plan [`files/secrets-plan.json`](../ansible/roles/openclaw_setup/files/secrets-plan.json) (references only), applied with `openclaw secrets apply`;
+  - it deletes a `models.json` still holding a plaintext key (a generated cache; the gateway regenerates it with non-secret markers);
+  - it then re-audits, and **fails the play unless `secrets audit --check` is clean**.
+
+  Scaleway needs no profile: `models.providers.scaleway.apiKey` is already an env SecretRef in `openclaw.json`, and removing the old `scaleway:default` profile also removes the `REF_SHADOWED` finding it caused. Old `openclaw.json.bak*` / `*.clobbered*` copies that still hold a credential field as a plain string are deleted. They are matched on structure, so no secret value appears in the role.
 - **No plaintext credentials in `openclaw.json`**: the gateway token, Telegram bot token and Scaleway API key are written as env SecretRefs (`{"source": "env", "provider": "default", "id": "OPENCLAW_GATEWAY_TOKEN"}`, …) that OpenClaw resolves from the service environment at startup. `openclaw.json` lives in the agent-readable state dir, and OpenClaw's updater and Doctor copy it into `openclaw.json.bak.*` and rollback snapshots — plaintext there would multiply with every update. Check with `sudo openclaw-admin secrets audit --check`.
 - Directory `/etc/openclaw` is `root:claw` `0750`, file `/etc/openclaw/secrets.env` is `root:claw` `0640`. **Root-owned** so the agent cannot rewrite its own credentials or endpoints, and **outside `$HOME`** so it never lands in state backups, memory indexing or anything the agent syncs. **Group-readable by `claw`** because the gateway is a systemd *user* unit: `claw`'s user manager reads `EnvironmentFile=` itself (a system unit had PID 1 read it as root), as does OpenClaw's updater when it rebuilds the service environment.
 - **What this does and does not protect** (OpenClaw's own position: SecretRefs are not a process-isolation boundary — see `docs/gateway/secrets/runtime-model.md` in the package). Any process running as `claw` can read every one of these values from the gateway's `/proc/<pid>/environ` (verified on this host: `kernel.yama.ptrace_scope=2` restricts ptrace *attach*, not same-uid `environ` reads), and the agent's own exec children inherit them. So the file mode was never what kept secrets from the agent while the gateway runs. The one real delta of making it `claw`-readable: the values stay readable while the gateway is stopped or crash-looping, when there is no live process to scrape — a small difference, and one the user-unit model requires. Protecting a credential *from the agent itself* takes OS isolation, sandboxed exec, or OpenClaw's egress proxy with protected store secrets — not file permissions.
-- **Ansible Vault Password Injection (`ANSIBLE_VAULT_PASSWORD`)**: The control node dynamically reads the local Ansible Vault key (`~/.ansible-personal-key`) during playbook deployment via Jinja2 file lookup (`{{ lookup('file', '~/.ansible-personal-key') | trim }}`) and injects it as `ANSIBLE_VAULT_PASSWORD` into `/etc/openclaw/secrets.env`. This allows OpenClaw subagents and tasks to execute Ansible operations using the standard Vault environment variable without hardcoding or committing plaintext keys to the repository.
 - **Notion Integration (`NOTION_API_TOKEN` & `NOTION_API_VERSION`)**: Managed securely via Ansible Vault (`openclaw_notion_api_token` in `ansible/vars/openclaw.yml`) and injected into `/etc/openclaw/secrets.env` along with `NOTION_API_VERSION=2026-03-11` for Notion API integrations.
 - `claw`'s systemd user manager loads `EnvironmentFile=/etc/openclaw/secrets.env` when it starts the `openclaw-gateway.service` user unit.
 - **Running manual `openclaw` admin commands: always use `sudo openclaw-admin <cmd>`**, never a plain `sudo -u claw openclaw <cmd>`. The plain form now fails outright — sudo's `secure_path` does not include `claw`'s npm prefix — and even with a full path it would see none of the service environment: Doctor misreports normal config as broken (`NODE_COMPILE_CACHE`, `OPENCLAW_NO_RESPAWN`, API keys unset), and anything that talks to the gateway has no token, since `openclaw.json` only references it as an env SecretRef. The wrapper (`/usr/local/bin/openclaw-admin`, templated from `openclaw-admin.j2`) runs the command as a transient unit in `claw`'s own user manager — `systemd-run --user --machine=claw@ --pipe --wait --property=EnvironmentFile=/etc/openclaw/secrets.env …` — rather than via sudo or a bash `source`:
@@ -222,6 +228,30 @@ ssh claw "sudo openclaw-admin secrets audit --check"       # no plaintext residu
 
 To back out, check out the previous revision of this repo and converge it: that reinstalls the system unit and the root-owned package. First run `sudo systemctl --user -M claw@ disable --now openclaw-gateway`, so the two don't fight over port 18789.
 
+### 4.5 No Vault Password on the Host
+
+Until 2026-09-19 the role injected the Ansible Vault password into the gateway environment as `ANSIBLE_VAULT_PASSWORD`, so the agent could run Ansible on the box. That was the largest leak risk on the host: a single vault ID (`personal`) protects **every** `!vault` value in this public repository — `vars/laptop.yml` (18), `vars/openclaw.yml` (13), `vars/minecraft.yml` (6) and the microk8s role defaults — including every past commit. One successful prompt-injection exfiltration of that one value would have exposed all of them, offline and permanently.
+
+Nothing the agent does needs it any more:
+- its `config-drift-checker` skill decrypted `vars/openclaw.yml` only to compare secret values inside `openclaw.json`, which holds SecretRefs since #138. The script already runs without a password;
+- its `self-config-development` skill only lints and syntax-checks, which CI does with a placeholder password;
+- deploys go through the approval-gated `ansible-deploy.yml` workflow, not the agent.
+
+The role therefore no longer ships the password, and it removes the stray `~claw/.ansible-personal-key` file. That file was not the current password and decrypts none of the 35 distinct vault values in the repository history (checked 2026-09-19).
+
+**Rekey after this change is converged** — never before, or the new password would still reach the host:
+
+```bash
+cd ansible
+uv run ansible-vault rekey --vault-id personal@~/.ansible-personal-key \
+  --new-vault-id personal@prompt \
+  vars/laptop.yml vars/openclaw.yml vars/minecraft.yml roles/microk8s/defaults/main.yml
+# then: write the new password to ~/.ansible-personal-key, and update the
+# ANSIBLE_VAULT_PASSWORD repository secret used by .github/workflows/ansible-deploy.yml
+```
+
+**Accepted risk:** rekeying does not protect history. The old password was present in the agent's environment and in `~claw/.zsh_history`, and the vault values in past public commits remain decryptable with it. The decision (2026-09-19) was to rekey only, without rotating the underlying secrets. Rotating any individual secret later closes its exposure; the OpenClaw ones are the most exposed, since they were also present in plaintext on the host.
+
 ---
 
 
@@ -337,7 +367,7 @@ To allow OpenClaw agents to interact securely with private GitHub repositories:
    ```bash
    uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
    ```
-   Ansible automatically authenticates `gh` for user `claw` (`gh auth login --with-token`) and injects `GITHUB_TOKEN` and `GH_TOKEN` into the systemd environment.
+   Ansible injects `GITHUB_TOKEN` and `GH_TOKEN` into the gateway environment (`secrets.env`). `gh` — and `git`, through the `gh auth git-credential` helper in `.gitconfig` — reads `GH_TOKEN` from there, so there is deliberately **no `gh auth login`**. That command stored a second plaintext copy of the PAT in `~claw/.config/gh/hosts.yml`, and the role now removes it. Interactive `ssh claw@claw` shells have no `GH_TOKEN`: run `gh` through `sudo openclaw-admin`'s environment, or export the token for that session only.
 
 ---
 
@@ -362,17 +392,11 @@ OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `c
    ```bash
    uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
    ```
-   The role installs `@anthropic-ai/claude-code` globally and injects `CLAUDE_CODE_OAUTH_TOKEN` into `/etc/openclaw/secrets.env` (root-only, `0600`), loaded by systemd's `EnvironmentFile=` before OpenClaw drops to the `claw` user — same isolation pattern as `GEMINI_API_KEY` and `GITHUB_TOKEN`.
+   The role installs `@anthropic-ai/claude-code` globally and injects `CLAUDE_CODE_OAUTH_TOKEN` into `/etc/openclaw/secrets.env` (`root:claw`, `0640`), which `claw`'s user manager loads for the gateway — same pattern as `GEMINI_API_KEY` and `GITHUB_TOKEN` ([4.1](#41-systemd-secrets-externalization--security-sandboxing)).
 
-4. **Register the auth profile (required — the env var alone is not enough)**:
-   `agentRuntime.id: "claude-cli"` on its own does **not** give OpenClaw a usable Anthropic credential. OpenClaw's own "CLI reuse" verification path (`openclaw models auth login --provider anthropic --method cli`) needs an interactive TTY to confirm the host's `claude` login — impossible on a systemd-managed headless box, and it fails with `Error: models auth login requires an interactive TTY`. Without a registered profile, `openclaw models auth list` shows `Profiles: (none)` and every request silently falls through the whole fallback chain (Gemini, then Scaleway) — Claude is configured as primary but never actually gets called. Register the same token as a profile instead (headless-safe, reads from stdin so the token never touches shell history):
-   ```bash
-   ssh claw "sudo bash -c '
-     grep ^CLAUDE_CODE_OAUTH_TOKEN= /etc/openclaw/secrets.env | cut -d= -f2- \
-       | openclaw-admin models auth paste-token --provider anthropic
-   '"
-   ```
-   This writes the actual token only into `~/.openclaw/agents/main/agent/openclaw-agent.sqlite` (never into `openclaw.json`). It also adds a non-secret pointer, `agents` → `auth.profiles.anthropic:manual = {"provider": "anthropic", "mode": "token"}`, to `openclaw.json` itself — that pointer **is** templated (`openclaw.json.j2`, gated on `openclaw_setup_claude_cli_enabled`) specifically so a future `ansible-playbook` run doesn't overwrite it and silently reintroduce this exact bug. The token in the sqlite store is untouched by Ansible either way (it's not a file the role manages).
+4. **The auth profile (required — the env var alone is not enough; automated by the role)**:
+   `agentRuntime.id: "claude-cli"` on its own does **not** give OpenClaw a usable Anthropic credential. OpenClaw's own "CLI reuse" verification path (`openclaw models auth login --provider anthropic --method cli`) needs an interactive TTY to confirm the host's `claude` login — impossible on a systemd-managed headless box, and it fails with `Error: models auth login requires an interactive TTY`. Without a registered profile, `openclaw models auth list` shows `Profiles: (none)` and every request silently falls through the whole fallback chain (Gemini, then Scaleway) — Claude is configured as primary but never actually gets called.
+   The role creates that profile, `anthropic:manual`, as a **`tokenRef`** to `CLAUDE_CODE_OAUTH_TOKEN` by applying the committed plan [`files/secrets-plan.json`](../ansible/roles/openclaw_setup/files/secrets-plan.json) with `openclaw secrets apply` ([4.1](#41-systemd-secrets-externalization--security-sandboxing)). The profile stores a reference, never the token. **Don't use `models auth paste-token`** any more: it stores the token in plaintext, and the next converge would log that profile out and recreate the reference. The non-secret pointer `auth.profiles.anthropic:manual = {"provider": "anthropic", "mode": "token"}` stays templated in `openclaw.json.j2` (gated on `openclaw_setup_claude_cli_enabled`).
 
 5. **Whitelist the token through OpenClaw's own subprocess env sanitization (required — steps 1–4 alone still silently fall back to Gemini)**:
    OpenClaw hard-codes `CLAUDE_CODE_OAUTH_TOKEN` into `CLAUDE_CLI_CLEAR_ENV` (`extensions/anthropic/cli-shared.ts` in the npm package) and strips it — along with every other Anthropic auth env var — before spawning the `claude` CLI subprocess for every `claude-cli` turn. This is deliberate: OpenClaw's docs say it "never forwards a copied token for this path," so the CLI is expected to already be natively logged in on the host via its own persisted credentials. A systemd-managed headless box has no such interactive login to reuse, so without this step every `claude-cli` turn fails with `error=FailoverError` / `detail=Not logged in · Please run /login` (visible in `journalctl _SYSTEMD_USER_UNIT=openclaw-gateway.service`) and falls straight through to Gemini — invisibly, since the gateway logs "model configured, enabled automatically" at startup regardless. There's a documented escape hatch: `OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV`, a comma/space-separated allowlist of env vars to preserve despite `clearEnv`. `secrets.env.j2` sets `OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV=CLAUDE_CODE_OAUTH_TOKEN` whenever the token is defined — no separate action needed beyond deploying.
@@ -386,7 +410,7 @@ OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `c
    ```
    Or just send a real message through Telegram/Signal and check which model answered.
 
-**Token lifecycle**: `claude setup-token` tokens are long-lived (weeks to months) but not permanent. If OpenClaw's model calls start failing with auth errors, regenerate with `claude setup-token`, redeploy step 2–3, then re-run step 4 (`paste-token`) with the new token — the profile isn't updated automatically just because `secrets.env` changed. Step 5 (`OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV`) is a static config value and doesn't need repeating on rotation.
+**Token lifecycle**: `claude setup-token` tokens are long-lived (weeks to months) but not permanent. If OpenClaw's model calls start failing with auth errors, regenerate with `claude setup-token` and redeploy steps 2–3. Because the profile is a reference to `CLAUDE_CODE_OAUTH_TOKEN`, the new value in `secrets.env` is picked up on the gateway restart the deploy triggers; nothing else needs repeating. Step 5 (`OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV`) is a static config value and doesn't need repeating on rotation either.
 
 **Switching model tier**: `openclaw_setup_model` (`ansible/roles/openclaw_setup/defaults/main.yml`, default `anthropic/claude-sonnet-5`) can be overridden per-inventory to `anthropic/claude-opus-5` for higher-quality/slower responses, or any other `anthropic/claude-*` id — the `claude-cli` `agentRuntime` mapping in the template follows whatever `openclaw_setup_model` is set to, as long as `openclaw_setup_claude_cli_enabled` stays `true`.
 
