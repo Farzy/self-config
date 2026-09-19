@@ -51,7 +51,7 @@ Exactly **two**. Both are repository secrets.
 | Secret | Value | Rotate by |
 |---|---|---|
 | `CI_SSH_PRIVATE_KEY` | Private half of the dedicated CI ed25519 key (full PEM, `-----BEGIN OPENSSH PRIVATE KEY-----` … `-----END OPENSSH PRIVATE KEY-----`). Must be **unencrypted** — a runner cannot type a passphrase. | Generating a new keypair, §4.1 |
-| `ANSIBLE_VAULT_PASSWORD` | The contents of `~/.ansible-personal-key` — the passphrase that decrypts the `!vault` values in `ansible/vars/*.yml`. | `ansible-vault rekey` across all vars files |
+| `ANSIBLE_VAULT_PASSWORD` | The contents of `~/.ansible-personal-key` — the passphrase that decrypts the `!vault` values in `ansible/vars/*.yml`. | `scripts/rekey-vault.py`, see [openclaw.md](openclaw.md) §4.5 |
 
 `ANTHROPIC_API_KEY` already exists for the Claude workflows and is unrelated.
 
@@ -217,9 +217,12 @@ the repository afterwards:
 ssh debian@claw.farzad.tech "sed -i '/github-actions@self-config/d' ~/.ssh/authorized_keys"
 ```
 
-**Rotate the vault password**: `ansible-vault rekey` every file containing
-`!vault` values, then update both `~/.ansible-personal-key` and the
-`ANSIBLE_VAULT_PASSWORD` secret.
+**Rotate the vault password**: run `scripts/rekey-vault.py`, then update both
+`~/.ansible-personal-key` and the `ANSIBLE_VAULT_PASSWORD` secret. `ansible-vault
+rekey` alone is not enough — it only handles fully encrypted files, not the
+inline `!vault` values in `ansible/vars/*.yml`. Full runbook, including the
+window where the drift check cannot decrypt:
+[openclaw.md](openclaw.md) §4.5.
 
 ---
 

@@ -28,6 +28,7 @@
     dest: "/etc/nginx/sites-enabled/{{ openclaw_setup_domain }}"
     state: link
   notify: Reload nginx
+
 - name: Ensure Nginx is started and enabled
   ansible.builtin.service:
     name: nginx

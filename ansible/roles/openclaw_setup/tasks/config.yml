@@ -2,6 +2,14 @@
 # openclaw.json, plus the credential-store audit gate that judges the converged
 # file. See docs/openclaw.md §4.1.
 
+- name: Assert the pinned openclaw version understands the templated config schema
+  ansible.builtin.assert:
+    that:
+      - openclaw_setup_version is version('2026.8.1', '>=')
+    fail_msg: >-
+      openclaw.json.j2 emits the 2026.8.1 schema (agents.entries, memory.search,
+      channels.signal.transport); pin openclaw_setup_version >= 2026.8.1 or revert the template.
+
 - name: Create OpenClaw config directory
   ansible.builtin.file:
 
