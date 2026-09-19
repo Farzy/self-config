@@ -113,13 +113,23 @@ master_setup_unattended_third_party_origins:
 # (typically a new kernel). Without it the fix is installed but not running.
 master_setup_unattended_auto_reboot: true
 
-# When to reboot, in the host's local time (UTC on the servers). The
-# apt-daily-upgrade timer fires around 06:00-07:00 UTC, so "03:30" means the
-# reboot lands at the next 03:30 rather than in the middle of the day.
+# When the upgrade itself runs (apt-daily-upgrade.timer), in the host's local
+# time (UTC on the servers). Debian's default is 06:00 plus up to an hour of
+# random delay; it is pinned to the small window below so that the reboot below
+# follows the upgrade within the same night instead of a day later.
+master_setup_unattended_upgrade_time: "02:00"
+master_setup_unattended_upgrade_random_delay: 15m
+
+# When to reboot after an upgrade left /var/run/reboot-required behind, in the
+# host's local time. unattended-upgrade schedules it with `shutdown -r <time>`
+# at the end of its own run, so this must fall after the upgrade window above
+# (02:00 + delay + install time), otherwise it waits for the next day's 03:30.
 master_setup_unattended_reboot_time: "03:30"
 
-# Reboot even if someone is logged in. False defers the reboot while an SSH
-# session is open, so a deliberate maintenance session is never cut short.
+# Reboot even if someone is logged in. False makes unattended-upgrade skip the
+# reboot when a session is open *at the end of the upgrade run* (~02:00-02:30);
+# it is not re-checked at reboot time, so a session opened after that is still
+# cut short at 03:30. A skipped reboot is retried by the next night's run.
 master_setup_unattended_reboot_with_users: false
 
 # Public SSH keys authorised for the unattended CI deploy account (the account

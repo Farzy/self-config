@@ -104,6 +104,39 @@
     owner: root
     group: root
     mode: '0644'
+    # A syntax error anywhere in /etc/apt/apt.conf.d/ makes every apt call on
+    # the host fail (including the apt tasks of this very role), so refuse to
+    # install a file apt itself cannot parse.
+    validate: apt-config -c=%s dump
+  tags: configuration
+
+# Debian's timer runs at 06:00 + up to 60 min of random delay. Pinning it makes
+# the upgrade time predictable, so Automatic-Reboot-Time can sit right behind it.
+# The empty `OnCalendar=` first clears the value inherited from the packaged unit.
+- name: Create the apt-daily-upgrade timer drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/apt-daily-upgrade.timer.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  tags: configuration
+
+- name: Schedule the unattended upgrade run
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/apt-daily-upgrade.timer.d/override.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      # Managed by Ansible (roles/master_setup/tasks/debian.yml).
+      [Timer]
+      OnCalendar=
+      OnCalendar=*-*-* {{ master_setup_unattended_upgrade_time }}
+      RandomizedDelaySec={{ master_setup_unattended_upgrade_random_delay }}
+  notify:
+    - Reload systemd
+    - Restart apt-daily-upgrade timer
   tags: configuration
 
 - name: Install global gitconfig for all users

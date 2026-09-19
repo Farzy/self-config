@@ -18,7 +18,12 @@
       tags: microk8s
       when: master_setup_install_microk8s
   vars:
-    master_setup_unattended_third_party: true
+    # Opted out of both: this host runs a multi-node KinD cluster, which does not
+    # survive a dockerd restart or a reboot on its own (kind#2775, kind#1689, see
+    # README.md § References), and nobody is around at night to recreate it.
+    # Debian security upgrades still apply; the reboot stays manual.
+    master_setup_unattended_third_party: false
+    master_setup_unattended_auto_reboot: false
     default_user: debian
     # Previously the docker role hardcoded `{{ user_owner }}`, which is defined
     # nowhere in this repository — so its final task failed with

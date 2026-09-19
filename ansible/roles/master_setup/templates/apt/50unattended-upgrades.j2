@@ -43,7 +43,7 @@ Unattended-Upgrade::Origins-Pattern {
 //      "o=Debian,a=stable-updates";
 //      "o=Debian,a=proposed-updates";
 //      "o=Debian Backports,a=${distro_codename}-backports,l=Debian Backports";
-{% if master_setup_unattended_third_party %}
+{% if master_setup_unattended_third_party | bool %}
 
         // Third-party repositories (master_setup_unattended_third_party).
         // Debian's own origins above only cover the distribution, so Docker,
