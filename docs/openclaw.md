@@ -379,7 +379,9 @@ To allow OpenClaw agents to interact securely with private GitHub repositories:
    ```bash
    uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playbooks/openclaw.yml
    ```
-   Ansible injects `GITHUB_TOKEN` and `GH_TOKEN` into the gateway environment (`secrets.env`). `gh` — and `git`, through the `gh auth git-credential` helper in `.gitconfig` — reads `GH_TOKEN` from there, so there is deliberately **no `gh auth login`**. That command stored a second plaintext copy of the PAT in `~claw/.config/gh/hosts.yml`, and the role now removes it. Interactive `ssh claw@claw` shells have no `GH_TOKEN`: run `gh` through `sudo openclaw-admin`'s environment, or export the token for that session only.
+   Ansible injects `GITHUB_TOKEN` and `GH_TOKEN` into the gateway environment (`secrets.env`). `gh` — and `git`, through the `gh auth git-credential` helper in `.gitconfig` — reads `GH_TOKEN` from there, so there is deliberately **no `gh auth login`**. That command stored a second plaintext copy of the PAT in `~claw/.config/gh/hosts.yml`, and the role now removes it.
+
+   Interactive `ssh claw@claw` shells get the same credential from `.zshrc`, which reads `GITHUB_TOKEN`/`GH_TOKEN` out of `/etc/openclaw/secrets.env` at startup (guarded on the user, in the same block as the OpenClaw completion). So `gh auth status` reports being logged in through `GH_TOKEN`, with no token written to any dotfile. Non-interactive shells (`ssh claw@claw '<cmd>'`) don't read `.zshrc`: use `sudo openclaw-admin` for those, or export the variable for that command.
 
 ---
 
