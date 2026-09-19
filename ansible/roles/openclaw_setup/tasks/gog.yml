@@ -1,0 +1,145 @@
+---
+# gog (Google Workspace CLI) and its non-interactive OAuth authorization.
+# See docs/openclaw.md §6.6.
+
+- name: "Check if gog CLI is installed: {{ openclaw_setup_gog_cli_version }}"
+  ansible.builtin.stat:
+    path: "/opt/gogcli-{{ openclaw_setup_gog_cli_version }}/gog"
+  register: openclaw_setup_gog_cli_stat
+
+- name: Download gog CLI release archive (Linux amd64)
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/openclaw/gogcli/releases/download/v{{
+      openclaw_setup_gog_cli_version }}/gogcli_{{
+      openclaw_setup_gog_cli_version }}_linux_amd64.tar.gz
+    dest: "/tmp/gogcli-{{ openclaw_setup_gog_cli_version }}-linux-amd64.tar.gz"
+    checksum: "sha256:{{ openclaw_setup_gog_cli_sha256 }}"
+    mode: '0644'
+  when: not openclaw_setup_gog_cli_stat.stat.exists
+
+- name: Create gog CLI install directory
+  ansible.builtin.file:
+    path: "/opt/gogcli-{{ openclaw_setup_gog_cli_version }}"
+    state: directory
+    mode: '0755'
+  when: not openclaw_setup_gog_cli_stat.stat.exists
+
+- name: Extract gog CLI
+  ansible.builtin.unarchive:
+    src: "/tmp/gogcli-{{ openclaw_setup_gog_cli_version }}-linux-amd64.tar.gz"
+    dest: "/opt/gogcli-{{ openclaw_setup_gog_cli_version }}"
+    remote_src: true
+  when: not openclaw_setup_gog_cli_stat.stat.exists
+
+- name: Remove downloaded gog CLI archive
+  ansible.builtin.file:
+    path: "/tmp/gogcli-{{ openclaw_setup_gog_cli_version }}-linux-amd64.tar.gz"
+    state: absent
+
+- name: Symlink gog CLI to /usr/local/bin
+  ansible.builtin.file:
+    src: "/opt/gogcli-{{ openclaw_setup_gog_cli_version }}/gog"
+    dest: /usr/local/bin/gog
+    state: link
+    force: true
+
+# The consumer below already skips once the keyring holds the credentials, via
+# its `creates:`. This write had no equivalent guard, so every run wrote a temp
+# file that nothing read and the next task deleted — two `changed` results per
+# run, for no work. That noise meant a converged host never reported changed=0,
+# which is exactly the signal the scheduled drift check exists to produce.
+- name: Check whether gog OAuth client credentials are already stored
+  ansible.builtin.stat:
+    path: "{{ openclaw_setup_gog_credentials_path }}"
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  register: openclaw_setup_gog_credentials_stat
+  when: openclaw_gog_oauth_client_json is defined
+
+- name: Write gog OAuth client credentials to temp file for claw user
+  ansible.builtin.copy:
+    content: "{{ openclaw_gog_oauth_client_json }}"
+    dest: "{{ openclaw_setup_home }}/.gog-oauth-client.json.tmp"
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0600'
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  when:
+    - openclaw_gog_oauth_client_json is defined
+    - not openclaw_setup_gog_credentials_stat.stat.exists
+  no_log: true
+
+- name: Store gog OAuth client credentials for claw user
+  ansible.builtin.command:
+    cmd: "gog --client default auth credentials set {{ openclaw_setup_home }}/.gog-oauth-client.json.tmp"
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  environment:
+    GOG_KEYRING_PASSWORD: "{{ openclaw_gog_keyring_password }}"
+  args:
+    creates: "{{ openclaw_setup_gog_credentials_path }}"
+  when: openclaw_gog_oauth_client_json is defined
+  no_log: true
+
+- name: Remove gog OAuth client credentials temp file
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_home }}/.gog-oauth-client.json.tmp"
+    state: absent
+
+- name: Check existing gog auth accounts for claw user
+  ansible.builtin.command:
+    cmd: gog auth list --plain
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  environment:
+    GOG_KEYRING_PASSWORD: "{{ openclaw_gog_keyring_password }}"
+  register: openclaw_setup_gog_auth_list
+  changed_when: false
+  # `check_mode: false` below makes this probe run for real, including against a
+  # host that has never been converged — where a --check run only *simulates*
+  # the gog download/extract/symlink, so the binary is absent and this exits
+  # 127. Without failed_when the play would hard-fail there, having previously
+  # just skipped and carried on. Failing soft leaves stdout empty, which makes
+  # the guard below fall through to "would import" — the correct signal.
+  failed_when: false
+  # Read-only, and it must run during a --check run: `command` is skipped in
+  # check mode by default, which left `stdout` empty, made the guard below
+  # ("account not in the list") trivially true, and reported a spurious change
+  # on every check run. Same treatment as the other read-only probes in this
+  # role.
+  check_mode: false
+  when: openclaw_gog_refresh_token_export_json is defined
+
+- name: Write gog refresh token export to temp file for claw user
+  ansible.builtin.copy:
+    content: "{{ openclaw_gog_refresh_token_export_json }}"
+    dest: "{{ openclaw_setup_home }}/.gog-refresh-token.json.tmp"
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0600'
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  when: >-
+    openclaw_gog_refresh_token_export_json is defined and
+    openclaw_setup_gog_account_email not in openclaw_setup_gog_auth_list.stdout
+  no_log: true
+
+- name: Import gog refresh token for claw user
+  ansible.builtin.command:
+    cmd: "gog auth tokens import {{ openclaw_setup_home }}/.gog-refresh-token.json.tmp"
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  environment:
+    GOG_KEYRING_PASSWORD: "{{ openclaw_gog_keyring_password }}"
+  when: >-
+    openclaw_gog_refresh_token_export_json is defined and
+    openclaw_setup_gog_account_email not in openclaw_setup_gog_auth_list.stdout
+  changed_when: true
+  no_log: true
+
+- name: Remove gog refresh token temp file
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_home }}/.gog-refresh-token.json.tmp"
+    state: absent

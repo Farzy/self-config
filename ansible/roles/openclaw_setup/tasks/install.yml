@@ -1,0 +1,225 @@
+---
+# Installing OpenClaw into the claw-owned npm prefix, and enforcing
+# openclaw_setup_version as a minimum through OpenClaw's own updater.
+# See docs/openclaw.md §4.4.
+
+- name: Assert the pinned openclaw version understands the templated config schema
+  ansible.builtin.assert:
+    that:
+      - openclaw_setup_version is version('2026.8.1', '>=')
+    fail_msg: >-
+      openclaw.json.j2 emits the 2026.8.1 schema (agents.entries, memory.search,
+      channels.signal.transport); pin openclaw_setup_version >= 2026.8.1 or revert the template.
+# --- OpenClaw installation (claw-owned, self-updatable) --------------------
+#
+# OpenClaw lives in a claw-owned npm prefix rather than root's /usr, so its own
+# updater — which runs as claw, from chat (`update.run`) or `openclaw update` —
+# can stage and swap the package tree. Ansible bootstraps it and enforces
+# openclaw_setup_version as a *minimum*: it upgrades an older install through
+# that same updater, and refuses to converge a host that is ahead of the repo
+# instead of silently downgrading it across a state migration.
+# See docs/openclaw.md §4.4.
+
+# Makes every npm run as claw (interactive shells, the agent, the updater's own
+# package-manager probe) agree on the global root this role installs into.
+- name: Point the openclaw user's npm global prefix at its own directory
+  ansible.builtin.copy:
+    content: |
+      # Managed by Ansible (openclaw_setup role). OpenClaw is installed here so
+      # its own updater can replace it — see docs/openclaw.md §4.4.
+      prefix={{ openclaw_setup_npm_prefix }}
+    dest: "{{ openclaw_setup_home }}/.npmrc"
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0644'
+
+- name: Create the openclaw user's npm global prefix
+  ansible.builtin.file:
+    path: "{{ openclaw_setup_npm_prefix }}"
+    state: directory
+    owner: "{{ openclaw_setup_user }}"
+    group: "{{ openclaw_setup_group }}"
+    mode: '0755'
+
+- name: Check for an OpenClaw install in the openclaw user's npm prefix
+  ansible.builtin.stat:
+    path: "{{ openclaw_setup_npm_prefix }}/lib/node_modules/openclaw/package.json"
+  register: openclaw_setup_package_stat
+
+- name: Read the installed OpenClaw package manifest
+  ansible.builtin.slurp:
+    src: "{{ openclaw_setup_npm_prefix }}/lib/node_modules/openclaw/package.json"
+  register: openclaw_setup_package_manifest
+  when: openclaw_setup_package_stat.stat.exists
+
+# Empty string when absent, which is what every guard below keys off.
+- name: Record the installed OpenClaw version
+  ansible.builtin.set_fact:
+    openclaw_setup_installed_version: >-
+      {{ (openclaw_setup_package_manifest.content | b64decode | from_json).version
+         if openclaw_setup_package_stat.stat.exists else '' }}
+
+# The one case Ansible must not "fix": OpenClaw upgraded itself on request, and
+# the new release may have migrated the SQLite state and openclaw.json schema.
+# Re-rendering the old template, or downgrading the package, could then leave
+# the gateway crash-looping. Reconciling is a one-line bump, plus a template
+# update if the schema changed — see docs/openclaw.md §4.4.
+- name: Refuse to converge a host that self-updated past the repo's pin
+  ansible.builtin.assert:
+    that:
+      - >-
+        openclaw_setup_installed_version | length == 0 or
+        openclaw_setup_installed_version is version(openclaw_setup_version, '<=')
+    fail_msg: >-
+      OpenClaw {{ openclaw_setup_installed_version }} is installed but the repo pins
+      openclaw_setup_version {{ openclaw_setup_version }}. It most likely updated
+      itself on request. Bump openclaw_setup_version to {{ openclaw_setup_installed_version }}
+      (and update openclaw.json.j2 if the new release changed the config schema)
+      before converging — Ansible never downgrades. See docs/openclaw.md §4.4.
+
+- name: Assert a pending upgrade is not blocked by the read-only config flag
+  ansible.builtin.assert:
+    that:
+      - not (openclaw_setup_config_readonly | bool)
+    fail_msg: >-
+      OpenClaw {{ openclaw_setup_installed_version }} is older than
+      openclaw_setup_version {{ openclaw_setup_version }}, but `openclaw update`
+      refuses to run while openclaw_setup_config_readonly is true. Turn it off to
+      let Ansible upgrade the install.
+  when:
+    - openclaw_setup_installed_version | length > 0
+    - openclaw_setup_installed_version is version(openclaw_setup_version, '<')
+
+# Only for a host with no install yet. Everything after that goes through
+# OpenClaw's own updater, which validates the candidate before activating it.
+# --allow-scripts (npm >= 11.16) explicitly approves OpenClaw's own lifecycle
+# scripts (Node version check, dist inventory), the same approval OpenClaw's
+# updater passes. On npm 11 that is a policy, not a sandbox: other packages'
+# install scripts still run, with a notice, unless strict-allow-scripts is
+# set; npm 12 blocks them. Left non-strict so an optional native dependency
+# cannot fail the bootstrap.
+- name: Bootstrap OpenClaw into the openclaw user's npm prefix
+  ansible.builtin.command:
+    argv:
+      - npm
+      - install
+      - --global
+      - --prefix
+      - "{{ openclaw_setup_npm_prefix }}"
+      - --no-fund
+      - --no-audit
+      - --allow-scripts=openclaw
+      - "openclaw@{{ openclaw_setup_version }}"
+  become: true
+  become_user: "{{ openclaw_setup_user }}"
+  when: openclaw_setup_installed_version | length == 0
+  changed_when: true
+  notify: Restart openclaw
+
+# Without this, a brand-new host would render the auth.profiles pointer into
+# openclaw.json but skip the credential-store block below (gated on the fact
+# computed before the bootstrap), leaving a pointer to a profile that does not
+# exist until the next converge — the silent-fallback state docs/openclaw.md
+# §6.4 describes.
+- name: Record the bootstrapped OpenClaw version
+  ansible.builtin.set_fact:
+    openclaw_setup_installed_version: "{{ openclaw_setup_version }}"
+  when:
+    - openclaw_setup_installed_version | length == 0
+    - not ansible_check_mode
+
+# Surfaces the bootstrap and the upgrade as pending changes in --check runs (the
+# drift check), where their command tasks are skipped and would stay silent.
+- name: Report a pending OpenClaw install or upgrade
+  ansible.builtin.debug:
+    msg: >-
+      {{ ('Would bootstrap OpenClaw ' ~ openclaw_setup_version ~ ' into ' ~ openclaw_setup_npm_prefix)
+         if openclaw_setup_installed_version | length == 0 else
+         ('Would upgrade OpenClaw ' ~ openclaw_setup_installed_version ~ ' -> '
+          ~ openclaw_setup_version ~ ' through `openclaw update`') }}
+  changed_when: true
+  when:
+    - ansible_check_mode
+    - >-
+      openclaw_setup_installed_version | length == 0 or
+      openclaw_setup_installed_version is version(openclaw_setup_version, '<')
+
+# Raising openclaw_setup_version above the installed release upgrades through
+# OpenClaw's own updater, the same path the agent's `update.run` takes: staged
+# install, canary boot on copied state, then stop/swap/restart with automatic
+# rollback while the schema allows it.
+#
+# Deliberately before openclaw.json.j2 is rendered: the updater's Doctor pass
+# migrates the live config to the new release's schema first, and only then
+# does the (bumped) template land, followed by the end-of-play restart. The
+# other order would briefly run the old binary against a new-schema config.
+#
+# Skipped in --check runs: `command` does not run there, so nothing would be
+# registered for the wait and the assert to read. "Report a pending OpenClaw
+# install or upgrade" above is what surfaces the pending upgrade in check mode.
+- name: Upgrade OpenClaw to the pinned minimum through its own updater
+  when:
+    - not ansible_check_mode
+    - openclaw_setup_installed_version | length > 0
+    - openclaw_setup_installed_version is version(openclaw_setup_version, '<')
+  block:
+    # The run ledger's latest entry before this update starts, so the wait
+    # below can tell this update's run apart from an older one.
+    - name: Read the OpenClaw update ledger before starting
+      ansible.builtin.command:
+        argv: "{{ openclaw_setup_cli_argv + ['update', 'status', '--json'] }}"
+      register: openclaw_setup_update_status_before
+      changed_when: false
+
+    # Returns as soon as the update is handed off: with a managed gateway
+    # service, `openclaw update` delegates to a detached helper even when started
+    # from a terminal (verified on claw), so the command's own exit says nothing
+    # about the outcome.
+    - name: Start the OpenClaw update
+      ansible.builtin.command:
+        argv: "{{ openclaw_setup_cli_argv + ['update', '--tag', openclaw_setup_version, '--yes', '--json'] }}"
+      changed_when: true
+
+    # Without this wait, the play would carry on — rendering openclaw.json and
+    # restarting the gateway from the end-of-play handler — while the helper is
+    # still stopping and swapping the package underneath it. `update status`
+    # reads the run ledger from the state database, so it keeps answering
+    # across the gateway restart the update performs. Done means: no run is
+    # active *and* the latest run is a new one, so a poll that lands before the
+    # new run is recorded cannot be mistaken for the previous run's outcome.
+    - name: Wait for the OpenClaw update to finish
+      ansible.builtin.command:
+        argv: "{{ openclaw_setup_cli_argv + ['update', 'status', '--json'] }}"
+      register: openclaw_setup_update_status
+      until: >-
+        openclaw_setup_update_status.rc == 0 and
+        not ((openclaw_setup_update_status.stdout | from_json).activeRun | default(none)) and
+        ((openclaw_setup_update_status.stdout | from_json).lastRun | default({}, true)).runId | default('')
+        != ((openclaw_setup_update_status_before.stdout | from_json).lastRun | default({}, true)).runId | default('')
+      retries: 90
+      delay: 20
+      changed_when: false
+
+    - name: Assert the OpenClaw update succeeded
+      vars:
+        openclaw_setup_update_last_run: >-
+          {{ (openclaw_setup_update_status.stdout | from_json).lastRun | default({}, true) }}
+      ansible.builtin.assert:
+        that:
+          - openclaw_setup_update_last_run.status | default('') == 'succeeded'
+          - >-
+            (openclaw_setup_update_last_run.after | default({}, true)).version | default('')
+            == openclaw_setup_version
+        fail_msg: >-
+          The OpenClaw update to {{ openclaw_setup_version }} did not succeed:
+          status={{ openclaw_setup_update_last_run.status | default('unknown') }}
+          reason={{ openclaw_setup_update_last_run.reason | default('unknown') }}.
+          The previous release normally keeps serving after a failed validation;
+          check `sudo openclaw-admin update status` and the report under
+          ~/.openclaw/logs/support/ before restarting anything. See docs/openclaw.md §4.4.
+
+- name: Install Claude Code CLI globally via npm
+  community.general.npm:
+    name: "@anthropic-ai/claude-code"
+    global: true
+  when: openclaw_setup_claude_cli_enabled

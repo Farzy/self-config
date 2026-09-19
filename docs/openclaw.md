@@ -86,7 +86,7 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 ### Key Ansible Roles & Templates
 * **Playbook**: [ansible/playbooks/openclaw.yml](../ansible/playbooks/openclaw.yml)
 * **Encrypted Vault Variables**: [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml)
-* **OpenClaw Role**: [ansible/roles/openclaw_setup/tasks/main.yml](../ansible/roles/openclaw_setup/tasks/main.yml)
+* **OpenClaw Role**: [ansible/roles/openclaw_setup/tasks/](../ansible/roles/openclaw_setup/tasks/) — `main.yml` imports one file per concern: `user.yml`, `packages.yml`, `signal-cli.yml`, `gog.yml`, `secrets-env.yml`, `install.yml`, `credential-stores.yml`, `config.yml`, `service.yml`, `nginx.yml`, `gateway.yml`, `skills.yml`. The import order is the order the tasks ran in when this was a single file, and the ordering that matters is documented in each file's header.
 * **Configuration Template**: [ansible/roles/openclaw_setup/templates/openclaw.json.j2](../ansible/roles/openclaw_setup/templates/openclaw.json.j2)
 * **Systemd User Unit Template**: [ansible/roles/openclaw_setup/templates/openclaw-gateway.service.j2](../ansible/roles/openclaw_setup/templates/openclaw-gateway.service.j2)
 * **Admin Wrapper Template**: [ansible/roles/openclaw_setup/templates/openclaw-admin.j2](../ansible/roles/openclaw_setup/templates/openclaw-admin.j2)
@@ -239,18 +239,26 @@ Nothing the agent does needs it any more:
 
 The role therefore no longer ships the password, and it removes the stray `~claw/.ansible-personal-key` file. That file was not the current password and decrypts none of the 35 distinct vault values in the repository history (checked 2026-09-19).
 
-**Rekey after this change is converged** — never before, or the new password would still reach the host:
+**Rekeyed on 2026-09-20**, after this change was converged, so the new password never reached the host. All 51 vault values in the repository were re-encrypted: the 12 fully encrypted files under `roles/laptop_setup/` and the 39 inline `!vault` values in `vars/laptop.yml` (18), `vars/openclaw.yml` (13), `vars/minecraft.yml` (6) and `roles/microk8s/defaults/main.yml` (2).
+
+Worth knowing if this is ever repeated: **`ansible-vault rekey` only handles fully encrypted files.** Inline `!vault` values have to be decrypted and re-encrypted individually, preserving each block's indentation, which is what the one-off script in that PR did (decrypt with the old secret through `VaultLib`, re-encrypt with the new one, compare sha256 digests of the plaintext before and after, and confirm the old password no longer decrypts anything).
+
+To rotate again:
 
 ```bash
+# 1. write the new password somewhere temporary, e.g. ~/.ansible-personal-key.new
+# 2. fully encrypted files:
 cd ansible
 uv run ansible-vault rekey --vault-id personal@~/.ansible-personal-key \
-  --new-vault-id personal@prompt \
-  vars/laptop.yml vars/openclaw.yml vars/minecraft.yml roles/microk8s/defaults/main.yml
-# then: write the new password to ~/.ansible-personal-key, and update the
-# ANSIBLE_VAULT_PASSWORD repository secret used by .github/workflows/ansible-deploy.yml
+  --new-vault-id personal@~/.ansible-personal-key.new \
+  roles/laptop_setup/files/ssh/* roles/laptop_setup/files/ai/* roles/laptop_setup/templates/ssh/config
+# 3. inline values: decrypt/re-encrypt each block (see the PR script), then
+# 4. activate: mv ~/.ansible-personal-key.new ~/.ansible-personal-key
+# 5. update the ANSIBLE_VAULT_PASSWORD repository secret used by
+#    .github/workflows/ansible-deploy.yml — CI cannot decrypt anything until then
 ```
 
-**Accepted risk:** rekeying does not protect history. The old password was present in the agent's environment and in `~claw/.zsh_history`, and the vault values in past public commits remain decryptable with it. The decision (2026-09-19) was to rekey only, without rotating the underlying secrets. Rotating any individual secret later closes its exposure; the OpenClaw ones are the most exposed, since they were also present in plaintext on the host.
+**Accepted risk:** rekeying does not protect history. The old password was present in the agent's environment and in `~claw/.zsh_history`, and the vault values in past public commits remain decryptable with it. The decision (2026-09-19) was to rekey only, without rotating the underlying secrets — the old password is not believed to have left the host.
 
 ---
 

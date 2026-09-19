@@ -1,0 +1,211 @@
+---
+# APT sources and host tooling: nginx/certbot, Node.js, the GitHub CLI and uv,
+# plus the one-shot apt migration cleanups.
+
+- name: Install dependencies
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
+      - curl
+      - gnupg
+      - ca-certificates
+      - acl
+      # Required on the managed node by ansible.builtin.deb822_repository,
+      # which replaces the deprecated apt_key/apt_repository below. Note that on
+      # a host that does not have it yet, a first `--check` run fails at the
+      # repository tasks: check mode only simulates this install, so the module
+      # still finds the library missing. That is expected, not a regression —
+      # apply once, then --check works.
+      - python3-debian
+    state: present
+    update_cache: true
+
+- name: Allow HTTP and HTTPS in ufw firewall
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "80"
+    - "443"
+
+# --- One-shot migration cleanups -------------------------------------------
+#
+# These run *before* deb822_repository, not after. The module derives its
+# keyring filename from `name` plus the fetched key's encoding — armored gives
+# nodesource.asc, binary gives nodesource.gpg — so the orphan removal below
+# targets a name the module itself can legitimately produce. Ordered after the
+# module, the play would delete the keyring it had just installed the moment
+# NodeSource served that key dearmored, and `Install Node.js` (update_cache)
+# would fail with NO_PUBKEY, flapping on every run. A --check run cannot catch
+# that, since nothing is written.
+
+# apt_repository appends rather than replaces, so bumping the Node major left
+# the previous release's line behind: on claw this file held both node_24.x and
+# node_26.x, meaning apt could resolve nodejs from either. deb822_repository
+# writes nodesource.sources instead, and apt would read both.
+- name: Remove the superseded NodeSource .list definition
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/nodesource.list
+    state: absent
+
+- name: Remove the orphaned NodeSource keyring left by the old flow
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/nodesource.gpg
+    state: absent
+
+# apt_key put the NodeSource key in /etc/apt/trusted.gpg, where it is trusted to
+# sign *any* repository. That file is host-wide rather than role-scoped, so
+# deleting it unconditionally would untrust whatever else has landed there —
+# another host in this group, or an `apt-key add` between converges — and the
+# damage would surface later as an apt signature error on an unrelated
+# repository. The evidence is therefore re-checked on every run instead of being
+# recorded in a comment.
+#
+# Matching on `pub:` records, not `fpr:`: gpg emits an fpr line per subkey too,
+# so filtering fingerprints would leave the NodeSource *subkey*
+# (0FA5ECC8C0CA58863C0AC5867E9656125E955B26) behind and the condition could
+# never hold.
+# The probe below must not run against a path that does not exist: `gpg
+# --keyring <path>` *creates* an empty keyring (32 bytes) as a side effect. That
+# turned the removal into a permanent churn loop — the probe recreated
+# /etc/apt/trusted.gpg on every run and the next task deleted it again, so a
+# converged host reported `changed` forever. Verified on claw: pointing gpg at a
+# nonexistent path leaves a 32-byte file behind, exactly the size found there.
+- name: Check whether the legacy globally-trusted apt keyring exists
+  ansible.builtin.stat:
+    path: /etc/apt/trusted.gpg
+  register: openclaw_setup_legacy_trusted_stat
+
+- name: Inspect the legacy globally-trusted apt keyring
+  ansible.builtin.command:
+    cmd: gpg --no-default-keyring --keyring /etc/apt/trusted.gpg --list-keys --with-colons
+  when: openclaw_setup_legacy_trusted_stat.stat.exists
+  register: openclaw_setup_legacy_trusted
+  changed_when: false
+  # Absent keyring, or no gpg, exits non-zero; that is a reason to leave the
+  # file alone, not to fail the play.
+  failed_when: false
+  # Read-only, and it has to run during --check or the guard below would compare
+  # against an empty stdout and delete on the strength of no evidence at all.
+  check_mode: false
+
+- name: Remove the legacy globally-trusted apt keyring
+  ansible.builtin.file:
+    path: /etc/apt/trusted.gpg
+    state: absent
+  when:
+    - openclaw_setup_legacy_trusted_stat.stat.exists
+    - openclaw_setup_legacy_trusted.rc | default(1) == 0
+    - openclaw_setup_legacy_trusted.stdout_lines | default([])
+      | select('match', '^pub:')
+      | reject('search', '2F59B5F99B1BE0B4')
+      | list | length == 0
+
+# --- End of one-shot migration cleanups ------------------------------------
+
+# apt_key and apt_repository are both deprecated and removed in ansible-core
+# 2.25. deb822_repository replaces the pair: it carries the signing key with the
+# repository definition, so the key is scoped to this one source instead of
+# being trusted for every repository on the host — which is the actual reason
+# apt_key is going away.
+#
+# The module creates /etc/apt/keyrings itself when it needs to store a key
+# (ensure_keyrings_dir), so it does not depend on the task further down that
+# also creates it.
+- name: Add NodeSource repository
+  ansible.builtin.deb822_repository:
+    name: nodesource
+    types: [deb]
+    uris: https://deb.nodesource.com/node_26.x
+    suites: [nodistro]
+    components: [main]
+    signed_by: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    state: present
+
+- name: Install Node.js
+  ansible.builtin.apt:
+    name: nodejs
+    state: present
+    update_cache: true
+
+- name: Create /etc/apt/keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Add GitHub CLI APT key
+  ansible.builtin.get_url:
+    url: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+    dest: /etc/apt/keyrings/githubcli-archive-keyring.gpg
+    mode: '0644'
+
+- name: Add GitHub CLI APT repository
+  ansible.builtin.deb822_repository:
+    name: github-cli
+    types: [deb]
+    uris: https://cli.github.com/packages
+    suites: [stable]
+    components: [main]
+    architectures: [amd64]
+    # Already scoped to its own keyring, downloaded by the task above, so this
+    # is a straight translation of the one-line deb entry.
+    signed_by: /etc/apt/keyrings/githubcli-archive-keyring.gpg
+    state: present
+
+- name: Remove the superseded GitHub CLI .list definition
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/github-cli.list
+    state: absent
+
+- name: Install GitHub CLI (gh)
+  ansible.builtin.apt:
+    name: gh
+    state: present
+    update_cache: true
+
+# No `gh auth login`: that stored a second plaintext copy of the PAT in
+# ~/.config/gh/hosts.yml. gh — and git, through its `gh auth git-credential`
+# helper (.gitconfig) — reads GH_TOKEN from the gateway environment instead
+# (secrets.env.j2). Interactive `claw` shells have no GH_TOKEN; use
+# `sudo openclaw-admin` or export it for the session. See docs/openclaw.md §6.3.
+- name: Find a stored gh login holding the PAT in plaintext
+  ansible.builtin.find:
+    paths: "{{ openclaw_setup_home }}/.config/gh"
+    patterns: hosts.yml
+    contains: '^\s*oauth_token:'
+  register: openclaw_setup_gh_stored_login
+  # Same gate as GITHUB_TOKEN/GH_TOKEN in secrets.env.j2: without the PAT there
+  # is no environment credential to replace the stored login with.
+  when: openclaw_github_pat is defined and openclaw_github_pat | length > 0
+
+- name: Remove the stored gh login
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ openclaw_setup_gh_stored_login.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Check if uv is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/uv
+  register: openclaw_setup_uv_stat
+
+- name: Download uv installation script
+  ansible.builtin.get_url:
+    url: https://astral.sh/uv/install.sh
+    dest: /tmp/uv-install.sh
+    mode: '0755'
+  when: not openclaw_setup_uv_stat.stat.exists
+
+- name: Install uv Python package manager
+  ansible.builtin.command:
+    cmd: /tmp/uv-install.sh
+  environment:
+    UV_INSTALL_DIR: /usr/local/bin
+  when: not openclaw_setup_uv_stat.stat.exists
+  changed_when: true
