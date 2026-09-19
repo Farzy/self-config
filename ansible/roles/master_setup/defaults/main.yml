@@ -91,6 +91,47 @@ master_setup_user_dotfiles:
 
 master_setup_install_microk8s: false
 
+# --- unattended-upgrades (rendered to /etc/apt/apt.conf.d/50unattended-upgrades) ---
+
+# Also auto-upgrade packages from third-party APT repositories (Docker,
+# NodeSource, GitHub CLI...), not just Debian's own. Off by default because an
+# unattended Docker upgrade restarts dockerd and, without `live-restore`, every
+# container on the host; every playbook in this repository turns it on.
+master_setup_unattended_third_party: false
+
+# `Origins-Pattern` entries added when the flag above is on. Values come from
+# the `Origin:`/`Label:` fields of each repository's InRelease file. A pattern
+# that matches nothing on a given host is harmless, so this one list serves
+# every server. NodeSource pins the major stream in its repository URL
+# (node_26.x), so this never crosses a Node major version.
+master_setup_unattended_third_party_origins:
+  - "origin=Docker,label=Docker CE"
+  - "origin=. nodistro,label=. nodistro"
+  - "origin=gh,label=gh"
+
+# Reboot automatically when an upgrade leaves /var/run/reboot-required behind
+# (typically a new kernel). Without it the fix is installed but not running.
+master_setup_unattended_auto_reboot: true
+
+# When the upgrade itself runs (apt-daily-upgrade.timer), in the host's local
+# time (UTC on the servers). Debian's default is 06:00 plus up to an hour of
+# random delay; it is pinned to the small window below so that the reboot below
+# follows the upgrade within the same night instead of a day later.
+master_setup_unattended_upgrade_time: "02:00"
+master_setup_unattended_upgrade_random_delay: 15m
+
+# When to reboot after an upgrade left /var/run/reboot-required behind, in the
+# host's local time. unattended-upgrade schedules it with `shutdown -r <time>`
+# at the end of its own run, so this must fall after the upgrade window above
+# (02:00 + delay + install time), otherwise it waits for the next day's 03:30.
+master_setup_unattended_reboot_time: "03:30"
+
+# Reboot even if someone is logged in. False makes unattended-upgrade skip the
+# reboot when a session is open *at the end of the upgrade run* (~02:00-02:30);
+# it is not re-checked at reboot time, so a session opened after that is still
+# cut short at 03:30. A skipped reboot is retried by the next night's run.
+master_setup_unattended_reboot_with_users: false
+
 # Public SSH keys authorised for the unattended CI deploy account (the account
 # GitHub Actions connects as, i.e. the host's `ansible_user`). Public keys are
 # not secrets, so these live in plain text in the per-host vars files.

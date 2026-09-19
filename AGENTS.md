@@ -62,6 +62,26 @@ one file may still be a no-op depending on which laptop it runs on.
 `system_profiler`, `when: is_macos`) — on a Debian/WSL2 laptop both booleans
 evaluate to false and every gated task is silently skipped.
 
+### Unattended upgrades (`master_setup`)
+
+`/etc/apt/apt.conf.d/50unattended-upgrades` is rendered from
+`roles/master_setup/templates/apt/50unattended-upgrades.j2` (it is deliberately
+not in `files/etcfiles/`, which is rsynced verbatim). It is driven by
+`master_setup_unattended_*` variables documented in the role's
+`defaults/main.yml`: `..._third_party` (default `false`, set to `true` in every
+playbook) adds Docker/NodeSource/GitHub CLI origins, and `..._auto_reboot`
+(default `true`, `..._reboot_time: "03:30"`, `..._reboot_with_users: false`)
+reboots after upgrades that leave `/var/run/reboot-required`.
+
+The `docker` role fully manages `/etc/docker/daemon.json` from the
+`docker_daemon_config` mapping (default `live-restore: true`, so a Docker
+package upgrade does not stop containers, plus json-file log rotation, 3 x
+10 MB), applied with a `reload`, never a restart. Reload does not apply the log
+settings: they take effect at the next dockerd restart, for newly created
+containers only. Keys not in the mapping are removed, so a host with hand-written
+settings must list them there first. `claw` is not managed by this role (it has
+its own hand-written `daemon.json`, already with `live-restore`).
+
 ### Vault-encrypted whole-file AI assistant configs
 
 `roles/laptop_setup/files/ai/{CLAUDE,AGENTS}_{personal,professional}.md` are

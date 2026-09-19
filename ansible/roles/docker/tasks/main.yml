@@ -83,6 +83,19 @@
     state: present
     update_cache: true
 
+# After the packages (so /etc/docker exists and dockerd can validate the file)
+# and before the service is ensured running. The handler reloads rather than
+# restarts, so applying this never stops a container.
+- name: Install Docker daemon configuration
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: '0644'
+    validate: dockerd --validate --config-file %s
+  notify: Reload Docker daemon configuration
+
 - name: Ensure the Docker service is enabled and running
   ansible.builtin.systemd_service:
     name: docker
