@@ -215,6 +215,14 @@ if [[ $(id -un) == "{{ openclaw_setup_user }}" ]]; then
     [ -d "{{ openclaw_setup_npm_prefix }}/bin" ] && export PATH="{{ openclaw_setup_npm_prefix }}/bin:${PATH}"
     [ -f "${HOME}/.openclaw/completions/openclaw.zsh" ] && source "${HOME}/.openclaw/completions/openclaw.zsh"
 fi
+
+# GitHub CLI authentication: gh reads GH_TOKEN/GITHUB_TOKEN automatically, so no
+# `gh auth login` and no token ever stored on disk in a dedicated gh config file.
+# Value comes from the openclaw_setup role's secrets.env (Ansible Vault, not git-tracked).
+if [[ $(id -un) == "{{ openclaw_setup_user }}" ]] && [ -r /etc/openclaw/secrets.env ]; then
+    export GITHUB_TOKEN="$(grep -m1 '^GITHUB_TOKEN=' /etc/openclaw/secrets.env | cut -d= -f2-)"
+    export GH_TOKEN="${GITHUB_TOKEN}"
+fi
 {% endif %}
 
 # iTerm2 integration
