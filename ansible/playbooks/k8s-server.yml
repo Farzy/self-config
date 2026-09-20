@@ -3,6 +3,21 @@
 - name: "Install server"
   hosts: k8s
 
+  pre_tasks:
+    # Debian 11 (bullseye) is past LTS: its -backports suite has been removed from
+    # the mirrors, so `apt-get update` fails ("no longer has a Release file") and,
+    # with it, every apt task with update_cache in the roles below. The main and
+    # security suites are still served. Drop this once the host is on a supported
+    # release.
+    - name: Disable the bullseye-backports repository (no longer on the mirrors)
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list
+        regexp: '^(deb(?:-src)? http://deb\.debian\.org/debian bullseye-backports main)$'
+        replace: '# disabled: repository no longer has a Release file: \1'
+        backup: true
+      when: ansible_facts['distribution_release'] == 'bullseye'
+      tags: always
+
   roles:
     - role: master_setup
       tags: deploy
