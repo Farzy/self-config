@@ -18,6 +18,10 @@
 
   vars:
     master_setup_unattended_third_party: true
+    # Keep scanners from exhausting sshd's unauthenticated-connection slots (see
+    # master_setup/defaults/main.yml).
+    master_setup_sshd_login_grace_time: 20
+    master_setup_sshd_max_startups: "30:30:200"
     iterm2_integration_users:
       - { name: "root", home_path: "/root", owner: "root", group: "root" }
       - { name: "debian", home_path: "/home/debian", owner: "debian", group: "debian" }

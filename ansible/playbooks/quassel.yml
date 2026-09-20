@@ -19,6 +19,15 @@
 
   vars:
     master_setup_unattended_third_party: true
+    # Password logins are off: only public keys (the operator's, and the CI
+    # deploy key below). quassel is the most attacked host and, unlike claw and
+    # minecraft-01, still accepted passwords.
+    master_setup_sshd_password_auth: false
+    # ~26k scan attempts a day fill sshd's unauthenticated-connection slots
+    # (default LoginGraceTime 120 / MaxStartups 10:30:100) and it then drops every
+    # new connection, the operator's and CI's included.
+    master_setup_sshd_login_grace_time: 20
+    master_setup_sshd_max_startups: "30:30:200"
     iterm2_integration_users:
       - { name: "root", home_path: "/root", owner: "root", group: "root" }
       - { name: "debian", home_path: "/home/debian", owner: "debian", group: "debian" }

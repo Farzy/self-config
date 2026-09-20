@@ -82,6 +82,21 @@ containers only. Keys not in the mapping are removed, so a host with hand-writte
 settings must list them there first. `claw` is not managed by this role (it has
 its own hand-written `daemon.json`, already with `live-restore`).
 
+`master_setup_sshd_password_auth` (default `null` = unmanaged; `false` in
+`quassel.yml`) writes the drop-in `/etc/ssh/sshd_config.d/10-password-auth.conf`
+and reloads sshd; never set it to `false` on a host without a working key.
+`master_setup_sshd_login_grace_time` / `..._max_startups` (default `null`; set in
+`quassel.yml`) write `20-connection-limits.conf` to keep scanners from
+exhausting sshd's unauthenticated-connection slots.
+
+`master_setup` also installs fail2ban and manages `/etc/fail2ban/jail.local` from
+`templates/fail2ban/jail.local.j2` (systemd backend, incremental bans) plus
+`fail2ban.local` (`dbpurgeage`, so the ban history lasts as long as the longest
+ban): an `sshd` jail (`mode = normal`) for real authentication failures and a
+separate, more tolerant `sshd-ddos` jail for pre-auth noise, which health checks
+and aborted `ssh` sessions also produce. Driven by `master_setup_fail2ban*`
+variables (default on). It replaced the hand-written file `claw` had.
+
 ### Vault-encrypted whole-file AI assistant configs
 
 `roles/laptop_setup/files/ai/{CLAUDE,AGENTS}_{personal,professional}.md` are

@@ -1,0 +1,48 @@
+# {{ ansible_managed }}
+# Rendered from roles/master_setup/templates/fail2ban/jail.local.j2.
+#
+# Replaces the hand-written jail.local first created on claw ("OpenClaw security
+# hardening"); the values below are a superset of it. Debian's own
+# jail.d/defaults-debian.conf already enables the sshd jail.
+#
+# There is no `validate:` on this file (fail2ban-client -t checks the whole
+# configuration tree, not one file), so a malformed jail.local is only noticed
+# when the "Restart fail2ban" handler runs at the end of the play: the file stays
+# installed and the service is down until it is fixed.
+[DEFAULT]
+# Never ban loopback or the addresses in master_setup_fail2ban_ignoreip.
+ignoreip = 127.0.0.1/8 ::1{% for ip in master_setup_fail2ban_ignoreip %} {{ ip }}{% endfor %}
+
+bantime = {{ master_setup_fail2ban_bantime }}
+findtime = {{ master_setup_fail2ban_findtime }}
+maxretry = {{ master_setup_fail2ban_maxretry }}
+
+# Repeat offenders are banned for progressively longer. fail2ban's default
+# formula already doubles the ban on each new ban (bantime, 2x, 4x, 8x...), so
+# `bantime.factor` is left at its default of 1: raising it would multiply *every*
+# ban, including the first. The ban history lives in fail2ban's database, which
+# is purged after dbpurgeage (see fail2ban.local), so that must be at least maxtime.
+bantime.increment = true
+bantime.maxtime = {{ master_setup_fail2ban_bantime_max }}
+
+# Read sshd's messages from the journal. Debian 13 has no rsyslog and so no
+# /var/log/auth.log; the journal works on every supported release. Needs the
+# python3-systemd package, which is only a Recommends of fail2ban.
+backend = systemd
+
+# Real authentication failures (bad password, invalid user): strict.
+[sshd]
+enabled = true
+port = ssh
+mode = normal
+
+# Pre-authentication noise (no identification string, connection closed or reset
+# before auth, protocol mismatch). This is what fills sshd's MaxStartups slots,
+# but it is also what a TCP health check, an aborted `ssh` or the operator's own
+# connections dropped by a saturated sshd look like, so it gets a much more
+# tolerant threshold than real authentication failures.
+[sshd-ddos]
+enabled = true
+port = ssh
+filter = sshd[mode=ddos]
+maxretry = {{ master_setup_fail2ban_ddos_maxretry }}

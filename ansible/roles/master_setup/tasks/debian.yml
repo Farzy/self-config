@@ -139,6 +139,113 @@
     - Restart apt-daily-upgrade timer
   tags: configuration
 
+# python3-systemd is only a Recommends of the Debian package, but the jail's
+# `backend = systemd` cannot start without it, so it is listed explicitly: on a
+# host without recommends the role would otherwise report green while nothing is
+# actually banned.
+- name: Install fail2ban
+  ansible.builtin.apt:
+    name:
+      - fail2ban
+      - python3-systemd
+    state: present
+  register: master_setup_fail2ban_install
+  when: master_setup_fail2ban | bool
+  tags: configuration
+
+- name: Install fail2ban configuration
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/fail2ban/jail.local.j2"
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: '0644'
+  when: master_setup_fail2ban | bool
+  notify: Restart fail2ban
+  tags: configuration
+
+# `dbpurgeage` is a fail2ban.conf option, not a jail one, so it needs its own file.
+# It is how long the ban history is kept: at its default of 1d, an offender's
+# history is forgotten after a day, so incremental bans never climb past 1d and a
+# restart only restores bans still inside that window.
+- name: Keep the fail2ban ban history as long as the longest ban
+  ansible.builtin.copy:
+    dest: /etc/fail2ban/fail2ban.local
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      # Managed by Ansible (roles/master_setup/tasks/debian.yml).
+      [Definition]
+      dbpurgeage = {{ master_setup_fail2ban_bantime_max }}
+  when: master_setup_fail2ban | bool
+  notify: Restart fail2ban
+  tags: configuration
+
+- name: Ensure fail2ban is enabled and running
+  ansible.builtin.systemd_service:
+    name: fail2ban
+    enabled: true
+    state: started
+  # In check mode the install above is only simulated, so on a host that does not
+  # have fail2ban yet the unit does not exist and this task would fail. Expected,
+  # not a regression: skip it only in that exact case.
+  when:
+    - master_setup_fail2ban | bool
+    - not (ansible_check_mode and master_setup_fail2ban_install is changed)
+  tags: configuration
+
+# Written by `copy` rather than `template` so the file is exactly two lines that
+# an operator can also create by hand in an emergency (see the PR that added it):
+# the content is identical, so Ansible then reports no change.
+- name: Set sshd PasswordAuthentication
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/10-password-auth.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      # Managed by Ansible (roles/master_setup/tasks/debian.yml).
+      PasswordAuthentication {{ 'yes' if master_setup_sshd_password_auth | bool else 'no' }}
+    # Refuse to install a file sshd itself cannot parse.
+    validate: /usr/sbin/sshd -t -f %s
+  when: master_setup_sshd_password_auth is not none
+  notify: Reload sshd
+  tags: configuration
+
+# Same idea as above: two static lines, creatable by hand in an emergency.
+- name: Set sshd connection limits
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/20-connection-limits.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      # Managed by Ansible (roles/master_setup/tasks/debian.yml).
+      LoginGraceTime {{ master_setup_sshd_login_grace_time }}
+      MaxStartups {{ master_setup_sshd_max_startups }}
+    validate: /usr/sbin/sshd -t -f %s
+  when:
+    - master_setup_sshd_login_grace_time is not none
+    - master_setup_sshd_max_startups is not none
+  notify: Reload sshd
+  tags: configuration
+
+# `sshd -T` prints the effective configuration, so this catches a drop-in that
+# loses to an earlier directive (sshd is first-match-wins). It reads the files,
+# not the running daemon, so it does not need the reload to have happened.
+- name: Verify the effective sshd PasswordAuthentication
+  ansible.builtin.command: /usr/sbin/sshd -T
+  register: master_setup_sshd_effective
+  changed_when: false
+  failed_when: >-
+    ('passwordauthentication ' ~ ('yes' if master_setup_sshd_password_auth | bool else 'no'))
+    not in master_setup_sshd_effective.stdout | lower
+  when:
+    - master_setup_sshd_password_auth is not none
+    - not ansible_check_mode
+  tags: configuration
+
 - name: Install global gitconfig for all users
   ansible.builtin.template:
     src: "{{ role_path }}/templates/dotfiles/.gitconfig"

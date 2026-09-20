@@ -132,6 +132,53 @@ master_setup_unattended_reboot_time: "03:30"
 # cut short at 03:30. A skipped reboot is retried by the next night's run.
 master_setup_unattended_reboot_with_users: false
 
+# --- fail2ban (SSH brute-force protection) ---
+
+# Install fail2ban and manage /etc/fail2ban/jail.local (sshd jail only). The
+# servers are on the public internet and see tens of thousands of SSH login
+# attempts a day, enough to exhaust sshd's MaxStartups and drop legitimate
+# connections. Successful key logins never count, so CI deploys are unaffected.
+master_setup_fail2ban: true
+
+# Addresses never banned (in addition to loopback), as IPs or CIDRs.
+master_setup_fail2ban_ignoreip: []
+
+# `maxretry` authentication failures within `findtime` earn a ban of `bantime`.
+# fail2ban's default formula then doubles the ban on each new ban for the same
+# address (1h, 2h, 4h...) up to `bantime_max`. Times accept fail2ban suffixes
+# (s, m, h, d, w).
+master_setup_fail2ban_maxretry: 5
+master_setup_fail2ban_findtime: 10m
+master_setup_fail2ban_bantime: 1h
+master_setup_fail2ban_bantime_max: 1w
+
+# Threshold for the separate `sshd-ddos` jail, which counts pre-authentication
+# noise (connections closed or reset before auth, no identification string).
+# Much higher than maxretry because a health check, an aborted `ssh` or the
+# operator's own connections dropped by a saturated sshd produce the same lines.
+master_setup_fail2ban_ddos_maxretry: 20
+
+# --- sshd ---
+
+# Manage sshd's PasswordAuthentication through a drop-in
+# (/etc/ssh/sshd_config.d/10-password-auth.conf). `null` (default) leaves sshd
+# alone, `false` forbids password logins, `true` allows them. Opt-in per
+# playbook rather than a default: turning passwords off on a host that has no
+# working key for its accounts would lock everyone out. Include is at the top of
+# Debian's sshd_config, so this drop-in wins over the compiled-in default.
+master_setup_sshd_password_auth: null
+
+# Connection limits, written to /etc/ssh/sshd_config.d/20-connection-limits.conf
+# when BOTH are set (`null` = leave sshd's defaults: LoginGraceTime 120,
+# MaxStartups 10:30:100). Internet scanners open connections faster than sshd
+# closes unauthenticated ones: each holds one of the MaxStartups slots for
+# LoginGraceTime seconds, and once `full` (100) are pending every new connection
+# is dropped, legitimate ones included. A short grace time frees the slots fast;
+# `start:rate:full` = begin dropping at `start` pending connections, with
+# probability `rate` %, rising linearly to 100 % at `full`.
+master_setup_sshd_login_grace_time: null
+master_setup_sshd_max_startups: null
+
 # Public SSH keys authorised for the unattended CI deploy account (the account
 # GitHub Actions connects as, i.e. the host's `ansible_user`). Public keys are
 # not secrets, so these live in plain text in the per-host vars files.

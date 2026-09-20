@@ -3,6 +3,21 @@
 - name: "Install server"
   hosts: k8s
 
+  pre_tasks:
+    # Debian 11 (bullseye) is past LTS: its -backports suite has been removed from
+    # the mirrors, so `apt-get update` fails ("no longer has a Release file") and,
+    # with it, every apt task with update_cache in the roles below. The main and
+    # security suites are still served. Drop this once the host is on a supported
+    # release.
+    - name: Disable the bullseye-backports repository (no longer on the mirrors)
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list
+        regexp: '^(deb(?:-src)? http://deb\.debian\.org/debian bullseye-backports main)$'
+        replace: '# disabled: repository no longer has a Release file: \1'
+        backup: true
+      when: ansible_facts['distribution_release'] == 'bullseye'
+      tags: always
+
   roles:
     - role: master_setup
       tags: deploy
@@ -24,6 +39,10 @@
     # Debian security upgrades still apply; the reboot stays manual.
     master_setup_unattended_third_party: false
     master_setup_unattended_auto_reboot: false
+    # Keep scanners from exhausting sshd's unauthenticated-connection slots (see
+    # master_setup/defaults/main.yml).
+    master_setup_sshd_login_grace_time: 20
+    master_setup_sshd_max_startups: "30:30:200"
     default_user: debian
     # Previously the docker role hardcoded `{{ user_owner }}`, which is defined
     # nowhere in this repository — so its final task failed with
