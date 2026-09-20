@@ -132,6 +132,24 @@ master_setup_unattended_reboot_time: "03:30"
 # cut short at 03:30. A skipped reboot is retried by the next night's run.
 master_setup_unattended_reboot_with_users: false
 
+# --- fail2ban (SSH brute-force protection) ---
+
+# Install fail2ban and manage /etc/fail2ban/jail.local (sshd jail only). The
+# servers are on the public internet and see tens of thousands of SSH login
+# attempts a day, enough to exhaust sshd's MaxStartups and drop legitimate
+# connections. Successful key logins never count, so CI deploys are unaffected.
+master_setup_fail2ban: true
+
+# Addresses never banned (in addition to loopback), as IPs or CIDRs.
+master_setup_fail2ban_ignoreip: []
+
+# `maxretry` failures within `findtime` earn a ban of `bantime`; repeat
+# offenders double up to `bantime_max`. Times accept fail2ban suffixes (s, m, h, d, w).
+master_setup_fail2ban_maxretry: 5
+master_setup_fail2ban_findtime: 10m
+master_setup_fail2ban_bantime: 1h
+master_setup_fail2ban_bantime_max: 1w
+
 # Public SSH keys authorised for the unattended CI deploy account (the account
 # GitHub Actions connects as, i.e. the host's `ansible_user`). Public keys are
 # not secrets, so these live in plain text in the per-host vars files.

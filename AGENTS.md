@@ -82,6 +82,11 @@ containers only. Keys not in the mapping are removed, so a host with hand-writte
 settings must list them there first. `claw` is not managed by this role (it has
 its own hand-written `daemon.json`, already with `live-restore`).
 
+`master_setup` also installs fail2ban and manages `/etc/fail2ban/jail.local`
+(sshd jail only, systemd backend, `mode = aggressive`, incremental bans) from
+`templates/fail2ban/jail.local.j2`, driven by `master_setup_fail2ban*`
+variables (default on). It replaced the hand-written file `claw` had.
+
 ### Vault-encrypted whole-file AI assistant configs
 
 `roles/laptop_setup/files/ai/{CLAUDE,AGENTS}_{personal,professional}.md` are

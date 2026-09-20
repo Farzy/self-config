@@ -1,0 +1,32 @@
+# {{ ansible_managed }}
+# Rendered from roles/master_setup/templates/fail2ban/jail.local.j2.
+#
+# Replaces the hand-written jail.local first created on claw ("OpenClaw security
+# hardening"); the values below are a superset of it. Debian's own
+# jail.d/defaults-debian.conf already enables the sshd jail.
+[DEFAULT]
+# Never ban loopback or the addresses in master_setup_fail2ban_ignoreip.
+ignoreip = 127.0.0.1/8 ::1{% for ip in master_setup_fail2ban_ignoreip %} {{ ip }}{% endfor %}
+
+bantime = {{ master_setup_fail2ban_bantime }}
+findtime = {{ master_setup_fail2ban_findtime }}
+maxretry = {{ master_setup_fail2ban_maxretry }}
+
+# Repeat offenders are banned for progressively longer: bantime * factor^n,
+# capped at maxtime.
+bantime.increment = true
+bantime.factor = 2
+bantime.maxtime = {{ master_setup_fail2ban_bantime_max }}
+
+# Read sshd's messages from the journal. Debian 13 has no rsyslog and so no
+# /var/log/auth.log; the journal works on every supported release.
+backend = systemd
+
+[sshd]
+enabled = true
+port = ssh
+# `aggressive` also counts unauthenticated probes (invalid users, connections
+# closed or reset before authentication, protocol mismatches). Those are the
+# bulk of internet scanning and what fills sshd's MaxStartups slots, which the
+# default `normal` mode ignores.
+mode = aggressive

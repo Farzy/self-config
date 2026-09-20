@@ -7,3 +7,11 @@
   ansible.builtin.systemd:
     name: apt-daily-upgrade.timer
     state: restarted
+
+- name: Restart fail2ban
+  ansible.builtin.systemd_service:
+    name: fail2ban
+    state: restarted
+  # Same check-mode guard as the "Ensure fail2ban is enabled" task: the unit does
+  # not exist yet on a host where the install is only simulated.
+  when: not (ansible_check_mode and master_setup_fail2ban_install is changed)

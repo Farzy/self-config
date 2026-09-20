@@ -139,6 +139,38 @@
     - Restart apt-daily-upgrade timer
   tags: configuration
 
+- name: Install fail2ban
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+  register: master_setup_fail2ban_install
+  when: master_setup_fail2ban | bool
+  tags: configuration
+
+- name: Install fail2ban configuration
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/fail2ban/jail.local.j2"
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: '0644'
+  when: master_setup_fail2ban | bool
+  notify: Restart fail2ban
+  tags: configuration
+
+- name: Ensure fail2ban is enabled and running
+  ansible.builtin.systemd_service:
+    name: fail2ban
+    enabled: true
+    state: started
+  # In check mode the install above is only simulated, so on a host that does not
+  # have fail2ban yet the unit does not exist and this task would fail. Expected,
+  # not a regression: skip it only in that exact case.
+  when:
+    - master_setup_fail2ban | bool
+    - not (ansible_check_mode and master_setup_fail2ban_install is changed)
+  tags: configuration
+
 - name: Install global gitconfig for all users
   ansible.builtin.template:
     src: "{{ role_path }}/templates/dotfiles/.gitconfig"
