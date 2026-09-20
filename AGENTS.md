@@ -85,6 +85,9 @@ its own hand-written `daemon.json`, already with `live-restore`).
 `master_setup_sshd_password_auth` (default `null` = unmanaged; `false` in
 `quassel.yml`) writes the drop-in `/etc/ssh/sshd_config.d/10-password-auth.conf`
 and reloads sshd; never set it to `false` on a host without a working key.
+`master_setup_sshd_login_grace_time` / `..._max_startups` (default `null`; set in
+`quassel.yml`) write `20-connection-limits.conf` to keep scanners from
+exhausting sshd's unauthenticated-connection slots.
 
 `master_setup` also installs fail2ban and manages `/etc/fail2ban/jail.local` from
 `templates/fail2ban/jail.local.j2` (systemd backend, incremental bans) plus

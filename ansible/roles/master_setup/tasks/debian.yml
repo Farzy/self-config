@@ -213,6 +213,24 @@
   notify: Reload sshd
   tags: configuration
 
+# Same idea as above: two static lines, creatable by hand in an emergency.
+- name: Set sshd connection limits
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/20-connection-limits.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      # Managed by Ansible (roles/master_setup/tasks/debian.yml).
+      LoginGraceTime {{ master_setup_sshd_login_grace_time }}
+      MaxStartups {{ master_setup_sshd_max_startups }}
+    validate: /usr/sbin/sshd -t -f %s
+  when:
+    - master_setup_sshd_login_grace_time is not none
+    - master_setup_sshd_max_startups is not none
+  notify: Reload sshd
+  tags: configuration
+
 # `sshd -T` prints the effective configuration, so this catches a drop-in that
 # loses to an earlier directive (sshd is first-match-wins). It reads the files,
 # not the running daemon, so it does not need the reload to have happened.

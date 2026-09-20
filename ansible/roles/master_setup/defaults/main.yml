@@ -168,6 +168,17 @@ master_setup_fail2ban_ddos_maxretry: 20
 # Debian's sshd_config, so this drop-in wins over the compiled-in default.
 master_setup_sshd_password_auth: null
 
+# Connection limits, written to /etc/ssh/sshd_config.d/20-connection-limits.conf
+# when BOTH are set (`null` = leave sshd's defaults: LoginGraceTime 120,
+# MaxStartups 10:30:100). Internet scanners open connections faster than sshd
+# closes unauthenticated ones: each holds one of the MaxStartups slots for
+# LoginGraceTime seconds, and once `full` (100) are pending every new connection
+# is dropped, legitimate ones included. A short grace time frees the slots fast;
+# `start:rate:full` = begin dropping at `start` pending connections, with
+# probability `rate` %, rising linearly to 100 % at `full`.
+master_setup_sshd_login_grace_time: null
+master_setup_sshd_max_startups: null
+
 # Public SSH keys authorised for the unattended CI deploy account (the account
 # GitHub Actions connects as, i.e. the host's `ansible_user`). Public keys are
 # not secrets, so these live in plain text in the per-host vars files.
