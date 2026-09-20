@@ -24,6 +24,10 @@
     # Debian security upgrades still apply; the reboot stays manual.
     master_setup_unattended_third_party: false
     master_setup_unattended_auto_reboot: false
+    # Keep scanners from exhausting sshd's unauthenticated-connection slots (see
+    # master_setup/defaults/main.yml).
+    master_setup_sshd_login_grace_time: 20
+    master_setup_sshd_max_startups: "30:30:200"
     default_user: debian
     # Previously the docker role hardcoded `{{ user_owner }}`, which is defined
     # nowhere in this repository — so its final task failed with
