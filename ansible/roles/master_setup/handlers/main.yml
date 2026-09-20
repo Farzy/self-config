@@ -15,3 +15,10 @@
   # Same check-mode guard as the "Ensure fail2ban is enabled" task: the unit does
   # not exist yet on a host where the install is only simulated.
   when: not (ansible_check_mode and master_setup_fail2ban_install is changed)
+
+# Reload, not restart: sshd re-reads its configuration and keeps the sessions that
+# are already open, so a bad change cannot cut off the operator who applied it.
+- name: Reload sshd
+  ansible.builtin.systemd_service:
+    name: ssh
+    state: reloaded

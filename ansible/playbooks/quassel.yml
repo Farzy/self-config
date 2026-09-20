@@ -19,6 +19,10 @@
 
   vars:
     master_setup_unattended_third_party: true
+    # Password logins are off: only public keys (the operator's, and the CI
+    # deploy key below). quassel is the most attacked host and, unlike claw and
+    # minecraft-01, still accepted passwords.
+    master_setup_sshd_password_auth: false
     iterm2_integration_users:
       - { name: "root", home_path: "/root", owner: "root", group: "root" }
       - { name: "debian", home_path: "/home/debian", owner: "debian", group: "debian" }

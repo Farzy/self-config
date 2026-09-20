@@ -171,6 +171,39 @@
     - not (ansible_check_mode and master_setup_fail2ban_install is changed)
   tags: configuration
 
+# Written by `copy` rather than `template` so the file is exactly two lines that
+# an operator can also create by hand in an emergency (see the PR that added it):
+# the content is identical, so Ansible then reports no change.
+- name: Set sshd PasswordAuthentication
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/10-password-auth.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      # Managed by Ansible (roles/master_setup/tasks/debian.yml).
+      PasswordAuthentication {{ 'yes' if master_setup_sshd_password_auth | bool else 'no' }}
+    # Refuse to install a file sshd itself cannot parse.
+    validate: /usr/sbin/sshd -t -f %s
+  when: master_setup_sshd_password_auth is not none
+  notify: Reload sshd
+  tags: configuration
+
+# `sshd -T` prints the effective configuration, so this catches a drop-in that
+# loses to an earlier directive (sshd is first-match-wins). It reads the files,
+# not the running daemon, so it does not need the reload to have happened.
+- name: Verify the effective sshd PasswordAuthentication
+  ansible.builtin.command: /usr/sbin/sshd -T
+  register: master_setup_sshd_effective
+  changed_when: false
+  failed_when: >-
+    ('passwordauthentication ' ~ ('yes' if master_setup_sshd_password_auth | bool else 'no'))
+    not in master_setup_sshd_effective.stdout | lower
+  when:
+    - master_setup_sshd_password_auth is not none
+    - not ansible_check_mode
+  tags: configuration
+
 - name: Install global gitconfig for all users
   ansible.builtin.template:
     src: "{{ role_path }}/templates/dotfiles/.gitconfig"

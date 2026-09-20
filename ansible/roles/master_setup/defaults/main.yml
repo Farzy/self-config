@@ -150,6 +150,16 @@ master_setup_fail2ban_findtime: 10m
 master_setup_fail2ban_bantime: 1h
 master_setup_fail2ban_bantime_max: 1w
 
+# --- sshd ---
+
+# Manage sshd's PasswordAuthentication through a drop-in
+# (/etc/ssh/sshd_config.d/10-password-auth.conf). `null` (default) leaves sshd
+# alone, `false` forbids password logins, `true` allows them. Opt-in per
+# playbook rather than a default: turning passwords off on a host that has no
+# working key for its accounts would lock everyone out. Include is at the top of
+# Debian's sshd_config, so this drop-in wins over the compiled-in default.
+master_setup_sshd_password_auth: null
+
 # Public SSH keys authorised for the unattended CI deploy account (the account
 # GitHub Actions connects as, i.e. the host's `ansible_user`). Public keys are
 # not secrets, so these live in plain text in the per-host vars files.
