@@ -9,7 +9,7 @@
     state: restarted
 
 - name: Restart fail2ban
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: fail2ban
     state: restarted
   # Same check-mode guard as the "Ensure fail2ban is enabled" task: the unit does
@@ -19,6 +19,6 @@
 # Reload, not restart: sshd re-reads its configuration and keeps the sessions that
 # are already open, so a bad change cannot cut off the operator who applied it.
 - name: Reload sshd
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: ssh
     state: reloaded

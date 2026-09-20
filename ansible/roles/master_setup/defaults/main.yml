@@ -143,12 +143,20 @@ master_setup_fail2ban: true
 # Addresses never banned (in addition to loopback), as IPs or CIDRs.
 master_setup_fail2ban_ignoreip: []
 
-# `maxretry` failures within `findtime` earn a ban of `bantime`; repeat
-# offenders double up to `bantime_max`. Times accept fail2ban suffixes (s, m, h, d, w).
+# `maxretry` authentication failures within `findtime` earn a ban of `bantime`.
+# fail2ban's default formula then doubles the ban on each new ban for the same
+# address (1h, 2h, 4h...) up to `bantime_max`. Times accept fail2ban suffixes
+# (s, m, h, d, w).
 master_setup_fail2ban_maxretry: 5
 master_setup_fail2ban_findtime: 10m
 master_setup_fail2ban_bantime: 1h
 master_setup_fail2ban_bantime_max: 1w
+
+# Threshold for the separate `sshd-ddos` jail, which counts pre-authentication
+# noise (connections closed or reset before auth, no identification string).
+# Much higher than maxretry because a health check, an aborted `ssh` or the
+# operator's own connections dropped by a saturated sshd produce the same lines.
+master_setup_fail2ban_ddos_maxretry: 20
 
 # --- sshd ---
 

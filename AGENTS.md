@@ -86,9 +86,12 @@ its own hand-written `daemon.json`, already with `live-restore`).
 `quassel.yml`) writes the drop-in `/etc/ssh/sshd_config.d/10-password-auth.conf`
 and reloads sshd; never set it to `false` on a host without a working key.
 
-`master_setup` also installs fail2ban and manages `/etc/fail2ban/jail.local`
-(sshd jail only, systemd backend, `mode = aggressive`, incremental bans) from
-`templates/fail2ban/jail.local.j2`, driven by `master_setup_fail2ban*`
+`master_setup` also installs fail2ban and manages `/etc/fail2ban/jail.local` from
+`templates/fail2ban/jail.local.j2` (systemd backend, incremental bans) plus
+`fail2ban.local` (`dbpurgeage`, so the ban history lasts as long as the longest
+ban): an `sshd` jail (`mode = normal`) for real authentication failures and a
+separate, more tolerant `sshd-ddos` jail for pre-auth noise, which health checks
+and aborted `ssh` sessions also produce. Driven by `master_setup_fail2ban*`
 variables (default on). It replaced the hand-written file `claw` had.
 
 ### Vault-encrypted whole-file AI assistant configs
