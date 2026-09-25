@@ -225,14 +225,12 @@ openclaw_gog_keyring_password: !vault |
           62396164323963623238323861636564383031396430346566366536366637313930353132373830
           32666132653737366261
 
-# supergateway crash-loops on a second concurrent SSE connection
-# ("Already connected to a transport"; https://github.com/supercorp-ai/supergateway/issues/112).
-# No fixed release exists on npm yet, so this lets us install a patched build instead of
-# the registry version while we wait on upstream. Set to "npm" (default) to install
-# fastmail_mcp_supergateway_version from the registry as before, or "git" to build and
-# install fastmail_mcp_supergateway_git_version from fastmail_mcp_supergateway_git_repo.
-# Revert to "npm" once a fixed release ships, then bump fastmail_mcp_supergateway_version.
-fastmail_mcp_supergateway_source: "git"
+# supergateway v4.0.0 (stable, published 2026-09-20) fixes the SSE crash-loop
+# from https://github.com/supercorp-ai/supergateway/issues/112 / PR #182, so we
+# install it from npm again instead of building the pinned upstream commit.
+# See roles/fastmail_mcp_setup/defaults/main.yml for the full rationale and the
+# git-build fallback that's still available.
+fastmail_mcp_supergateway_source: "npm"
 
 # Public SSH key GitHub Actions authenticates with, installed for the `debian`
 # account (the inventory's `ansible_user`). Public keys are not secrets, so this
