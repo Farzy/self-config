@@ -314,3 +314,6 @@ terraform/_auth/*.json
 
 .gemini/
 gha-creds-*.json
+
+# Claude Code git worktrees
+.claude/worktrees/
