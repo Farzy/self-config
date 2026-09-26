@@ -2,16 +2,17 @@
 openclaw_setup_user: claw
 openclaw_setup_group: claw
 openclaw_setup_home: /home/claw
-# Under $HOME rather than /var/tmp: the unit's PrivateTmp=true gives the gateway
-# a private /var/tmp, so a cache there was never the host directory — it was an
-# empty per-start copy thrown away on every restart. $HOME is already in the
-# unit's ReadWritePaths, so no extra sandbox exception is needed either.
+# Under $HOME rather than /var/tmp: while the unit had PrivateTmp=true (until
+# 2026.9.6, see docs/openclaw.md §4.1), a cache there was an empty per-start
+# copy thrown away on every restart. $HOME is also the one place the gateway
+# is sure to own.
 openclaw_setup_compile_cache: "{{ openclaw_setup_home }}/.cache/openclaw/compile-cache"
 
-# TMPDIR for the gateway. Not the unit's PrivateTmp /tmp: systemd deletes that
-# directory as soon as the service stops, and OpenClaw's update helper keeps its
-# staged runtime, parameters and log under os.tmpdir() while it stops, swaps and
-# restarts the very service that owns it. Kept 0700 under $HOME instead.
+# TMPDIR for the gateway. Not the shared /tmp, and never a PrivateTmp /tmp:
+# systemd deletes that directory as soon as the service stops, and OpenClaw's
+# update helper keeps its staged runtime, parameters and log under os.tmpdir()
+# while it stops, swaps and restarts the very service that owns it. Kept 0700
+# under $HOME instead.
 openclaw_setup_tmp_dir: "{{ openclaw_setup_home }}/.cache/openclaw/tmp"
 
 # claw-owned npm global prefix OpenClaw is installed into, so its own updater —
@@ -111,4 +112,4 @@ openclaw_setup_config_readonly: false
 # older, but never downgrades: once a newer release has migrated the SQLite
 # state, an older package cannot be restored safely. A host that self-updated
 # past this value fails the play until it is bumped — see docs/openclaw.md §4.4.
-openclaw_setup_version: "2026.9.5"
+openclaw_setup_version: "2026.9.6"

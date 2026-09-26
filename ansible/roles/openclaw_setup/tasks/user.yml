@@ -142,7 +142,7 @@
   become_user: "{{ openclaw_setup_user }}"
 
 # The gateway's TMPDIR (see openclaw_setup_tmp_dir): private to the user, and
-# unlike PrivateTmp's /tmp it survives the service stop in the middle of an
+# unlike a PrivateTmp /tmp it would survive the service stop in the middle of an
 # update.
 - name: Create the OpenClaw gateway temporary directory
   ansible.builtin.file:
@@ -155,7 +155,7 @@
   become_user: "{{ openclaw_setup_user }}"
 
 # Superseded by the cache under $HOME above; the old path sat behind the unit's
-# PrivateTmp and never reached the service anyway.
+# former PrivateTmp and never reached the service anyway.
 - name: Remove the legacy /var/tmp compile cache
   ansible.builtin.file:
     path: /var/tmp/openclaw-compile-cache

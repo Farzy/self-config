@@ -46,8 +46,9 @@ EnvironmentFile=/etc/openclaw/secrets.env
 # The claw-owned npm prefix first, so the agent's own `openclaw` calls resolve
 # to the installation this unit runs.
 Environment=PATH={{ openclaw_setup_npm_prefix }}/bin:/usr/local/bin:/usr/bin:/bin
-# Not PrivateTmp's /tmp, which systemd deletes when this service stops — exactly
-# what the update helper does mid-update while its files live in os.tmpdir().
+# A claw-owned TMPDIR rather than the shared /tmp (and not a PrivateTmp /tmp,
+# which systemd would delete when this service stops — exactly what the update
+# helper does mid-update while its files live in os.tmpdir()).
 Environment=TMPDIR={{ openclaw_setup_tmp_dir }}
 Environment=OPENCLAW_GATEWAY_PORT={{ openclaw_setup_port }}
 # Service identity markers `openclaw gateway install` writes. They are what lets
@@ -71,31 +72,22 @@ Environment=OPENCLAW_CONFIG_READONLY=1
 # agent, which can start unsandboxed processes through its own user manager
 # (`systemd-run --user`, the same way the updater escapes this unit's lifecycle).
 #
-# In a user unit, every namespace-based setting below (ProtectSystem, PrivateTmp,
-# ProtectKernelTunables, ...) is SILENTLY IGNORED unless PrivateUsers=true is also
-# set: an unprivileged user manager cannot create mount namespaces otherwise.
-# Verified on claw (systemd 252): without it the root file system stays
-# writable and the journal logs "namespace setup is prohibited ... ignoring".
-# Do not remove PrivateUsers without re-checking /proc/<pid>/mountinfo.
-
-# Run in a user namespace mapping only {{ openclaw_setup_user }}; required for the
-# settings below to take effect. Other users' files appear as nobody:nogroup, but
-# access checks are unchanged (journal reads through systemd-journal still work).
-PrivateUsers=true
-
-# Mount the whole file system read-only, including /usr and /etc
-ProtectSystem=strict
-
-# Allow writes to OpenClaw's home directory only: state, config, workspace, the
-# npm prefix the updater swaps, and the Node compile cache all live there
-ReadWritePaths={{ openclaw_setup_home }}
-
-# Keep ProtectHome off so the service can manage its own files under {{ openclaw_setup_home }}
-ProtectHome=false
-
-# Mount a private, isolated /tmp and /var/tmp namespace to prevent multi-tenant token leakage.
-# Kept for tools that hard-code /tmp; OpenClaw itself uses TMPDIR above.
-PrivateTmp=true
+# No namespace-based sandboxing (PrivateUsers, ProtectSystem, ReadWritePaths,
+# PrivateTmp, ProtectKernelTunables, ProtectControlGroups, ProtectHostname).
+# In a user unit those only take effect under PrivateUsers=true — an
+# unprivileged user manager cannot create mount namespaces otherwise, and
+# systemd then silently ignores them. PrivateUsers=true in turn is incompatible
+# with OpenClaw >= 2026.9.6: its fs-safe temp workspaces require every ancestor
+# of the temp root, starting at `/`, to be owned by the effective uid or root,
+# and inside the user namespace root is unmapped and shows as nobody. Every
+# claude-cli agent turn then fails with "temp workspace directory has an
+# untrusted owner" (claw, 2026-09-26). For an unprivileged uid the settings
+# dropped here were defense in depth only: `/`, /usr, /etc and /proc/sys are
+# not writable by {{ openclaw_setup_user }} anyway. See docs/openclaw.md §4.1.
+# Restore them together if upstream ever accepts the overflow uid.
+#
+# What remains below is seccomp- or no_new_privs-based, which a user manager
+# can apply without namespaces.
 
 # Set MemoryDenyWriteExecute to false because Node.js V8 engine requires W^X JIT compilation memory allocation
 MemoryDenyWriteExecute=false
@@ -114,17 +106,8 @@ NoNewPrivileges=true
 # NoNewPrivileges=true only prevented creating setuid-to-claw files.
 RestrictSUIDSGID=false
 
-# Prevent modification of system hostname or domain name by isolating UTS namespace
-ProtectHostname=true
-
 # Prevent switching execution domain or architecture personality
 LockPersonality=true
-
-# Protect kernel variables (/proc/sys, /sys, /proc/sysrq-trigger) from modification
-ProtectKernelTunables=true
-
-# Mount control group hierarchies (/sys/fs/cgroup) as read-only
-ProtectControlGroups=true
 
 # Prevent the service from acquiring realtime scheduling priorities to avoid CPU starvation attacks
 RestrictRealtime=true
