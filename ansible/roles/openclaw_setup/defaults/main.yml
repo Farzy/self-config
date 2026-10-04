@@ -81,7 +81,12 @@ openclaw_setup_gog_cli_sha256: "905fed0bfabafa5dde7189e50642b3fa31d7fc4aad50a8d2
 openclaw_setup_gog_account_email: "farzad.farid@gmail.com"
 
 openclaw_setup_telegram_enabled: true
+# Telegram sender ids only ("telegram:<id>"): rendered as channels.telegram.allowFrom
+# and groupAllowFrom. Do not put other channels' ids here.
 openclaw_setup_telegram_allow_from: []
+# Owners across every channel ("telegram:<id>", "signal:<number>", ...): rendered as
+# commands.ownerAllowFrom, which is channel-agnostic, unlike the per-channel lists.
+openclaw_setup_owner_allow_from: []
 openclaw_setup_telegram_thread_bindings_enabled: true
 
 openclaw_setup_allowed_origins:

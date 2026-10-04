@@ -33,7 +33,8 @@ openclaw_gateway_token: !vault |
           33343434383438313836343435383633353032353562636532653564303839646462633839363838
           363863343066633762323035623235396566
 
-openclaw_setup_telegram_allow_from: ["telegram:1252517755", "signal:+4944703493752944954"]
+openclaw_setup_telegram_allow_from: ["telegram:1252517755"]
+openclaw_setup_owner_allow_from: ["telegram:1252517755", "signal:+4944703493752944954"]
 
 openclaw_telegram_bot_token: !vault |
           $ANSIBLE_VAULT;1.2;AES256;personal

@@ -42,7 +42,7 @@
     }
   },
   "commands": {
-    "ownerAllowFrom": {{ openclaw_setup_telegram_allow_from | to_json }}
+    "ownerAllowFrom": {{ openclaw_setup_owner_allow_from | to_json }}
   },
 {% set ns = namespace(models={}, allow_models=[]) %}
 {% if openclaw_setup_claude_cli_enabled %}
