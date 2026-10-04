@@ -341,6 +341,9 @@ The server includes modern CLI tools configured with standard short names:
      ssh claw "sudo openclaw-admin pairing approve <CODE>"
      ```
 
+5. **Allow-list**:
+   `openclaw_setup_telegram_allow_from` (default `[]`, set in [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml)) is rendered as `channels.telegram.allowFrom` and `groupAllowFrom`. It holds Telegram sender ids only (`telegram:<id>`); the play fails if it holds anything else. Owners are configured separately, see [6.2](#62-signal-control-channel-setup) step 4.
+
 ---
 
 ### 6.2 Signal Control Channel Setup
@@ -366,6 +369,9 @@ The server includes modern CLI tools configured with standard short names:
      ```bash
      ssh claw "sudo openclaw-admin pairing approve <CODE>"
      ```
+
+4. **Owners (all channels)**:
+   `openclaw_setup_owner_allow_from` (default `[]`) is rendered as `commands.ownerAllowFrom`, the channel-agnostic owner list, so it mixes channels (`telegram:<id>`, `signal:<number>`). It is deliberately separate from `openclaw_setup_telegram_allow_from`: that list used to feed `commands.ownerAllowFrom` too, which is how a Signal id once ended up in the Telegram allow-lists. Being allowed to chat on a channel does not make someone an owner, so the two lists are not derived from each other.
 
 ---
 
@@ -453,8 +459,6 @@ OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `c
 * **`openclaw_setup_reasoning_default`** (default: `"stream"`) — rendered as `agents.defaults.reasoningDefault`.
 * **`openclaw_setup_scaleway_api`** (default: `"openai-responses"`) — rendered as `models.providers.scaleway.api`, alongside the existing `baseUrl`/`apiKey`/`models` fields.
 * **`openclaw_setup_telegram_thread_bindings_enabled`** (default: `true`) — rendered as `channels.telegram.threadBindings.enabled`.
-* **`openclaw_setup_telegram_allow_from`** (default: `[]`) — rendered as `channels.telegram.allowFrom` and `groupAllowFrom`. Telegram sender ids only (`telegram:<id>`).
-* **`openclaw_setup_owner_allow_from`** (default: `[]`) — rendered as `commands.ownerAllowFrom`, the channel-agnostic owner list, so it may mix channels (`telegram:<id>`, `signal:<number>`). Before this variable existed `commands.ownerAllowFrom` reused the Telegram list, which is how a Signal id ended up in the Telegram allow-lists.
 * **`agents.defaults.modelPolicy.allow`** — no dedicated variable: computed in `openclaw.json.j2` as the primary model, plus `openclaw_setup_model_fallbacks`, plus every id in `openclaw_setup_scaleway_models` (when `openclaw_setup_scaleway_enabled` is `true`) prefixed `scaleway/`, deduplicated. Including every configured Scaleway model — not just the fallback chain — matters because `models.providers.scaleway.models` registers all of them (including `mistral-small-3.2-24b-instruct-2506`, which isn't a fallback) as selectable in the Control UI; leaving one out of the allow-list would silently block a model this same config otherwise advertises as available. A separate allow-list variable existed briefly and was removed after it drifted out of sync with the fallback chain (missing `google/gemini-3.1-pro-preview`) the first time `openclaw doctor --fix` touched it — deriving it removes the possibility of that drift rather than requiring the lists to be kept in sync by hand.
 
 These settings previously existed only as manual drift on the live server (set outside Ansible) and were wiped by a plain redeploy; they're now first-class template inputs so `ansible-playbook --diff` stays a true no-op when nothing has actually changed.

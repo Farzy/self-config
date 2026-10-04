@@ -10,6 +10,18 @@
       openclaw.json.j2 emits the 2026.8.1 schema (agents.entries, memory.search,
       channels.signal.transport); pin openclaw_setup_version >= 2026.8.1 or revert the template.
 
+# Rendered as channels.telegram.allowFrom/groupAllowFrom. A previous version of
+# the role fed commands.ownerAllowFrom from this list too, which let a Signal id
+# slip into the Telegram lists; this keeps that mistake from coming back.
+- name: Assert the Telegram allow-list only holds Telegram ids
+  ansible.builtin.assert:
+    that:
+      - openclaw_setup_telegram_allow_from | reject("match", "^telegram:") | list | length == 0
+    fail_msg: >-
+      openclaw_setup_telegram_allow_from must only contain "telegram:<id>" entries
+      (rendered as channels.telegram.allowFrom/groupAllowFrom); put owner ids from
+      other channels in openclaw_setup_owner_allow_from instead.
+
 - name: Create OpenClaw config directory
   ansible.builtin.file:
 
