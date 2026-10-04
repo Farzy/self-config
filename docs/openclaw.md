@@ -527,6 +527,17 @@ pattern (laptop-side secret → `ansible-vault encrypt_string` → deploy):
    The role writes the client JSON and token export to short-lived 0600
    temp files under `/home/claw`, feeds them to `gog auth credentials set` /
    `gog auth tokens import` as the `claw` user, then deletes the temp files.
+   These calls (`tasks/gog-auth.yml`, run after `secrets-env.yml`) go through
+   `openclaw_setup_gog_argv`: a transient unit in `claw`'s user manager with
+   `EnvironmentFile=/etc/openclaw/secrets.env`, so the keyring password is read
+   from that file and **never appears on a command line**. Do not pass it with
+   `environment:` on a `become` task: Ansible puts the variable on the `sudo`
+   command line, and sudo logs the full line to the journal in clear text
+   (`no_log` only hides it from Ansible's own output). Until this was fixed, every
+   run wrote the password to the host's journal (`journalctl | grep
+   GOG_KEYRING_PASSWORD`, 2026-09-19 onwards); those old lines survive until the
+   journal is vacuumed, so rotate the password (below) and then
+   `sudo journalctl --vacuum-time=1s --rotate` if you want them gone.
    The token-import step is skipped on repeat runs once `gog auth list`
    already shows `openclaw_setup_gog_account_email`. The client-credentials
    step is skipped the same way once

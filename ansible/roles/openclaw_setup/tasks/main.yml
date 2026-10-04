@@ -1,7 +1,7 @@
 ---
 # The role is split by concern; each file keeps the order the tasks ran in when
 # this was one file. Ordering that matters is documented where it applies:
-# secrets.env before anything that runs the OpenClaw CLI, the credential stores
+# secrets.env before anything that runs the OpenClaw CLI or authorizes gog, the credential stores
 # before openclaw.json is rendered, and the audit gate after it.
 
 - name: Provision the openclaw service account
@@ -13,11 +13,16 @@
 - name: Install signal-cli
   ansible.builtin.import_tasks: signal-cli.yml
 
-- name: Install and authorize the gog CLI
+- name: Install the gog CLI
   ansible.builtin.import_tasks: gog.yml
 
 - name: Deploy the OpenClaw secrets environment file
   ansible.builtin.import_tasks: secrets-env.yml
+
+# After secrets.env: gog reads its keyring password from there, never from a
+# `become` environment (see gog-auth.yml).
+- name: Authorize the gog CLI
+  ansible.builtin.import_tasks: gog-auth.yml
 
 - name: Install OpenClaw
   ansible.builtin.import_tasks: install.yml
