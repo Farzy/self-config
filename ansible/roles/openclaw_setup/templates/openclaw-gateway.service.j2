@@ -83,8 +83,8 @@ Environment=OPENCLAW_CONFIG_READONLY=1
 # rejected every temp workspace inside the user namespace, where root is
 # unmapped and shows as nobody ("temp workspace directory has an untrusted
 # owner"); fs-safe 0.21 trusts the host hierarchy there, still enforcing ancestor
-# modes, and logs FS_SAFE_UNMAPPED_TEMP_ANCESTOR once per process. See
-# docs/openclaw.md §4.1.
+# modes (a bare repro prints an FS_SAFE_UNMAPPED_TEMP_ANCESTOR warning).
+# See docs/openclaw.md §4.1.
 
 # Run in a user namespace mapping only {{ openclaw_setup_user }}; required for the
 # settings below to take effect. Other users' files appear as nobody:nogroup, but
