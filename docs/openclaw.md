@@ -6,7 +6,7 @@ This guide details the deployment, configuration, operational management, and tr
 
 ## 1. System Overview & Architecture
 
-* **Cloud Provider**: Scaleway (`PLAY2-PICO` instance, Debian Bookworm).
+* **Cloud Provider**: Scaleway (`PRO2-XXS` instance — 2 dedicated vCPU, 8 GiB, Debian Bookworm).
 * **Hostname / Domain**: `claw.farzad.tech` (IP: `163.172.189.14`).
 * **Web Gateway**: Nginx reverse proxy with TLS certificate managed by Certbot (Let's Encrypt), forwarding `https://claw.farzad.tech` to `http://127.0.0.1:3000`.
 * **Runtime Environment**: Node.js 26.x (`node_26.x` APT repository). OpenClaw is installed in the `claw`-owned npm prefix `/home/claw/.npm-global` and runs as the systemd **user** unit `openclaw-gateway.service` of `claw` (lingering), which is what lets it update itself on request — see [4.4](#44-self-update-on-request).

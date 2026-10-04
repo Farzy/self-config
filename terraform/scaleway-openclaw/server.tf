@@ -35,7 +35,7 @@ resource "scaleway_instance_server" "openclaw_server" {
   ip_id = scaleway_instance_ip.openclaw_ip.id
 
   root_volume {
-    delete_on_termination = true
+    delete_on_termination = false
     size_in_gb            = 20
   }
 
