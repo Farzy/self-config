@@ -11,7 +11,7 @@ This guide details the deployment, configuration, operational management, and tr
 * **Web Gateway**: Nginx reverse proxy with TLS certificate managed by Certbot (Let's Encrypt), forwarding `https://claw.farzad.tech` to `http://127.0.0.1:3000`.
 * **Runtime Environment**: Node.js 26.x (`node_26.x` APT repository). OpenClaw is installed in the `claw`-owned npm prefix `/home/claw/.npm-global` and runs as the systemd **user** unit `openclaw-gateway.service` of `claw` (lingering), which is what lets it update itself on request — see [4.4](#44-self-update-on-request).
 * **Dedicated System Account**: User `claw` (`/home/claw`, default shell `/usr/bin/zsh`).
-* **LLM Provider**: Anthropic Claude (`anthropic/claude-sonnet-5`), routed through the `claude-cli` agent runtime (reuses a Claude Code login on the host instead of a separate API key — see [6.4](#64-claude-anthropic-model-via-claude-code-cli-reuse)), with optional Scaleway Generative APIs (`https://api.scaleway.ai/5e40a076-f4e5-4328-8052-1a543614ec45/v1`, supporting GLM 5.2, Qwen 3.6 Coder, and Mistral Small 3) available as an alternate provider.
+* **LLM Provider**: Anthropic Claude (`anthropic/claude-sonnet-5-5`, with `anthropic/claude-opus-5-5` allow-listed for on-demand use), routed through the `claude-cli` agent runtime (reuses a Claude Code login on the host instead of a separate API key — see [6.4](#64-claude-anthropic-model-via-claude-code-cli-reuse)), with optional Scaleway Generative APIs (`https://api.scaleway.ai/5e40a076-f4e5-4328-8052-1a543614ec45/v1`, supporting GLM 5.2, Qwen 3.6 Coder, and Mistral Small 3) available as an alternate provider.
 * **Embeddings Provider**: Google Gemini (`gemini-embedding-001`) is still used for `memory.search` — unrelated to the chat model, kept for semantic memory indexing (see [4.2](#42-memory-search--background-dreaming-configuration)).
 * **API Key Management**: Dedicated Gemini API key (embeddings only) and optional Scaleway API key stored encrypted with Ansible Vault in [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml). Claude auth uses a long-lived OAuth token (`CLAUDE_CODE_OAUTH_TOKEN`), also vault-encrypted.
 * **Control Channels**:
@@ -436,7 +436,7 @@ OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `c
 6. **Verify — with an actual live call, not just a status check**:
    `openclaw models auth list` (expect `anthropic:manual [anthropic/token]`) and `openclaw models status`'s `Runtime auth: ... status=usable` line both look green even when the subprocess env-stripping bug above is still active — they only confirm a profile *exists*, not that a `claude-cli` turn actually succeeds. Likewise `status --deep`'s "Model selection" table reflects each session's *last actual turn*, so a session shown on a fallback model may just predate a fix. The only real proof is a completed turn with no fallback:
    ```bash
-   ssh claw "sudo openclaw-admin agent --session-key agent:main:verify --message 'reply with exactly: OK' --model anthropic/claude-sonnet-5 --json" \
+   ssh claw "sudo openclaw-admin agent --session-key agent:main:verify --message 'reply with exactly: OK' --model anthropic/claude-sonnet-5-5 --json" \
      | python3 -c "import json,sys; r=json.load(sys.stdin)['result']; print(r['payloads'][0]['text']); print(r['meta']['systemPromptReport']['provider'])"
    # expect: OK / claude-cli  (not gemini-3.1-pro-preview or scaleway/*)
    ```
@@ -444,7 +444,9 @@ OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `c
 
 **Token lifecycle**: `claude setup-token` tokens are long-lived (weeks to months) but not permanent. If OpenClaw's model calls start failing with auth errors, regenerate with `claude setup-token` and redeploy steps 2–3. Because the profile is a reference to `CLAUDE_CODE_OAUTH_TOKEN`, the new value in `secrets.env` is picked up on the gateway restart the deploy triggers; nothing else needs repeating. Step 5 (`OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV`) is a static config value and doesn't need repeating on rotation either.
 
-**Switching model tier**: `openclaw_setup_model` (`ansible/roles/openclaw_setup/defaults/main.yml`, default `anthropic/claude-sonnet-5`) can be overridden per-inventory to `anthropic/claude-opus-5` for higher-quality/slower responses, or any other `anthropic/claude-*` id — the `claude-cli` `agentRuntime` mapping in the template follows whatever `openclaw_setup_model` is set to, as long as `openclaw_setup_claude_cli_enabled` stays `true`.
+**Switching model tier**: `openclaw_setup_model` (`ansible/roles/openclaw_setup/defaults/main.yml`, default `anthropic/claude-sonnet-5-5`) can be overridden per-inventory to `anthropic/claude-opus-5-5` for higher-quality/slower responses, or any other `anthropic/claude-*` id — the `claude-cli` `agentRuntime` mapping in the template follows whatever `openclaw_setup_model` is set to, as long as `openclaw_setup_claude_cli_enabled` stays `true`.
+
+**Allow-listing an extra model without switching the primary**: `openclaw_setup_extra_claude_cli_models` (same file, default `["anthropic/claude-opus-5-5"]`) adds entries to both the `claude-cli` `agentRuntime` mapping and `modelPolicy.allow`, so a session can be switched to Opus 5.5 on demand (e.g. for a harder task) without making it the standing primary or fallback.
 
 **Reverting to Gemini as primary**: set `openclaw_setup_model: "google/gemini-3.1-pro-preview"` and `openclaw_setup_claude_cli_enabled: false`, then redeploy. `GEMINI_API_KEY` and the `google` plugin stay wired regardless (needed for `memory.search` embeddings).
 
