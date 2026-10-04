@@ -6,7 +6,7 @@ variable "project_id" {
 variable "instance_type" {
   type        = string
   description = "Scaleway instance type"
-  default     = "PLAY2-PICO"
+  default     = "PRO2-XXS"
 }
 
 variable "instance_name" {
