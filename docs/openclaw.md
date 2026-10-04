@@ -341,6 +341,9 @@ The server includes modern CLI tools configured with standard short names:
      ssh claw "sudo openclaw-admin pairing approve <CODE>"
      ```
 
+5. **Allow-list**:
+   `openclaw_setup_telegram_allow_from` (default `[]`, set in [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml)) is rendered as `channels.telegram.allowFrom` and `groupAllowFrom`. It holds Telegram sender ids only (`telegram:<id>`); the play fails if it holds anything else. Owners are configured separately, see [6.2](#62-signal-control-channel-setup) step 4.
+
 ---
 
 ### 6.2 Signal Control Channel Setup
@@ -366,6 +369,9 @@ The server includes modern CLI tools configured with standard short names:
      ```bash
      ssh claw "sudo openclaw-admin pairing approve <CODE>"
      ```
+
+4. **Owners (all channels)**:
+   `openclaw_setup_owner_allow_from` (default `[]`) is rendered as `commands.ownerAllowFrom`, the channel-agnostic owner list, so it mixes channels (`telegram:<id>`, `signal:<number>`). It is deliberately separate from `openclaw_setup_telegram_allow_from`: that list used to feed `commands.ownerAllowFrom` too, which is how a Signal id once ended up in the Telegram allow-lists. Being allowed to chat on a channel does not make someone an owner, so the two lists are not derived from each other.
 
 ---
 
