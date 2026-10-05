@@ -1,8 +1,9 @@
 ---
 # The role is split by concern; each file keeps the order the tasks ran in when
 # this was one file. Ordering that matters is documented where it applies:
-# secrets.env before anything that runs the OpenClaw CLI or authorizes gog, the credential stores
-# before openclaw.json is rendered, and the audit gate after it.
+# secrets.env before anything that runs the OpenClaw CLI or authorizes gog,
+# the credential stores before openclaw.json is rendered, and the audit gate
+# after it.
 
 - name: Provision the openclaw service account
   ansible.builtin.import_tasks: user.yml

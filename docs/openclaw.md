@@ -534,10 +534,17 @@ pattern (laptop-side secret → `ansible-vault encrypt_string` → deploy):
    `environment:` on a `become` task: Ansible puts the variable on the `sudo`
    command line, and sudo logs the full line to the journal in clear text
    (`no_log` only hides it from Ansible's own output). Until this was fixed, every
-   run wrote the password to the host's journal (`journalctl | grep
-   GOG_KEYRING_PASSWORD`, 2026-09-19 onwards); those old lines survive until the
-   journal is vacuumed, so rotate the password (below) and then
-   `sudo journalctl --vacuum-time=1s --rotate` if you want them gone.
+   run wrote the password to the host's journal (2026-09-19 onwards). Check for
+   leaked lines with a count, not a grep that would print the secret itself:
+   ```bash
+   sudo journalctl _COMM=sudo --grep GOG_KEYRING_PASSWORD -q -o cat | wc -l
+   ```
+   A non-zero result means old lines are still there. Those old lines survive
+   until the journal is vacuumed, so rotate the password (see **Rotating the
+   keyring password** below) and then `sudo journalctl --vacuum-time=1s --rotate`
+   if you want them gone — **this discards all archived journal history on the
+   host** (sshd, sudo, every other unit's logs), not just the leaked lines, so
+   only run it if you're fine losing that audit trail.
    The token-import step is skipped on repeat runs once `gog auth list`
    already shows `openclaw_setup_gog_account_email`. The client-credentials
    step is skipped the same way once
@@ -564,6 +571,32 @@ pattern (laptop-side secret → `ansible-vault encrypt_string` → deploy):
      sudo -u claw -E gog calendar list
    '"
    ```
+
+**Rotating the keyring password**: `openclaw_gog_keyring_password` is an
+arbitrary secret you generate yourself (step 3), not something Google issues,
+so rotating it is a local three-step procedure that never touches Google:
+1. Generate a new password and store it in Ansible Vault: re-run the
+   `ansible-vault encrypt_string --name openclaw_gog_keyring_password` command
+   from step 3 with a fresh `openssl rand -hex 32`, and replace the existing
+   `openclaw_gog_keyring_password` block in
+   [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml) with the new
+   output.
+2. Remove the existing gog credentials and token entries on the host so
+   nothing is left encrypted under the old password:
+   ```bash
+   ssh claw "sudo bash -c '
+     set -a; source /etc/openclaw/secrets.env; set +a
+     sudo -u claw -E gog auth remove you@gmail.com --force
+     sudo -u claw rm -f /home/claw/.local/share/gogcli/credentials.json
+   '"
+   ```
+   (the path is `openclaw_setup_gog_credentials_path`; adjust the account for
+   each one `gog auth list` shows).
+3. Redeploy: `uv run ansible-playbook --diff --vault-id
+   personal@~/.ansible-personal-key playbooks/openclaw.yml`. With the old
+   entries gone, the presence guards from step 4 above no longer find them, so
+   `gog auth credentials set` / `gog auth tokens import` re-run and gog
+   re-authenticates under the new password.
 
 **Token lifecycle**: with the OAuth client published, the refresh token
 doesn't expire on a fixed schedule — it lasts until revoked, unused for 6
