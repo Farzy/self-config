@@ -176,6 +176,7 @@
     - .gitconfig-professional
     - .gitignore_global
     - .tmux.conf
+    - .zshenv
     - .zshrc
   tags:
     - configuration
