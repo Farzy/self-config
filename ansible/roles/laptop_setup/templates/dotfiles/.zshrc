@@ -251,11 +251,6 @@ export LESSCHARSET=utf-8
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES # See https://github.com/ansible/ansible/issues/32499
 {| endif |}
 
-export GITHUB_TOKEN={{ github_token }}
-{| if is_macos -|}
-export HOMEBREW_GITHUB_API_TOKEN={{ github_homebrew_token }}
-{| endif |}
-
 # Set personal aliases, overriding those provided by oh-my-zsh libs,
 # plugins, and themes. Aliases can be placed here, though oh-my-zsh
 # users are encouraged to define aliases within the ZSH_CUSTOM folder.

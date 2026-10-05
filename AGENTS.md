@@ -221,8 +221,8 @@ If the user ever copies or pastes a raw private key, password, or token into a p
 ### Renewing Personal GitHub Keys
 The Ansible configuration stores personal GitHub tokens encrypted with Ansible Vault.
 The two relevant tokens are:
-*   `github_token` (Regular and MCP key, corresponding to `.zshrc`'s `export GITHUB_TOKEN=...`)
-*   `github_homebrew_token` (Homebrew API key, corresponding to `.zshrc`'s `export HOMEBREW_GITHUB_API_TOKEN=...`)
+*   `github_token` (Regular and MCP key; rendered into `.gitconfig`'s `[github] token`. `.zshrc` no longer exports it: `GITHUB_TOKEN` now comes from `~/.env`, loaded by `.zshenv`)
+*   `github_homebrew_token` (Homebrew API key; **currently unused**: `.zshrc` no longer exports `HOMEBREW_GITHUB_API_TOKEN`, which now comes from `~/.env`)
 
 #### Safe Encryption and Update Procedure:
 > [!CAUTION]
