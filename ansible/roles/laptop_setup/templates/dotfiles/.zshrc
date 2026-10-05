@@ -410,7 +410,7 @@ if command -v gog &> /dev/null; then
     eval "$(gog completion zsh)"
 fi
 
-# ~/.env is loaded by ~/.zshenv, before this file.
+# ~/.env is loaded by ~/.zshenv, before this file: assignments here override it.
 
 # Propagate environment variables to macOS launchd for GUI applications
 if command -v launchctl &> /dev/null; then
