@@ -11,6 +11,15 @@
     mode: '0755'
     validate: bash -n %s
 
+- name: Assert the pinned openclaw version tolerates PrivateUsers=true in the gateway unit
+  ansible.builtin.assert:
+    that:
+      - openclaw_setup_version is version('2026.9.7', '>=')
+    fail_msg: >-
+      openclaw-gateway.service.j2 sets PrivateUsers=true, which OpenClaw < 2026.9.7
+      (@openclaw/fs-safe < 0.21.0) rejects ("temp workspace directory has an untrusted
+      owner"). Pin openclaw_setup_version >= 2026.9.7. See docs/openclaw.md §4.1.
+
 # Root-owned inside a claw-owned directory on purpose: OpenClaw reads the unit
 # from this exact path, and treats one it does not own as a sealed definition —
 # still restarted and verified during updates, never rewritten by OpenClaw.

@@ -2,9 +2,9 @@
 openclaw_setup_user: claw
 openclaw_setup_group: claw
 openclaw_setup_home: /home/claw
-# Under $HOME rather than /var/tmp: while the unit had PrivateTmp=true (until
-# 2026.9.6, see docs/openclaw.md §4.1), a cache there was an empty per-start
-# copy thrown away on every restart. $HOME is also the one place the gateway
+# Under $HOME rather than /var/tmp: the unit has PrivateTmp=true (see
+# docs/openclaw.md §4.1), so a cache there would be an empty per-start copy
+# thrown away on every restart. $HOME is also the one place the gateway
 # is sure to own.
 openclaw_setup_compile_cache: "{{ openclaw_setup_home }}/.cache/openclaw/compile-cache"
 
@@ -14,6 +14,19 @@ openclaw_setup_compile_cache: "{{ openclaw_setup_home }}/.cache/openclaw/compile
 # while it stops, swaps and restarts the very service that owns it. Kept 0700
 # under $HOME instead.
 openclaw_setup_tmp_dir: "{{ openclaw_setup_home }}/.cache/openclaw/tmp"
+
+# V8 old-generation heap limit for the gateway, in MiB (Node's
+# --max-old-space-size, passed through NODE_OPTIONS in the unit; 0 = Node's
+# default). OpenClaw has no setting for its memory-pressure thresholds: it warns
+# above max(1.5 GiB, heap limit / 2) of RSS, capped at half the RAM, and goes
+# critical above max(3 GiB, heap limit x 0.75). With Node's default
+# 2144 MiB limit on this 8 GiB host that is the 1.5 GiB floor. The gateway
+# plateaus around 1.85 GiB RSS (JS heap ~350 MiB; the rest is worker isolates
+# and native memory), so it logged a `[diagnostics/memory] ... level=warning`
+# line every 5 minutes. 5120 moves the warning to ~2.5 GiB and the critical
+# level to ~3.8 GiB, which still flags a real leak well before the host runs
+# out. See docs/openclaw.md §8.
+openclaw_setup_node_max_old_space_mb: 5120
 
 # claw-owned npm global prefix OpenClaw is installed into, so its own updater —
 # running as claw — can stage and swap the package tree (a root-owned
