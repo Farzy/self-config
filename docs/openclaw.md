@@ -543,9 +543,15 @@ pattern (laptop-side secret → `ansible-vault encrypt_string` → deploy):
    run wrote the password to the host's journal (2026-09-19 onwards). Check for
    leaked lines with a count, not a grep that would print the secret itself:
    ```bash
-   sudo journalctl _COMM=sudo --grep GOG_KEYRING_PASSWORD -q -o cat | wc -l
+   sudo journalctl _COMM=sudo --grep 'GOG_KEYRING_PASSWORD=[0-9a-f]' -q -o cat | wc -l
    ```
-   A non-zero result means old lines are still there. Those old lines survive
+   The pattern matches only an actual `NAME=<hex value>` assignment. A bare
+   `--grep GOG_KEYRING_PASSWORD` also counts the check itself, since sudo logs
+   the `journalctl` command line too. Add `-o short-iso | cut -c1-25` instead of
+   `-o cat | wc -l` to list when leaks happened without printing them. Any run
+   of the role from a revision without this fix (a branch not yet rebased on
+   it, or CI's check-mode drift runs) still leaks: `gog auth list` runs in
+   `--check` too. A non-zero result means old lines are still there. Those old lines survive
    until the journal is vacuumed, so rotate the password (see **Rotating the
    keyring password** below) and then `sudo journalctl --vacuum-time=1s --rotate`
    if you want them gone — **this discards all archived journal history on the
