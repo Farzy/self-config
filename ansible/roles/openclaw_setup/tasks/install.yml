@@ -211,8 +211,12 @@
           check `sudo openclaw-admin update status` and the report under
           ~/.openclaw/logs/support/ before restarting anything. See docs/openclaw.md §4.4.
 
+# Pinned rather than "present": the root-owned install never self-updates, so
+# an unpinned one stays on whatever version was first installed — too old for
+# newer models (see openclaw_setup_claude_cli_version).
 - name: Install Claude Code CLI globally via npm
   community.general.npm:
     name: "@anthropic-ai/claude-code"
+    version: "{{ openclaw_setup_claude_cli_version }}"
     global: true
   when: openclaw_setup_claude_cli_enabled
