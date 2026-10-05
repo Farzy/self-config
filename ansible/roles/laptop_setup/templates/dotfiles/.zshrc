@@ -199,6 +199,9 @@ HIST_STAMPS="yyyy-mm-dd"
 eval `gdircolors`
 {| endif |}
 
+# Skip the verification of insecure directories for autocompletion
+ZSH_DISABLE_COMPFIX="true"
+
 # Which plugins would you like to load?
 # Standard plugins can be found in $ZSH/plugins/
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
