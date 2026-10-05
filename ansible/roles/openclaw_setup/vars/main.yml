@@ -20,6 +20,24 @@ openclaw_setup_cli_argv:
   - "--setenv=PATH={{ openclaw_setup_npm_prefix }}/bin:/usr/local/bin:/usr/bin:/bin"
   - "{{ openclaw_setup_npm_prefix }}/bin/openclaw"
 
+# `gog` as the openclaw user with the keyring password from secrets.env, for the
+# tasks in gog-auth.yml. Same mechanism as openclaw_setup_cli_argv: the value is
+# read by the user manager from the EnvironmentFile, so it never appears on a
+# command line (sudo logs the full line of a `become` task, `environment:` included).
+# Callers append the gog arguments.
+openclaw_setup_gog_argv:
+  - systemd-run
+  - --user
+  - "--machine={{ openclaw_setup_user }}@"
+  - --quiet
+  - --pipe
+  - --wait
+  - --collect
+  - --property=EnvironmentFile=/etc/openclaw/secrets.env
+  - "--working-directory={{ openclaw_setup_home }}"
+  - "--setenv=PATH=/usr/local/bin:/usr/bin:/bin"
+  - /usr/local/bin/gog
+
 # `openclaw secrets apply` plan (references only, no secret values) deployed from
 # files/secrets-plan.json. See docs/openclaw.md §4.1.
 openclaw_setup_secrets_plan_path: /etc/openclaw/secrets-plan.json
