@@ -58,12 +58,17 @@ openclaw_setup_ssh_key: ""
 openclaw_setup_gog_credentials_path: "{{ openclaw_setup_home }}/.local/share/gogcli/credentials.json"
 
 openclaw_setup_email: farzy@farzy.org
-openclaw_setup_model: "anthropic/claude-sonnet-5"
+openclaw_setup_model: "anthropic/claude-sonnet-5-5"
 openclaw_setup_claude_cli_enabled: true
 openclaw_setup_model_fallbacks:
   - "google/gemini-3.1-pro-preview"
   - "scaleway/glm-5.2"
   - "scaleway/qwen3.6-35b-a3b"
+# Allow-listed and claude-cli-routed like the primary model, but not selected
+# by default: lets a session be switched to Opus 5.5 on demand (heavier,
+# costlier reasoning) without making it the standing primary or fallback.
+openclaw_setup_extra_claude_cli_models:
+  - "anthropic/claude-opus-5-5"
 openclaw_setup_reasoning_default: "stream"
 
 openclaw_setup_scaleway_enabled: false
