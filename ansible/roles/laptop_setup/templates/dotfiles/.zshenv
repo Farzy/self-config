@@ -2,7 +2,8 @@
 # before .zprofile/.zshrc. Keep it to environment variables: anything that
 # prints, prompts or is slow runs for every script too.
 #
-# Keep in sync with roles/master_setup/templates/dotfiles/.zshenv (same file).
+# Keep in sync with roles/master_setup/templates/dotfiles/.zshenv (same ~/.env
+# loader; that copy also carries an OpenClaw-only block).
 
 # Load environment variables from ~/.env if present. Here rather than in .zshrc
 # so non-interactive shells (cron jobs, `ssh host cmd`, agent and editor tool

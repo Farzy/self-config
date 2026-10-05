@@ -293,7 +293,7 @@ Step 5 opens a failure window: pushing to `main` triggers that workflow's check-
 
 ### 5.2 Zsh Shell, Dotfiles & OpenClaw Autocompletion
 - **Default Shell**: `claw` user is configured with `/usr/bin/zsh` and Oh My Zsh.
-- **Dotfiles**: Standard dotfiles (`.zshrc`, `.bashrc`, `.profile`, `.gitignore_global`, `.gitconfig`) are deployed to `/home/claw/`.
+- **Dotfiles**: Standard dotfiles (`.zshenv`, `.zshrc`, `.bashrc`, `.profile`, `.gitignore_global`, `.gitconfig`), templated from the `master_setup` role, are deployed to `/home/claw/` by `openclaw_setup` (`tasks/user.yml`). `.zshenv` exports `GITHUB_TOKEN`/`GH_TOKEN` for every zsh of the account (see [6.3](#63-github-personal-access-token-pat-integration)); its `~/.env` loader is a no-op here, since `claw` has no `~/.env`.
 - **Zsh Autocompletion**: `.zshrc` automatically loads OpenClaw CLI completion dynamically:
   ```zsh
   if command -v openclaw &> /dev/null; then
@@ -405,7 +405,7 @@ To allow OpenClaw agents to interact securely with private GitHub repositories:
    ```
    Ansible injects `GITHUB_TOKEN` and `GH_TOKEN` into the gateway environment (`secrets.env`). `gh` — and `git`, through the `gh auth git-credential` helper in `.gitconfig` — reads `GH_TOKEN` from there, so there is deliberately **no `gh auth login`**. That command stored a second plaintext copy of the PAT in `~claw/.config/gh/hosts.yml`, and the role now removes it.
 
-   Interactive `ssh claw@claw` shells get the same credential from `.zshrc`, which reads `GITHUB_TOKEN`/`GH_TOKEN` out of `/etc/openclaw/secrets.env` at startup (guarded on the user, in the same block as the OpenClaw completion). So `gh auth status` reports being logged in through `GH_TOKEN`, with no token written to any dotfile. Non-interactive shells (`ssh claw@claw '<cmd>'`) don't read `.zshrc`: use `sudo openclaw-admin` for those, or export the variable for that command.
+   All zsh shells for that user — interactive (`ssh claw@claw`) and non-interactive (`ssh claw@claw '<cmd>'`, or any tool's exec sandbox such as Claude Code's) — get the same credential from `.zshenv`, which reads `GITHUB_TOKEN`/`GH_TOKEN` out of `/etc/openclaw/secrets.env` at startup (guarded on the user with zsh's built-in `$USERNAME`, so other accounts pay no fork; deployed by `openclaw_setup`'s dotfiles loop). It lives in `.zshenv` rather than `.zshrc` specifically because `.zshenv` is sourced for every invocation, not just interactive ones. So `gh auth status` reports being logged in through `GH_TOKEN`, with no token written to any dotfile, in either shell mode.
 
 ---
 

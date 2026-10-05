@@ -115,6 +115,9 @@
   become: true
   become_user: "{{ openclaw_setup_user }}"
 
+# .zshenv carries the GH_TOKEN/GITHUB_TOKEN export (docs/openclaw.md §6.3), so
+# the agent's non-interactive `zsh -c` shells get it too, not only .zshrc's
+# interactive ones. Its ~/.env loader is a no-op here: claw has no ~/.env.
 - name: Install dotfiles for openclaw user
   ansible.builtin.template:
     src: "{{ role_path }}/../master_setup/templates/dotfiles/{{ item }}"
@@ -126,6 +129,7 @@
     - .bashrc
     - .gitignore_global
     - .profile
+    - .zshenv
     - .zshrc
     - .gitconfig
 

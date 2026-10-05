@@ -170,8 +170,8 @@
 # No `gh auth login`: that stored a second plaintext copy of the PAT in
 # ~/.config/gh/hosts.yml. gh — and git, through its `gh auth git-credential`
 # helper (.gitconfig) — reads GH_TOKEN from the gateway environment instead
-# (secrets.env.j2). Interactive `claw` shells have no GH_TOKEN; use
-# `sudo openclaw-admin` or export it for the session. See docs/openclaw.md §6.3.
+# (secrets.env.j2), and in claw's own shells from .zshenv, which reads it out of
+# secrets.env for interactive and `zsh -c` shells alike. See docs/openclaw.md §6.3.
 - name: Find a stored gh login holding the PAT in plaintext
   ansible.builtin.find:
     paths: "{{ openclaw_setup_home }}/.config/gh"
