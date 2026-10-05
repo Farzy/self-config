@@ -613,6 +613,11 @@ OpenClaw workspace skills are automatically provisioned via Ansible:
   ```bash
   ssh claw "sudo openclaw-admin status --deep"
   ```
+* **`[diagnostics/memory] memory pressure: level=warning reason=rss_threshold` in the journal**:
+  OpenClaw samples its memory and warns, at most every 5 minutes while the gateway is busy, when RSS crosses `max(1.5 GiB, V8 heap limit / 2)` (capped at half the RAM); critical starts at `max(3 GiB, heap limit × 0.75)`. There is no `openclaw.json` setting for these thresholds. With Node's default heap limit (2144 MiB on this 8 GiB host) the warning sat at the 1.5 GiB floor, below the gateway's normal plateau of about 1.85 GiB RSS (JS heap ~350 MiB, the rest worker isolates and native memory), so the line repeated all day. The unit therefore sets `NODE_OPTIONS=--max-old-space-size=5120` (`openclaw_setup_node_max_old_space_mb`), which moves the warning to ~2.5 GiB and critical to ~3.8 GiB. If the warning comes back, check the trend before raising the limit again; a steadily rising RSS or heap is a leak, not noise:
+  ```bash
+  ssh claw@claw "journalctl --user -u openclaw-gateway --since -1d | grep -oE 'level=\w+ reason=\w+ rss=[0-9.]+ \w+ heap=[0-9.]+ \w+'"
+  ```
 * **Restart OpenClaw Gateway**:
   ```bash
   ssh claw "sudo systemctl --user -M claw@ restart openclaw-gateway"

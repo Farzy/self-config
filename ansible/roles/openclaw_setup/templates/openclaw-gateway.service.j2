@@ -50,6 +50,13 @@ Environment=PATH={{ openclaw_setup_npm_prefix }}/bin:/usr/local/bin:/usr/bin:/bi
 # this service stops — exactly what the update helper does mid-update while its
 # files live in os.tmpdir().
 Environment=TMPDIR={{ openclaw_setup_tmp_dir }}
+{% if openclaw_setup_node_max_old_space_mb | int > 0 %}
+# Larger V8 heap limit, which also raises OpenClaw's memory-pressure warning
+# threshold (derived from it) above the gateway's steady-state RSS. Through
+# NODE_OPTIONS rather than ExecStart, so ExecStart keeps matching what
+# `openclaw gateway install` generates. See openclaw_setup_node_max_old_space_mb.
+Environment=NODE_OPTIONS=--max-old-space-size={{ openclaw_setup_node_max_old_space_mb | int }}
+{% endif %}
 Environment=OPENCLAW_GATEWAY_PORT={{ openclaw_setup_port }}
 # Service identity markers `openclaw gateway install` writes. They are what lets
 # the running gateway recognise itself as a managed service and hand
