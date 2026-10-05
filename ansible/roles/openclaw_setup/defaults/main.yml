@@ -60,12 +60,6 @@ openclaw_setup_gog_credentials_path: "{{ openclaw_setup_home }}/.local/share/gog
 openclaw_setup_email: farzy@farzy.org
 openclaw_setup_model: "anthropic/claude-sonnet-5-5"
 openclaw_setup_claude_cli_enabled: true
-# Exact Claude Code CLI version the claude-cli agent runtime runs. It is
-# installed root-owned in /usr, so it never updates itself: bump this to
-# upgrade. Every model routed through claude-cli (openclaw_setup_model and
-# openclaw_setup_extra_claude_cli_models) must be supported by it — Opus 5.5
-# needs >= 2.1.280, and 2.1.222 failed with "does not support this model".
-openclaw_setup_claude_cli_version: "2.1.289"
 openclaw_setup_model_fallbacks:
   - "google/gemini-3.1-pro-preview"
   - "scaleway/glm-5.2"

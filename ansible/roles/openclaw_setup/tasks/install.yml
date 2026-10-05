@@ -211,12 +211,15 @@
           check `sudo openclaw-admin update status` and the report under
           ~/.openclaw/logs/support/ before restarting anything. See docs/openclaw.md §4.4.
 
-# Pinned rather than "present": the root-owned install never self-updates, so
-# an unpinned one stays on whatever version was first installed — too old for
-# newer models (see openclaw_setup_claude_cli_version).
+# Always the latest release, not "present": the install is root-owned in /usr,
+# so it never updates itself, and "present" kept the first version ever
+# installed. That one (2.1.222) rejected claude-opus-5-5, which needs >= 2.1.280,
+# so a model routed through claude-cli (openclaw_setup_model,
+# openclaw_setup_extra_claude_cli_models) could fail every turn. Each converge
+# upgrades it, so this task reports "changed" whenever a new release is out.
 - name: Install Claude Code CLI globally via npm
   community.general.npm:
     name: "@anthropic-ai/claude-code"
-    version: "{{ openclaw_setup_claude_cli_version }}"
+    state: latest
     global: true
   when: openclaw_setup_claude_cli_enabled
