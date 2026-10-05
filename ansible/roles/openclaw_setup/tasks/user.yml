@@ -115,6 +115,9 @@
   become: true
   become_user: "{{ openclaw_setup_user }}"
 
+# .zshenv carries the GH_TOKEN/GITHUB_TOKEN export (docs/openclaw.md §6.3), so
+# the agent's non-interactive `zsh -c` shells get it too, not only .zshrc's
+# interactive ones. Its ~/.env loader is a no-op here: claw has no ~/.env.
 - name: Install dotfiles for openclaw user
   ansible.builtin.template:
     src: "{{ role_path }}/../master_setup/templates/dotfiles/{{ item }}"
@@ -126,6 +129,7 @@
     - .bashrc
     - .gitignore_global
     - .profile
+    - .zshenv
     - .zshrc
     - .gitconfig
 
@@ -155,12 +159,15 @@
   become_user: "{{ openclaw_setup_user }}"
 
 # OpenClaw's preferred temp root is hard-coded to /tmp/openclaw (logs, claude-cli
-# skill staging), independently of TMPDIR. Since the unit lost PrivateTmp (see
-# docs/openclaw.md §4.1) that is the host's shared /tmp, emptied at every boot,
-# where any other local account could create the directory first: the gateway
-# would then either refuse it ("untrusted owner") or write into a directory it
-# does not control. tmpfiles.d recreates it for the openclaw user at every boot,
-# before the user manager starts, and re-asserts owner and mode if it exists.
+# skill staging), independently of TMPDIR. The gateway itself gets a private
+# one through PrivateTmp, but everything else running as the openclaw user —
+# openclaw-admin, which runs unsandboxed through the user manager, and the
+# updater — uses the host's shared /tmp, emptied at every boot, where any other
+# local account could create the directory first: OpenClaw would then either
+# refuse it ("untrusted owner") or write into a directory it does not control
+# (see docs/openclaw.md §4.1). tmpfiles.d recreates it for the openclaw user at
+# every boot, before the user manager starts, and re-asserts owner and mode if
+# it exists.
 - name: Reserve /tmp/openclaw for the openclaw user at boot
   ansible.builtin.copy:
     content: |
@@ -184,7 +191,7 @@
   changed_when: true
 
 # Superseded by the cache under $HOME above; the old path sat behind the unit's
-# former PrivateTmp and never reached the service anyway.
+# PrivateTmp and never reached the service anyway.
 - name: Remove the legacy /var/tmp compile cache
   ansible.builtin.file:
     path: /var/tmp/openclaw-compile-cache
