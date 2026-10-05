@@ -161,8 +161,9 @@
 # updater — uses the host's shared /tmp, emptied at every boot, where any other
 # local account could create the directory first: OpenClaw would then either
 # refuse it ("untrusted owner") or write into a directory it does not control
-# (see docs/openclaw.md §4.1). tmpfiles.d recreates it for the openclaw user at every boot,
-# before the user manager starts, and re-asserts owner and mode if it exists.
+# (see docs/openclaw.md §4.1). tmpfiles.d recreates it for the openclaw user at
+# every boot, before the user manager starts, and re-asserts owner and mode if
+# it exists.
 - name: Reserve /tmp/openclaw for the openclaw user at boot
   ansible.builtin.copy:
     content: |
