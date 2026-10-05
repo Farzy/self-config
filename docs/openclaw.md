@@ -399,7 +399,7 @@ To allow OpenClaw agents to interact securely with private GitHub repositories:
    ```
    Ansible injects `GITHUB_TOKEN` and `GH_TOKEN` into the gateway environment (`secrets.env`). `gh` — and `git`, through the `gh auth git-credential` helper in `.gitconfig` — reads `GH_TOKEN` from there, so there is deliberately **no `gh auth login`**. That command stored a second plaintext copy of the PAT in `~claw/.config/gh/hosts.yml`, and the role now removes it.
 
-   Interactive `ssh claw@claw` shells get the same credential from `.zshrc`, which reads `GITHUB_TOKEN`/`GH_TOKEN` out of `/etc/openclaw/secrets.env` at startup (guarded on the user, in the same block as the OpenClaw completion). So `gh auth status` reports being logged in through `GH_TOKEN`, with no token written to any dotfile. Non-interactive shells (`ssh claw@claw '<cmd>'`) don't read `.zshrc`: use `sudo openclaw-admin` for those, or export the variable for that command.
+   All zsh shells for that user — interactive (`ssh claw@claw`) and non-interactive (`ssh claw@claw '<cmd>'`, or any tool's exec sandbox such as Claude Code's) — get the same credential from `.zshenv`, which reads `GITHUB_TOKEN`/`GH_TOKEN` out of `/etc/openclaw/secrets.env` at startup (guarded on the user, same pattern as the OpenClaw completion block in `.zshrc`). It lives in `.zshenv` rather than `.zshrc` specifically because `.zshenv` is sourced for every invocation, not just interactive ones. So `gh auth status` reports being logged in through `GH_TOKEN`, with no token written to any dotfile, in either shell mode.
 
 ---
 

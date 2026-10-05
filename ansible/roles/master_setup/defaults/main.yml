@@ -87,6 +87,7 @@ master_setup_user_dotfiles:
   - name: .bashrc
   - name: .gitignore_global
   - name: .profile
+  - name: .zshenv
   - name: .zshrc
 
 master_setup_install_microk8s: false
