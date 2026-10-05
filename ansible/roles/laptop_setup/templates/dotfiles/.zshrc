@@ -199,6 +199,9 @@ HIST_STAMPS="yyyy-mm-dd"
 eval `gdircolors`
 {| endif |}
 
+# Skip the verification of insecure directories for autocompletion
+ZSH_DISABLE_COMPFIX="true"
+
 # Which plugins would you like to load?
 # Standard plugins can be found in $ZSH/plugins/
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
@@ -246,11 +249,6 @@ export LESSCHARSET=utf-8
 {| if is_macos -|}
 # Ansible
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES # See https://github.com/ansible/ansible/issues/32499
-{| endif |}
-
-export GITHUB_TOKEN={{ github_token }}
-{| if is_macos -|}
-export HOMEBREW_GITHUB_API_TOKEN={{ github_homebrew_token }}
 {| endif |}
 
 # Set personal aliases, overriding those provided by oh-my-zsh libs,
@@ -412,8 +410,7 @@ if command -v gog &> /dev/null; then
     eval "$(gog completion zsh)"
 fi
 
-# Load environment variables from ~/.env if present
-if [ -s "${HOME}/.env" ]; then set -a; source "${HOME}/.env"; set +a; fi
+# ~/.env is loaded by ~/.zshenv, before this file: assignments here override it.
 
 # Propagate environment variables to macOS launchd for GUI applications
 if command -v launchctl &> /dev/null; then
