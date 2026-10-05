@@ -58,12 +58,14 @@
 {% endif %}
 {# agents.defaults.modelPolicy.allow: primary + fallbacks + extra claude-cli
    models (allow-listed but not selected by default, e.g. Opus 5.5 for
-   on-demand heavier reasoning), plus every model any configured provider
-   actually exposes (so a manually-selected, non-fallback model like Mistral
-   Small isn't silently blocked) — deduped since the primary can legitimately
-   also appear in the fallback list (e.g. the documented "Reverting to Gemini
-   as primary" path). #}
-{% set ns.allow_models = ([openclaw_setup_model] + (openclaw_setup_model_fallbacks | default([])) + (openclaw_setup_extra_claude_cli_models | default([])) + (openclaw_setup_scaleway_models | map(attribute='id') | map('regex_replace', '^', 'scaleway/') | list if openclaw_setup_scaleway_enabled | default(false) else [])) | unique | list %}
+   on-demand heavier reasoning) — only when openclaw_setup_claude_cli_enabled
+   is true, matching the agentRuntime mapping above, so an extra model never
+   ends up allow-listed without a runtime able to serve it (e.g. on the
+   documented "Reverting to Gemini as primary" path) — plus every model any
+   configured provider actually exposes (so a manually-selected, non-fallback
+   model like Mistral Small isn't silently blocked) — deduped since the
+   primary can legitimately also appear in the fallback list. #}
+{% set ns.allow_models = ([openclaw_setup_model] + (openclaw_setup_model_fallbacks | default([])) + ((openclaw_setup_extra_claude_cli_models | default([])) if openclaw_setup_claude_cli_enabled else []) + (openclaw_setup_scaleway_models | map(attribute='id') | map('regex_replace', '^', 'scaleway/') | list if openclaw_setup_scaleway_enabled | default(false) else [])) | unique | list %}
   "agents": {
     "defaults": {
       "model": {
