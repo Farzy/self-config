@@ -623,22 +623,20 @@ so rotating it is a local procedure that never touches Google:
    uv run ansible-playbook playbooks/openclaw.yml --check --diff -t openclaw
    uv run ansible-playbook playbooks/openclaw.yml -v --diff -t openclaw
    ```
-   With the old entries gone, the presence guards from step 4 above no longer
-   find them, so `gog auth credentials set` / `gog auth tokens import` re-run
+   With the old entries gone, the presence guards described in setup step 4
+   ("Append the three encrypted blocks") no longer find them, so `gog auth credentials set` / `gog auth tokens import` re-run
    and gog re-authenticates under the new password. The new value also reaches
    `/etc/openclaw/secrets.env`, followed by a gateway restart. That task has
    `diff: false`, so `--diff` reports it as changed without printing the old
    or new secrets.
-4. Check, then merge the vault change promptly: until `main` has it, CI's
-   check-mode drift runs use the old password against the new store.
-   ```bash
-   ssh debian@claw "sudo bash -c 'set -a; source /etc/openclaw/secrets.env; set +a; sudo -u claw -E gog auth list; sudo -u claw -E gog calendar list'"
-   ```
+4. Verify with the setup step 5 commands above, then merge the vault change
+   promptly: until `main` has it, CI's check-mode drift runs use the old
+   password against the new store.
 
 Last rotated 2026-10-09, after the old password had leaked into the sudo
-journal (see step 4 above). Clearing those lines is optional and only possible
-wholesale (`sudo journalctl --rotate --vacuum-time=1s` deletes **all** archived
-journal history); after the rotation they hold a dead password.
+journal (see setup step 4 above). After the rotation those lines hold a dead
+password. Clearing them is optional and only possible wholesale, with the
+`journalctl --vacuum-time=1s --rotate` command and the warning in setup step 4.
 
 **Token lifecycle**: with the OAuth client published, the refresh token
 doesn't expire on a fixed schedule — it lasts until revoked, unused for 6
