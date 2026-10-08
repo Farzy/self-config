@@ -223,3 +223,19 @@
     state: latest
     global: true
   when: openclaw_setup_claude_cli_enabled
+
+# The gateway runs `claude` from its PATH, and the unit puts the openclaw user's
+# own npm prefix first (so `openclaw` resolves to the self-updatable install).
+# A Claude Code CLI installed there (`npm i -g` as claw, e.g. by the agent
+# itself, as on 2026-10-04) silently shadows the managed /usr/bin/claude above:
+# it escapes the "latest" policy and is writable by the agent. OpenClaw has no
+# config key for the binary path (only a wrapper backend plugin), so remove the
+# shadowing copy instead. Reported as a change by the drift check if it returns.
+- name: Remove a Claude Code CLI installed in the openclaw user's npm prefix
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ openclaw_setup_npm_prefix }}/bin/claude"
+    - "{{ openclaw_setup_npm_prefix }}/lib/node_modules/@anthropic-ai/claude-code"
+  when: openclaw_setup_claude_cli_enabled

@@ -218,6 +218,17 @@ ssh debian@claw "sudo openclaw-admin update --tag <version> --yes"      # with t
 
 Then bump `openclaw_setup_version` as below. If the same thing happens through the role's own upgrade path, the recovery is identical.
 
+**Known issue — the 2026.9.8 updater refuses the next update after a successful one.** Every successful update leaves a completed activation receipt next to the install: `~claw/.npm-global/lib/node_modules/.openclaw.package-activation-<hash>.control/operation.sqlite` (`0600`, phase `anchor-retired`). During a run, the 2026.9.8 updater's runtime-retention step hard-links that file. Its `package-swap` step then finds two links instead of the one its safety check requires, and fails with `Package publication recovery permissions are unsafe` → `global-install-failed` (upstream [openclaw/openclaw#167283](https://github.com/openclaw/openclaw/issues/167283), [#167376](https://github.com/openclaw/openclaw/issues/167376)). Permissions and umask aren't involved. The failure is harmless: candidate validation has already passed, the swap is refused before the service stops, and the gateway keeps serving the old release. 2026.9.9's updater no longer links the receipt, but the update is driven by the *installed* release, so the 9.8 → 9.9 hop needs this workaround once (claw, 2026-10-08):
+
+```bash
+ssh debian@claw "sudo openclaw-admin update status --json"   # no activeRun
+ssh debian@claw "sudo fuser ~claw/.npm-global/lib/node_modules/.openclaw.package-activation-*.control/operation.sqlite"  # nothing holds it
+ssh debian@claw "sudo -u claw mkdir -p /home/claw/backups/update-receipts && sudo -u claw mv ~claw/.npm-global/lib/node_modules/.openclaw.package-activation-*.control /home/claw/backups/update-receipts/"
+ssh debian@claw "sudo openclaw-admin update --tag 2026.9.9 --yes"   # ~5 min downtime during the swap
+```
+
+Keep the moved receipt on the same filesystem as a backup. The successful run writes a fresh receipt, which 2026.9.9 and later handle.
+
 **Reconciling with Ansible afterwards.** `openclaw_setup_version` is a **minimum**, not an exact pin:
 
 | Installed vs `openclaw_setup_version` | What the role does |
@@ -411,7 +422,7 @@ To allow OpenClaw agents to interact securely with private GitHub repositories:
 
 ### 6.4 Claude (Anthropic) Model via Claude Code CLI Reuse
 
-OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `claude-cli` agent runtime (`ansible/roles/openclaw_setup/templates/openclaw.json.j2` → `agents.defaults.models["{{ openclaw_setup_model }}"].agentRuntime.id`). This reuses a Claude Code login on the `claw` host and bills against your Claude subscription (Pro/Max/Team/Enterprise) instead of pay-as-you-go Anthropic API credits. `claude` (the Claude Code CLI) is installed globally via npm by the `openclaw_setup` role, resolving to `/usr/bin/claude`, so no systemd `PATH=` override is needed. The role always installs the **latest** release (`state: latest`): the install is root-owned and never updates itself, and a stale CLI cannot serve newer models. Claude Code 2.1.222 rejected `claude-opus-5-5` (`API Error: 400 … version 2.1.280 or newer is required`). Each converge therefore upgrades it whenever a new release is out, and the task shows up as changed in `--check` runs and in the weekly drift check. To test the installed CLI against a model directly: `ssh debian@claw "sudo systemd-run --user -M claw@ --pipe --wait -p EnvironmentFile=/etc/openclaw/secrets.env claude -p --model <model> 'Reply with exactly: OK'"`.
+OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `claude-cli` agent runtime (`ansible/roles/openclaw_setup/templates/openclaw.json.j2` → `agents.defaults.models["{{ openclaw_setup_model }}"].agentRuntime.id`). This reuses a Claude Code login on the `claw` host and bills against your Claude subscription (Pro/Max/Team/Enterprise) instead of pay-as-you-go Anthropic API credits. `claude` (the Claude Code CLI) is installed globally via npm by the `openclaw_setup` role, resolving to `/usr/bin/claude`, so no systemd `PATH=` override is needed. The gateway resolves `claude` through its `PATH`, which lists `claw`'s own npm prefix first, so the role also **removes any Claude Code CLI installed in `~claw/.npm-global`**. One appeared on 2026-10-04 (an `npm i -g` as `claw`, most likely by the agent). It silently shadowed `/usr/bin/claude`: it wasn't covered by the update policy below and the agent could overwrite it. OpenClaw has no config key for the binary path; only a wrapper backend plugin could set one. The role always installs the **latest** release (`state: latest`): the install is root-owned and never updates itself, and a stale CLI cannot serve newer models. Claude Code 2.1.222 rejected `claude-opus-5-5` (`API Error: 400 … version 2.1.280 or newer is required`). Each converge therefore upgrades it whenever a new release is out, and the task shows up as changed in `--check` runs and in the weekly drift check. To test the installed CLI against a model directly: `ssh debian@claw "sudo systemd-run --user -M claw@ --pipe --wait -p EnvironmentFile=/etc/openclaw/secrets.env claude -p --model <model> 'Reply with exactly: OK'"`.
 
 1. **Generate a long-lived OAuth token** (on your laptop, where you already have a browser-authenticated `claude` login):
    ```bash
