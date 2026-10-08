@@ -276,6 +276,8 @@
     group: root
     mode: '0700'
 
+# diff: false — the file holds the vault-decrypted Fastmail token, which a
+# --diff run would otherwise print when it changes (e.g. on rotation).
 - name: Deploy Fastmail MCP secrets environment file
   ansible.builtin.template:
     src: secrets.env.j2
@@ -283,6 +285,7 @@
     owner: root
     group: root
     mode: '0600'
+  diff: false
   notify: Restart fastmail-mcp
 
 - name: Deploy Fastmail MCP systemd service

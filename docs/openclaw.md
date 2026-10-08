@@ -599,7 +599,7 @@ pattern (laptop-side secret → `ansible-vault encrypt_string` → deploy):
 
 **Rotating the keyring password**: `openclaw_gog_keyring_password` is an
 arbitrary secret you generate yourself (step 3), not something Google issues,
-so rotating it is a local three-step procedure that never touches Google:
+so rotating it is a local procedure that never touches Google:
 1. Generate a new password and store it in Ansible Vault: re-run the
    `ansible-vault encrypt_string --name openclaw_gog_keyring_password` command
    from step 3 with a fresh `openssl rand -hex 32`, and replace the existing
@@ -617,11 +617,28 @@ so rotating it is a local three-step procedure that never touches Google:
    ```
    (the path is `openclaw_setup_gog_credentials_path`; adjust the account for
    each one `gog auth list` shows).
-3. Redeploy: `uv run ansible-playbook --diff --vault-id
-   personal@~/.ansible-personal-key playbooks/openclaw.yml`. With the old
-   entries gone, the presence guards from step 4 above no longer find them, so
-   `gog auth credentials set` / `gog auth tokens import` re-run and gog
-   re-authenticates under the new password.
+3. Redeploy, right after step 2 (the agent has no working gog in between).
+   From `ansible/`:
+   ```bash
+   uv run ansible-playbook playbooks/openclaw.yml --check --diff -t openclaw
+   uv run ansible-playbook playbooks/openclaw.yml -v --diff -t openclaw
+   ```
+   With the old entries gone, the presence guards from step 4 above no longer
+   find them, so `gog auth credentials set` / `gog auth tokens import` re-run
+   and gog re-authenticates under the new password. The new value also reaches
+   `/etc/openclaw/secrets.env`, followed by a gateway restart. That task has
+   `diff: false`, so `--diff` reports it as changed without printing the old
+   or new secrets.
+4. Check, then merge the vault change promptly: until `main` has it, CI's
+   check-mode drift runs use the old password against the new store.
+   ```bash
+   ssh debian@claw "sudo bash -c 'set -a; source /etc/openclaw/secrets.env; set +a; sudo -u claw -E gog auth list; sudo -u claw -E gog calendar list'"
+   ```
+
+Last rotated 2026-10-09, after the old password had leaked into the sudo
+journal (see step 4 above). Clearing those lines is optional and only possible
+wholesale (`sudo journalctl --rotate --vacuum-time=1s` deletes **all** archived
+journal history); after the rotation they hold a dead password.
 
 **Token lifecycle**: with the OAuth client published, the refresh token
 doesn't expire on a fixed schedule — it lasts until revoked, unused for 6
