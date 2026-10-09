@@ -300,8 +300,11 @@ if type brew &>/dev/null; then
         FPATH=${HOMEBREW_PREFIX}/share/zsh-completions:$FPATH
     fi
 
+    # -u: skip the compaudit check. Docker Desktop symlinks its completions into
+    # ${HOMEBREW_PREFIX}/share/zsh/site-functions, but the targets inside Docker.app are owned
+    # by another user, which made compaudit prompt "insecure files" on every new shell.
     autoload -Uz compinit
-    compinit
+    compinit -u
 fi
 
 # UV
