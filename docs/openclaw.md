@@ -229,6 +229,8 @@ ssh debian@claw "sudo openclaw-admin update --tag 2026.9.9 --yes"   # ~5 min dow
 
 Keep the moved receipt on the same filesystem as a backup. The successful run writes a fresh receipt, which 2026.9.9 and later handle.
 
+**Known issue — a receipt written in one mount namespace is refused in another** (`The previous package receipt is not safely replaceable.`, `global-install-failed`, claw, 2026-10-12). Each activation receipt records its authority database, `/tmp/openclaw/managed-update-handoffs.sqlite`, by device and inode, and the path is hard-coded (no `TMPDIR` or env override). The gateway unit has `PrivateTmp=true`, so an update started from chat (`update.run`) saw its own empty `/tmp/openclaw` (inode 40), while the receipt left by the CLI-driven 9.8 → 9.9 update pointed at the host's (inode 24). `package-swap` compares the two and refuses. Validation had passed and the gateway kept serving 2026.9.9. The unit now bind-mounts the host directory (`BindPaths=/tmp/openclaw`), so every update path, gateway, `openclaw-admin` or Ansible, records and checks the same inodes. Diagnose with `sudo stat -c '%i' /proc/$(pgrep -u claw -f 'openclaw.*gateway' | head -1)/root/tmp/openclaw` against `stat -c %i /tmp/openclaw`: they must be equal. If an older release's receipt still mismatches after the unit change, run the update once from `openclaw-admin` (host namespace) or move the receipt as above. Upgrades driven by the role itself always run in the host namespace, which is why bumping `openclaw_setup_version` worked while the chat request did not.
+
 **Reconciling with Ansible afterwards.** `openclaw_setup_version` is a **minimum**, not an exact pin:
 
 | Installed vs `openclaw_setup_version` | What the role does |

@@ -113,6 +113,17 @@ ProtectHome=false
 # OpenClaw's own TMPDIR stays under $HOME (see above).
 PrivateTmp=true
 
+# Share the host's /tmp/openclaw with everything else that runs as {{ openclaw_setup_user }}.
+# OpenClaw hard-codes it as the home of managed-update-handoffs.sqlite, the
+# authority database that every package activation receipt records by inode.
+# With PrivateTmp alone the gateway sees its own empty /tmp/openclaw, so a
+# chat-triggered `update.run` after a CLI/Ansible-driven update (or the
+# reverse) fails package-swap with "The previous package receipt is not safely
+# replaceable." The directory is reserved 0700 {{ openclaw_setup_user }} by
+# /etc/tmpfiles.d/openclaw.conf, so this exposes nothing to other accounts.
+# See docs/openclaw.md §4.4.
+BindPaths=/tmp/openclaw
+
 # Protect kernel variables (/proc/sys, /sys, /proc/sysrq-trigger) from modification
 ProtectKernelTunables=true
 
