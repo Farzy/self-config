@@ -109,9 +109,24 @@ ReadWritePaths={{ openclaw_setup_home }}
 ProtectHome=false
 
 # Mount a private, isolated /tmp and /var/tmp namespace to prevent multi-tenant token leakage.
-# Covers OpenClaw's hard-coded /tmp/openclaw and tools that hard-code /tmp;
-# OpenClaw's own TMPDIR stays under $HOME (see above).
+# Covers tools that hard-code /tmp, except /tmp/openclaw, which is bound back to
+# the host's copy below; OpenClaw's own TMPDIR stays under $HOME (see above).
 PrivateTmp=true
+
+# Share the host's /tmp/openclaw with everything else that runs as {{ openclaw_setup_user }}.
+# OpenClaw hard-codes it as the home of managed-update-handoffs.sqlite, the
+# authority database that every package activation receipt records by inode.
+# With PrivateTmp alone the gateway sees its own empty /tmp/openclaw, so a
+# chat-triggered `update.run` after a CLI/Ansible-driven update (or the
+# reverse) fails package-swap with "The previous package receipt is not safely
+# replaceable." The directory is reserved 0700 {{ openclaw_setup_user }} by
+# /etc/tmpfiles.d/openclaw.conf, so this exposes nothing to other accounts.
+# Deliberately no "-" prefix: if the directory is missing the unit must fail
+# loudly rather than silently bring the receipt mismatch back; the role
+# re-creates it on every run (tasks/user.yml). Side effect: the gateway's logs
+# and skill staging there now outlive the service, until the next reboot.
+# See docs/openclaw.md §4.4.
+BindPaths=/tmp/openclaw
 
 # Protect kernel variables (/proc/sys, /sys, /proc/sysrq-trigger) from modification
 ProtectKernelTunables=true
