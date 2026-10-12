@@ -237,7 +237,15 @@ The two relevant tokens are:
    uv run ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key --name github_homebrew_token "$(cat /tmp/temp-homebrew-key | tr -d '\r\n')"
    ```
 3. Update the encrypted values under `github_token` and `github_homebrew_token` in [laptop.yml](file:///Users/ffarid/src/personal/self-config/ansible/vars/laptop.yml).
-4. **Delete the temporary key files immediately** from local storage:
+4. Update the live copies:
+   * `~/.env` (Ansible does not manage it): set `GITHUB_TOKEN=` and `HOMEBREW_GITHUB_API_TOKEN=` from the same files (no `export`, no quotes; keep the file `0600`).
+   * `~/.gitconfig` (managed by Ansible): re-render it from a dry run, then a real run. **Always pass `--limit` with the current machine** (`serenity` or `FRMPTMACFH396`, replace `<this-laptop>` below): both `[laptops]` entries use `ansible_connection=local`, so without it the other laptop's entry writes this machine's dotfiles too. The task has `diff: false`, so the default `--diff` (`ansible.cfg`) never prints the token.
+     ```bash
+     uv run ansible-playbook playbooks/laptop.yml --limit <this-laptop> --check -t zsh
+     uv run ansible-playbook playbooks/laptop.yml --limit <this-laptop> -t zsh
+     ```
+5. Verify from a **fresh** shell: `gh auth status` and `gh api user`. Shells, terminal tabs, tmux panes and GUI apps (Claude.app included) started before the change keep the old `GITHUB_TOKEN`: `.zshenv` loads `~/.env` once per process tree (`DOTENV_LOADED`). Restart them, or test with `env -u GITHUB_TOKEN -u DOTENV_LOADED zsh -c 'gh auth status'`.
+6. **Delete the temporary key files immediately** from local storage:
    ```bash
    rm -f /tmp/temp-regular-key /tmp/temp-homebrew-key
    ```
