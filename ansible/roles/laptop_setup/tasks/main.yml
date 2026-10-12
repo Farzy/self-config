@@ -163,6 +163,24 @@
 
 # Change Ansible/Jinja block delimiters in order to avoid issues with shell
 # syntax '${%…}'.
+#
+# Separate from the loop below because .gitconfig holds a secret, the
+# vault-decrypted github_token ([github] token): mode 0600 instead of 0644, and
+# diff: false so a --diff run (the default in ansible.cfg) never prints the old
+# and new token, e.g. when the token is renewed. no_log is not needed: the
+# template module's result never includes the file contents.
+- name: "Install .gitconfig (holds github_token)"
+  ansible.builtin.template:
+    src: "dotfiles/.gitconfig"
+    dest: "~/.gitconfig"
+    mode: '0600'
+    block_start_string: "{|"
+    block_end_string: "|}"
+  diff: false
+  tags:
+    - configuration
+    - zsh
+
 - name: "Install personal config files"
   ansible.builtin.template:
     src: "dotfiles/{{ item }}"
@@ -171,7 +189,6 @@
     block_start_string: "{|"
     block_end_string: "|}"
   loop:
-    - .gitconfig
     - .gitconfig-personal
     - .gitconfig-professional
     - .gitignore_global
