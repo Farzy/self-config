@@ -46,9 +46,9 @@ EnvironmentFile=/etc/openclaw/secrets.env
 # The claw-owned npm prefix first, so the agent's own `openclaw` calls resolve
 # to the installation this unit runs.
 Environment=PATH={{ openclaw_setup_npm_prefix }}/bin:/usr/local/bin:/usr/bin:/bin
-# A claw-owned TMPDIR rather than PrivateTmp's /tmp, which systemd deletes when
-# this service stops — exactly what the update helper does mid-update while its
-# files live in os.tmpdir().
+# A claw-owned TMPDIR rather than the unit's private /tmp, which goes away with
+# the service's namespace, while the update helper stops this service mid-update
+# with its files in os.tmpdir().
 Environment=TMPDIR={{ openclaw_setup_tmp_dir }}
 {% if openclaw_setup_node_max_old_space_mb | int > 0 %}
 # Larger V8 heap limit, which also raises OpenClaw's memory-pressure warning
@@ -79,9 +79,10 @@ Environment=OPENCLAW_CONFIG_READONLY=1
 # agent, which can start unsandboxed processes through its own user manager
 # (`systemd-run --user`, the same way the updater escapes this unit's lifecycle).
 #
-# In a user unit, every namespace-based setting below (ProtectSystem, PrivateTmp,
-# ProtectKernelTunables, ...) is SILENTLY IGNORED unless PrivateUsers=true is also
-# set: an unprivileged user manager cannot create mount namespaces otherwise.
+# In a user unit, every namespace-based setting below (ProtectSystem,
+# TemporaryFileSystem, BindPaths, ProtectKernelTunables, ...) is SILENTLY
+# IGNORED unless PrivateUsers=true is also set: an unprivileged user manager
+# cannot create mount namespaces otherwise.
 # Verified on claw (systemd 252): without it the root file system stays
 # writable and the journal logs "namespace setup is prohibited ... ignoring".
 # Do not remove PrivateUsers without re-checking /proc/<pid>/mountinfo.
@@ -108,15 +109,25 @@ ReadWritePaths={{ openclaw_setup_home }}
 # Keep ProtectHome off so the service can manage its own files under {{ openclaw_setup_home }}
 ProtectHome=false
 
-# Mount a private, isolated /tmp and /var/tmp namespace to prevent multi-tenant token leakage.
+# Private, isolated /tmp and /var/tmp to prevent multi-tenant token leakage.
 # Covers tools that hard-code /tmp, except /tmp/openclaw, which is bound back to
 # the host's copy below; OpenClaw's own TMPDIR stays under $HOME (see above).
-PrivateTmp=true
+#
+# A tmpfs that exists only in this unit's mount namespace, deliberately NOT
+# PrivateTmp=true. A chat-triggered update helper (`systemd-run --user --scope`)
+# inherits this namespace, then stops the gateway. PrivateTmp's /tmp is backed
+# by a host directory (/tmp/systemd-private-*) that systemd deletes on stop;
+# deleting it also detaches the /tmp/openclaw bind mount below inside the
+# namespace, so the helper failed mid-update with "lstat '/tmp/openclaw' ENOENT"
+# -> "Update executor ownership is no longer current" and left the gateway
+# stopped (claw, 2026-10-14). A tmpfs has no host-side directory to delete: it
+# lives until the last process in the namespace exits. See docs/openclaw.md §4.4.
+TemporaryFileSystem=/tmp /var/tmp
 
 # Share the host's /tmp/openclaw with everything else that runs as {{ openclaw_setup_user }}.
 # OpenClaw hard-codes it as the home of managed-update-handoffs.sqlite, the
 # authority database that every package activation receipt records by inode.
-# With PrivateTmp alone the gateway sees its own empty /tmp/openclaw, so a
+# With a private /tmp alone the gateway sees its own empty /tmp/openclaw, so a
 # chat-triggered `update.run` after a CLI/Ansible-driven update (or the
 # reverse) fails package-swap with "The previous package receipt is not safely
 # replaceable." The directory is reserved 0700 {{ openclaw_setup_user }} by
