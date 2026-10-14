@@ -146,8 +146,8 @@
   become_user: "{{ openclaw_setup_user }}"
 
 # The gateway's TMPDIR (see openclaw_setup_tmp_dir): private to the user, and it
-# survives the service stop in the middle of an update, which a PrivateTmp /tmp
-# would not.
+# survives the service stop in the middle of an update, which the unit's private
+# /tmp would not.
 - name: Create the OpenClaw gateway temporary directory
   ansible.builtin.file:
     path: "{{ openclaw_setup_tmp_dir }}"
@@ -164,7 +164,7 @@
 # could create the directory first: OpenClaw would then either refuse it
 # ("untrusted owner") or write into a directory it does not control (see
 # docs/openclaw.md §4.1). The gateway unit bind-mounts this same directory
-# (BindPaths=/tmp/openclaw) on top of its PrivateTmp, so the gateway, the
+# (BindPaths=/tmp/openclaw) on top of its private tmpfs /tmp, so the gateway, the
 # updater and openclaw-admin all see one copy. tmpfiles.d recreates it for the
 # openclaw user at every boot, before the user manager starts, and re-asserts
 # owner and mode if it exists.
@@ -193,7 +193,7 @@
   changed_when: false
 
 # Superseded by the cache under $HOME above; the old path sat behind the unit's
-# PrivateTmp and never reached the service anyway.
+# private /var/tmp and never reached the service anyway.
 - name: Remove the legacy /var/tmp compile cache
   ansible.builtin.file:
     path: /var/tmp/openclaw-compile-cache
