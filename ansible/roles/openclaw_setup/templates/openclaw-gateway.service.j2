@@ -122,6 +122,8 @@ ProtectHome=false
 # -> "Update executor ownership is no longer current" and left the gateway
 # stopped (claw, 2026-10-14). A tmpfs has no host-side directory to delete: it
 # lives until the last process in the namespace exits. See docs/openclaw.md §4.4.
+# RAM-backed, but bounded: systemd mounts each with size=10% of RAM by default
+# (about 795 MiB apiece on the 8 GiB instance, checked in /proc/<pid>/mountinfo).
 TemporaryFileSystem=/tmp /var/tmp
 
 # Share the host's /tmp/openclaw with everything else that runs as {{ openclaw_setup_user }}.
