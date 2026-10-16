@@ -227,11 +227,11 @@ openclaw_gog_keyring_password: !vault |
           39613839356132313037
 
 # supergateway v4.0.0 (stable, published 2026-09-20) fixed the SSE crash-loop
-# from https://github.com/supercorp-ai/supergateway/issues/112 / PR #182; v4.1.0
-# (stable, published 2026-09-30) is the current latest stable and still
-# includes the fix, so we install it from npm again instead of building the
-# pinned upstream commit. See roles/fastmail_mcp_setup/defaults/main.yml for
-# the full rationale and the git-build fallback that's still available.
+# from https://github.com/supercorp-ai/supergateway/issues/112 / PR #182, and
+# every later stable release includes the fix, so we install from npm instead of
+# building the pinned upstream commit. The pinned version, the full rationale
+# and the git-build fallback that's still available live in
+# roles/fastmail_mcp_setup/defaults/main.yml.
 fastmail_mcp_supergateway_source: "npm"
 
 # Public SSH key GitHub Actions authenticates with, installed for the `debian`
