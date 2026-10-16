@@ -17,8 +17,13 @@ permissions:
 
 jobs:
   review:
+    # Not for Dependabot PRs: GitHub runs them with Dependabot's secret store,
+    # not the Actions one, so ANTHROPIC_API_KEY is empty and every such run
+    # failed (e.g. #167-#170). Keyed on the PR author rather than github.actor,
+    # which can be someone else when a human triggers the event.
     if: |-
-      github.event.pull_request.head.repo.fork == false
+      github.event.pull_request.head.repo.fork == false &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: 'ubuntu-latest'
     timeout-minutes: 15
     steps:
