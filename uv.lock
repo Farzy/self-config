@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12, <4.0"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -1536,6 +1536,7 @@ wheels = [
 name = "self-config"
 version = "1.0.0"
 source = { virtual = "." }
+default-groups = []
 dependencies = [
     { name = "ansible" },
     { name = "apache-libcloud" },
@@ -1566,7 +1567,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=48.0.1,<51.0.0" },
     { name = "jmespath", specifier = ">=1.0.1,<2.0.0" },
     { name = "jsonpatch", specifier = ">=1.33,<2.0" },
-    { name = "kubernetes", specifier = ">=29.0.0,<37.0.0" },
+    { name = "kubernetes", specifier = ">=29.0.0,<38.0.0" },
     { name = "openshift", specifier = ">=0.13,<1.0" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
     { name = "pre-commit", specifier = ">=3.7.0,<5.0.0" },
