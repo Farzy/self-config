@@ -106,6 +106,10 @@ openclaw_setup_telegram_allow_from: []
 # commands.ownerAllowFrom, which is channel-agnostic, unlike the per-channel lists.
 openclaw_setup_owner_allow_from: []
 openclaw_setup_telegram_thread_bindings_enabled: true
+# channels.telegram.richMessages: native Telegram tables, headings and plan
+# checkboxes instead of plain-text fallbacks. Enabled by the 2026.10.5 Doctor
+# migration on claw; kept here so a converge does not revert it.
+openclaw_setup_telegram_rich_messages: true
 
 openclaw_setup_allowed_origins:
   - "https://{{ openclaw_setup_domain }}"
@@ -135,4 +139,4 @@ openclaw_setup_config_readonly: false
 # older, but never downgrades: once a newer release has migrated the SQLite
 # state, an older package cannot be restored safely. A host that self-updated
 # past this value fails the play until it is bumped — see docs/openclaw.md §4.4.
-openclaw_setup_version: "2026.10.4"
+openclaw_setup_version: "2026.10.5"
