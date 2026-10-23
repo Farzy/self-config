@@ -125,22 +125,32 @@
     signed_by: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
     state: present
 
-# state: latest, not present: OpenClaw 2026.10.6 requires Node 26.12.1+ (older
-# 26.x builds accept TLS chains signed with the compromised certificate keys),
-# and `present` would leave an already-installed older nodejs in place. The
-# NodeSource source above is pinned to node_26.x, so this stays on the 26 line.
+# state: latest, not present: `present` would leave an already-installed older
+# nodejs in place, and OpenClaw refuses Node builds below
+# openclaw_setup_node_min_version (older builds trust TLS chains signed with the
+# compromised certificate keys). The NodeSource source above is pinned to
+# node_26.x, so this stays on the 26 line.
+#
+# The gateway is a long-running process: apt swapping the binary does not move
+# it off the old Node, so a change restarts it.
 - name: Install Node.js
   ansible.builtin.apt:
     name: nodejs
     state: latest  # noqa: package-latest
     update_cache: true
+  register: openclaw_setup_nodejs_pkg
+  notify: Restart openclaw
 
+# In --check a pending upgrade is not applied, so the probe would read the old
+# binary (or none at all on a fresh host); the apt task's "changed" is the
+# signal there, and the version check only makes sense once apt really ran.
 - name: Read the installed Node.js version
   ansible.builtin.command:
     cmd: node --version
   register: openclaw_setup_node_installed
   changed_when: false
   check_mode: false
+  when: not (ansible_check_mode and openclaw_setup_nodejs_pkg is changed)
 
 - name: Verify Node.js meets the minimum required by OpenClaw
   ansible.builtin.assert:
@@ -151,6 +161,7 @@
       Node.js {{ openclaw_setup_node_installed.stdout | trim }} is older than
       {{ openclaw_setup_node_min_version }}, the minimum OpenClaw requires.
     quiet: true
+  when: not (ansible_check_mode and openclaw_setup_nodejs_pkg is changed)
 
 - name: Create /etc/apt/keyrings directory
   ansible.builtin.file:
