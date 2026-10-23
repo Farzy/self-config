@@ -28,6 +28,11 @@ openclaw_setup_tmp_dir: "{{ openclaw_setup_home }}/.cache/openclaw/tmp"
 # out. See docs/openclaw.md §8.
 openclaw_setup_node_max_old_space_mb: 5120
 
+# Minimum Node.js on the 26 line that OpenClaw 2026.10.6+ accepts: it rejects
+# older builds, which trust TLS chains signed with the compromised certificate
+# keys fixed in the October 2026 Node.js security releases.
+openclaw_setup_node_min_version: "26.12.1"
+
 # claw-owned npm global prefix OpenClaw is installed into, so its own updater —
 # running as claw — can stage and swap the package tree (a root-owned
 # /usr/lib/node_modules install can only ever be replaced by root). ~/.npm-global
