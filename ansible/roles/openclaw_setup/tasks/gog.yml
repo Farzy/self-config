@@ -18,18 +18,23 @@
     mode: '0644'
   when: not openclaw_setup_gog_cli_stat.stat.exists
 
+# Not conditional on the stat: gogcli archives (seen in 0.47.0) can ship their "./"
+# entry as 0700, which tar applies to this directory and leaves gog unreadable for
+# the claw user. Enforcing the mode on every run also repairs an affected host.
 - name: Create gog CLI install directory
   ansible.builtin.file:
     path: "/opt/gogcli-{{ openclaw_setup_gog_cli_version }}"
     state: directory
     mode: '0755'
-  when: not openclaw_setup_gog_cli_stat.stat.exists
 
 - name: Extract gog CLI
   ansible.builtin.unarchive:
     src: "/tmp/gogcli-{{ openclaw_setup_gog_cli_version }}-linux-amd64.tar.gz"
     dest: "/opt/gogcli-{{ openclaw_setup_gog_cli_version }}"
     remote_src: true
+    # Keep the 0755 directory above instead of the mode of the archive's "./" entry.
+    extra_opts:
+      - --no-overwrite-dir
   # The directory above is only created for real, so check mode has nothing to extract into.
   when:
     - not openclaw_setup_gog_cli_stat.stat.exists
