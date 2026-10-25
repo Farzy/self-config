@@ -22,8 +22,8 @@
 Description=OpenClaw Gateway
 After=network-online.target
 Wants=network-online.target
-StartLimitBurst=5
-StartLimitIntervalSec=60
+StartLimitBurst=10
+StartLimitIntervalSec=300
 
 [Service]
 ExecStart=/usr/bin/node {{ openclaw_setup_npm_prefix }}/lib/node_modules/openclaw/dist/index.js gateway --port {{ openclaw_setup_port }}
