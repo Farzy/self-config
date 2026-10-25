@@ -51,4 +51,18 @@
     src: "/opt/signal-cli-{{ openclaw_setup_signal_cli_version }}/signal-cli"
     dest: "{{ openclaw_setup_signal_cli_path }}"
     state: link
+  # In --check the extract above is skipped, so a pending version has no binary to
+  # link to yet; `file` refuses a dangling link without force, and force would hide
+  # a failed real extract.
+  when: not (ansible_check_mode and not openclaw_setup_signal_cli_stat.stat.exists)
   notify: Restart openclaw
+
+# Surfaces the pending bump in --check runs (the drift check), where the extract
+# and the link above are skipped and would stay silent.
+- name: Report a pending signal-cli install or upgrade
+  ansible.builtin.debug:
+    msg: "Would install signal-cli {{ openclaw_setup_signal_cli_version }} and restart OpenClaw"
+  changed_when: true
+  when:
+    - ansible_check_mode
+    - not openclaw_setup_signal_cli_stat.stat.exists
