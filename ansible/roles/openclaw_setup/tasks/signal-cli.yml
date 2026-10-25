@@ -29,7 +29,10 @@
     src: "/tmp/signal-cli-{{ openclaw_setup_signal_cli_version }}-Linux-native.tar.gz"
     dest: "/opt/signal-cli-{{ openclaw_setup_signal_cli_version }}"
     remote_src: true
-  when: not openclaw_setup_signal_cli_stat.stat.exists
+  # The directory above is only created for real, so check mode has nothing to extract into.
+  when:
+    - not openclaw_setup_signal_cli_stat.stat.exists
+    - not ansible_check_mode
   notify: Restart openclaw
 
 - name: Remove downloaded signal-cli archive

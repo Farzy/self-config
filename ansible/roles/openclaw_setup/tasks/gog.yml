@@ -30,7 +30,10 @@
     src: "/tmp/gogcli-{{ openclaw_setup_gog_cli_version }}-linux-amd64.tar.gz"
     dest: "/opt/gogcli-{{ openclaw_setup_gog_cli_version }}"
     remote_src: true
-  when: not openclaw_setup_gog_cli_stat.stat.exists
+  # The directory above is only created for real, so check mode has nothing to extract into.
+  when:
+    - not openclaw_setup_gog_cli_stat.stat.exists
+    - not ansible_check_mode
 
 - name: Remove downloaded gog CLI archive
   ansible.builtin.file:
