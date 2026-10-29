@@ -244,6 +244,20 @@ ssh claw "sudo systemctl --user -M claw@ start openclaw-gateway"
 ssh claw "sudo openclaw-admin update status --json"  # migrationWarnings must be empty
 ```
 
+**It happened again on 2026-10-28** (chat-requested 2026.10.7 → 2026.10.8, run `45d734f0`): same `authority-check-failed` refusal, same `state-migrated-no-rollback`, Signal plugin left pending. The same sequence fixed it, with two differences. The second `update repair` (gateway stopped) finished everything: it converged the plugin, marked the run `succeeded` and **started the gateway itself**. `doctor --fix` then needs its own stop/start window, and it reported nothing else to repair beyond the agent-database path repair the update had skipped. Expect this every time a chat or Control UI update crosses a state migration, until upstream fixes the race. Upgrading by bumping `openclaw_setup_version` goes through the same updater (`openclaw update --tag … --yes`, handed off to the same detached helper that stops, swaps, restarts the gateway and then runs Doctor), so it is not known to avoid the race. If it happens there, the role's "Assert the OpenClaw update succeeded" task fails with `status=state-migrated-no-rollback`, and the recovery below applies unchanged. The 2026.10.8 sequence differs from the 2026.10.5 block above, because the second `update repair` restarts the gateway itself:
+
+```bash
+ssh -n claw "sudo systemctl --user -M claw@ stop openclaw-gateway"
+ssh -n claw "sudo openclaw-admin backup create --output /home/claw/backups --verify --no-include-workspace < /dev/null"
+ssh -n claw "sudo openclaw-admin update repair --yes < /dev/null"   # converges the plugin, marks the run succeeded, restarts the gateway
+ssh -n claw "sudo systemctl --user -M claw@ stop openclaw-gateway"
+ssh -n claw "sudo openclaw-admin doctor --fix < /dev/null"
+ssh -n claw "sudo systemctl --user -M claw@ start openclaw-gateway"
+ssh -n claw "sudo openclaw-admin update status --json < /dev/null"   # lastRun succeeded, no migrationWarnings
+```
+
+**Run `openclaw-admin` with stdin closed when it isn't interactive.** The wrapper uses `systemd-run --pipe`, which forwards stdin to the command. Over a non-interactive or backgrounded `ssh` session whose stdin stays open, `update status`, `update repair` and `doctor` can block indefinitely. Use `ssh -n` or `< /dev/null`. For long maintenance windows, run the steps detached on the host (`nohup … < /dev/null > log 2>&1 &`; `nohup` only redirects stdin when it is a terminal, so over `ssh` it must be closed explicitly) so a sleeping or disconnected client can't interrupt them midway.
+
 Doctor never removes the retained pre-migration snapshots (`.openclaw.package-backup-*.databases` and `*.pre-startup-migration-*.bak`) or the previous package kept under `.openclaw.package-activation-*`. `openclaw update cleanup --dry-run` lists what it would retire; `--yes` deletes them permanently, so take a verified backup first.
 
 **Reconciling with Ansible afterwards.** `openclaw_setup_version` is a **minimum**, not an exact pin:
