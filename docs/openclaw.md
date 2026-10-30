@@ -121,6 +121,12 @@ To protect API tokens and sensitive credentials from unauthorized process access
 #### 2. Threat Model Defense & Harmonized Systemd Sandboxing
 The systemd user unit ([ansible/roles/openclaw_setup/templates/openclaw-gateway.service.j2](../ansible/roles/openclaw_setup/templates/openclaw-gateway.service.j2)) configures harmonized process sandboxing balancing security against Node.js runtime needs.
 
+> **Compared with upstream** (checked 2026-10-30 against the 2026.10.9 docs and [openclaw-ansible](https://github.com/openclaw/openclaw-ansible)): neither the unit `openclaw gateway install` renders nor the official Ansible installer sandboxes the gateway. openclaw-ansible's `docs/security.md` says not to assume `NoNewPrivileges`, `PrivateTmp`, `ProtectSystem`, `ProtectHome` or `ReadWritePaths`; it relies on an unprivileged user, UFW, Tailscale, Docker agent sandboxes and `openclaw security audit`. The update docs only show `ReadWritePaths=… /tmp` for a hardened *system* unit. So this unit is stricter than anything upstream tests. Each incompatibility so far was found and fixed here:
+> - the 2026.9.6 temp-workspace ownership check under `PrivateUsers`, fixed upstream in fs-safe;
+> - the private `/tmp` splitting `/tmp/openclaw` (`BindPaths=`, `TemporaryFileSystem=`).
+>
+> The remaining update failure ([4.4](#44-self-update-on-request)) happens without any sandbox too. Keep the hardening, but when an update misbehaves, check these settings first.
+
 > **Scope of this sandbox.** It contains the gateway process and whatever runs inside it by accident; it is not a boundary against a compromised agent. `claw` has linger and therefore its own user manager, so any code running as `claw` can start an unsandboxed process with `systemd-run --user` — which is exactly how the updater escapes the gateway's lifecycle. That was already true with the old system unit, since linger was enabled then too.
 >
 > **User units need `PrivateUsers=true` for any of this to apply.** An unprivileged user manager cannot create mount namespaces on its own, and systemd then **silently skips** every namespace-based setting — `ProtectSystem`, `TemporaryFileSystem`, `BindPaths`, `ProtectKernelTunables`, `ProtectHostname`… Verified on this host (systemd 252): without it, the root file system stays writable inside the unit and the journal only logs `namespace setup is prohibited … ignoring`. With it, `/` and `/proc/sys` are mounted read-only as intended (writes fail with `EROFS`, not just `EACCES`), and everything the updater needs — the user bus, `systemctl --user`, `systemd-run --user --scope`, journal reads — still works. Don't remove it without re-checking `/proc/<pid>/mountinfo`.
@@ -249,12 +255,20 @@ ssh claw "sudo openclaw-admin update status --json"  # migrationWarnings must be
 ```bash
 ssh -n claw "sudo systemctl --user -M claw@ stop openclaw-gateway"
 ssh -n claw "sudo openclaw-admin backup create --output /home/claw/backups --verify --no-include-workspace < /dev/null"
-ssh -n claw "sudo openclaw-admin update repair --yes < /dev/null"   # converges the plugin, marks the run succeeded, restarts the gateway
-ssh -n claw "sudo systemctl --user -M claw@ stop openclaw-gateway"
+ssh -n claw "sudo openclaw-admin update repair --yes < /dev/null"   # converges the plugin, marks the run succeeded; may restart the gateway (10.8 did, 10.9 did not)
+ssh -n claw "sudo systemctl --user -M claw@ stop openclaw-gateway"   # no-op if repair left it stopped
 ssh -n claw "sudo openclaw-admin doctor --fix < /dev/null"
 ssh -n claw "sudo systemctl --user -M claw@ start openclaw-gateway"
 ssh -n claw "sudo openclaw-admin update status --json < /dev/null"   # lastRun succeeded, no migrationWarnings
 ```
+
+**Third time on 2026-10-30, and the root cause** (chat-requested 2026.10.8 → 2026.10.9, run `9fd1eae7`; upstream [openclaw/openclaw#178291](https://github.com/openclaw/openclaw/issues/178291), P0). The same sequence above finished it (about 4.6 min of downtime); this time `update repair` left the gateway stopped. The refusal is **an OpenClaw bug, unrelated to this host's systemd sandbox**:
+- The message names no holder ("…offline maintenance; retry when it finishes", not "…by `<role>` process `<pid>`"). In the 10.9 code that variant only fires when the **Doctor process itself** holds offline-maintenance custody of the state DB, but its config-write ("config promotion") authority check runs with no active maintenance scope. Doctor refuses its own custody.
+- A foreign holder would be named, and the running gateway is exempt from the check.
+- The journal shows only the updater's own systemd stop and start (no unit auto-restart).
+- The upstream reporter hits the same error on macOS with a LaunchAgent, with no systemd at all.
+
+So removing `PrivateUsers`/`ProtectSystem`/`TemporaryFileSystem` would not help. Every chat or Control UI update that crosses a state migration fails this way until upstream fixes #178291, and the five-step recovery above is the remedy.
 
 **Run `openclaw-admin` with stdin closed when it isn't interactive.** The wrapper uses `systemd-run --pipe`, which forwards stdin to the command. Over a non-interactive or backgrounded `ssh` session whose stdin stays open, `update status`, `update repair` and `doctor` can block indefinitely. Use `ssh -n` or `< /dev/null`. For long maintenance windows, run the steps detached on the host (`nohup … < /dev/null > log 2>&1 &`; `nohup` only redirects stdin when it is a terminal, so over `ssh` it must be closed explicitly) so a sleeping or disconnected client can't interrupt them midway.
 
