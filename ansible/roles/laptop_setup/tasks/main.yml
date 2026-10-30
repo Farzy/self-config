@@ -209,6 +209,47 @@
     - iterm2
   when: is_macos
 
+# The iTerm2 preferences synced through Dropbox reference Profiles-MFT.json as a
+# dynamic profile file. It holds work-specific host/project names, so it is kept
+# in Dropbox rather than in this public repository and copied into place here.
+# Without it, iTerm2 shows a "Dynamic Profiles Error" dialog at each launch.
+# This is a copy, not a symlink (iTerm2's directory watcher may not notice edits
+# made to a symlink's target): after the file changes in Dropbox, rerun with
+# `-t iterm2` to refresh it.
+- name: Check for the Dropbox-hosted iTerm2 MFT dynamic profiles
+  ansible.builtin.stat:
+    path: "{{ iterm2_dropbox_dynamic_profiles_path }}/Profiles-MFT.json"
+  register: iterm2_mft_profiles
+  tags:
+    - configuration
+    - iterm2
+  when: is_macos
+
+- name: Install iTerm2 MFT DynamicProfiles from Dropbox
+  ansible.builtin.copy:
+    src: "{{ iterm2_dropbox_dynamic_profiles_path }}/Profiles-MFT.json"
+    dest: "{{ iterm2_library_path }}/DynamicProfiles/Profiles-MFT.json"
+    remote_src: true
+    mode: '0644'
+  tags:
+    - configuration
+    - iterm2
+  when:
+    - is_macos
+    - iterm2_mft_profiles.stat.exists | default(false)
+
+- name: Warn when the Dropbox-hosted iTerm2 MFT DynamicProfiles are missing
+  ansible.builtin.debug:
+    msg: >-
+      {{ iterm2_dropbox_dynamic_profiles_path }}/Profiles-MFT.json not found;
+      iTerm2 will keep showing a Dynamic Profiles Error until Dropbox syncs it.
+  tags:
+    - configuration
+    - iterm2
+  when:
+    - is_macos
+    - not (iterm2_mft_profiles.stat.exists | default(false))
+
 - name: Create .gemini directory
   ansible.builtin.file:
     path: "~/.gemini"
