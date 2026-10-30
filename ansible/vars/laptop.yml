@@ -274,6 +274,7 @@ laptop_setup_global_apt_packages:
   - zsh
 
 iterm2_library_path: ~/Library/Application Support/iTerm2
+iterm2_dropbox_dynamic_profiles_path: ~/Dropbox/Personnel/iTerm2/DynamicProfiles
 iterm2_sessions:
   - name: quassel
     badge: Quassel
