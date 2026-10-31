@@ -5,12 +5,12 @@ fastmail_mcp_home: /home/fastmail-mcp
 fastmail_mcp_app_dir: /opt/fastmail-mcp
 fastmail_mcp_port: 18790
 fastmail_mcp_version: "v1.13.4"
-fastmail_mcp_supergateway_version: "4.2.0"
+fastmail_mcp_supergateway_version: "4.2.1"
 
 # supergateway crash-loops on a second concurrent SSE connection
 # ("Already connected to a transport"; https://github.com/supercorp-ai/supergateway/issues/112).
 # v4.0.0 (stable, published 2026-09-20) was the first non-prerelease npm version
-# that included the fix; v4.2.0 (stable, published 2026-10-15) is the current
+# that included the fix; v4.2.1 (stable, published 2026-10-24) is the current
 # latest stable and still includes it, so fastmail_mcp_supergateway_version
 # installs it from the registry as before. Set to "git" to build and install
 # fastmail_mcp_supergateway_git_version from fastmail_mcp_supergateway_git_repo
@@ -18,7 +18,7 @@ fastmail_mcp_supergateway_version: "4.2.0"
 fastmail_mcp_supergateway_source: "npm"
 
 # Only used when fastmail_mcp_supergateway_source == "git". Kept available as a
-# fallback even though a stable release (now v4.2.0) has included the fix since v4.0.0.
+# fallback even though a stable release (now v4.2.1) has included the fix since v4.0.0.
 # Upstream official repo, pinned to the merge commit of PR #182 ("give every SSE session
 # its own Server"), which fixes the crash and supersedes community PR #113 (including the
 # cleanupSession() reentrant-recursion issue Farzad flagged on that thread):
