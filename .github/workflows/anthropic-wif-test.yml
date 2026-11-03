@@ -1,24 +1,40 @@
-name: anthropic-wif-test
-on: workflow_dispatch
-permissions:
-  id-token: write
-  contents: read
+# On-demand check that GitHub OIDC -> Anthropic workload identity federation
+# works. It only mints a short-lived token and throws it away; the Claude
+# workflows still authenticate with ANTHROPIC_API_KEY.
+#
+# This repository is public, so its logs are world-readable: only an allow-list
+# of non-secret response fields is printed, and the job fails unless the
+# exchange really returned a token.
+name: 'anthropic-wif-test'
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
 jobs:
-  call-claude:
-    runs-on: ubuntu-latest
+  exchange-token:
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 5
+    permissions:
+      id-token: 'write'
     steps:
-      - name: Fetch GitHub OIDC token
+      - name: 'Fetch GitHub OIDC token'
+        id: 'oidc'
         uses: 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd' # ratchet:actions/github-script@v8
         with:
           script: |
             const token = await core.getIDToken('https://api.anthropic.com');
             core.setSecret(token);
-            core.exportVariable('JWT', token);
-      - name: Exchange for an Anthropic access token
+            core.setOutput('jwt', token);
+
+      - name: 'Exchange for an Anthropic access token'
+        env:
+          JWT: '${{ steps.oidc.outputs.jwt }}'
         run: |
-          curl -sS https://api.anthropic.com/v1/oauth/token \
+          resp=$(curl -sS --fail-with-body --max-time 30 https://api.anthropic.com/v1/oauth/token \
             -H "content-type: application/json" \
-            --data @- <<JSON | jq 'with_entries(if (.key | test("token$")) then .value = "<redacted>" else . end)'
+            --data @- <<JSON
           {
             "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
             "assertion": "$JWT",
@@ -28,3 +44,7 @@ jobs:
             "workspace_id": "wrkspc_018qveQFkAiauo9xyvEzeKXC"
           }
           JSON
+          ) || { echo "Token exchange failed: $resp"; exit 1; }
+          jq -e 'has("access_token")' <<<"$resp" >/dev/null
+          jq -r '"::add-mask::" + .access_token' <<<"$resp"
+          jq '{token_type, scope, expires_in, workspace_id}' <<<"$resp"
