@@ -170,6 +170,10 @@ full design; the essentials for making changes:
     off by default in CI (overriding `ansible.cfg`) because rendered templates
     can contain vault-decrypted secrets. Never echo a secret into a log or a job
     summary.
+*   `.github/workflows/claude-review.yml` authenticates to Anthropic through
+    workload identity federation (GitHub OIDC, no secret);
+    `anthropic-wif-test.yml` checks that exchange on demand. `claude.yml` and
+    `claude-triage.yml` still use the `ANTHROPIC_API_KEY` secret.
 *   Workflows are linted by `actionlint` and audited by `zizmor` via
     `pre-commit`. Pin third-party actions to a commit SHA with a
     `# ratchet:owner/repo@vX` comment.

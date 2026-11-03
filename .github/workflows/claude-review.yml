@@ -17,9 +17,10 @@ permissions:
 
 jobs:
   review:
-    # Not for Dependabot PRs: GitHub runs them with Dependabot's secret store,
-    # not the Actions one, so ANTHROPIC_API_KEY is empty and every such run
-    # failed (e.g. #167-#170). Keyed on the PR author rather than github.actor,
+    # Not for Dependabot PRs: they aren't reviewed, on purpose. GitHub also runs
+    # them with restricted credentials: when this workflow used a static API key,
+    # the secret was empty and every such run failed (e.g. #167-#170). Keyed on
+    # the PR author rather than github.actor,
     # which can be someone else when a human triggers the event.
     if: |-
       github.event.pull_request.head.repo.fork == false &&
@@ -33,7 +34,14 @@ jobs:
       - name: 'Run Claude Code review'
         uses: 'anthropics/claude-code-action@v1' # ratchet:exclude
         with:
-          anthropic_api_key: '${{ secrets.ANTHROPIC_API_KEY }}'
+          # Workload identity federation instead of a static API key: the action
+          # exchanges the job's GitHub OIDC token (hence `id-token: write`) for a
+          # short-lived Anthropic token and refreshes it during the run. These
+          # are identifiers, not secrets.
+          anthropic_federation_rule_id: 'fdrl_01NmswSzm9ibXzjSZF6QMS5q'
+          anthropic_organization_id: 'd6e15781-4fe8-4a92-a70d-0addae3f1e3b'
+          anthropic_service_account_id: 'svac_01G7r2PqCCibLn2kCMVUrzFt'
+          anthropic_workspace_id: 'wrkspc_018qveQFkAiauo9xyvEzeKXC'
           # `claude_args` is split into CLI arguments, so it takes no inline
           # comments — the rationale lives here instead.
           #
