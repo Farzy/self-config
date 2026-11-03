@@ -53,7 +53,7 @@ Exactly **two**. Both are repository secrets.
 | `CI_SSH_PRIVATE_KEY` | Private half of the dedicated CI ed25519 key (full PEM, `-----BEGIN OPENSSH PRIVATE KEY-----` … `-----END OPENSSH PRIVATE KEY-----`). Must be **unencrypted** — a runner cannot type a passphrase. | Generating a new keypair, §4.1 |
 | `ANSIBLE_VAULT_PASSWORD` | The contents of `~/.ansible-personal-key` — the passphrase that decrypts the `!vault` values in `ansible/vars/*.yml`. | `scripts/rekey-vault.py`, see [openclaw.md](openclaw.md) §4.5 |
 
-`ANTHROPIC_API_KEY` already exists for the Claude workflows and is unrelated.
+The Claude workflows (`claude*.yml`) are unrelated and need no stored secret: they authenticate to Anthropic through workload identity federation.
 
 > [!NOTE]
 > These are repository-level secrets, so the `check` path can use them without

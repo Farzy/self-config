@@ -11,7 +11,7 @@ rules:
         # anthropics/claude-code-action is deliberately tracked at the floating
         # `v1` tag (note the `# ratchet:exclude` markers) so that upstream fixes
         # land without a dependency bump. Accepted: it is a first-party action
-        # from the vendor whose API key the workflow already holds, so hash
+        # from the vendor whose API the workflow already authenticates to, so hash
         # pinning would not meaningfully reduce what a compromise could do.
         'anthropics/*': 'ref-pin'
         # Everything else must be pinned to a full commit SHA.
@@ -30,6 +30,15 @@ rules:
       - 'claude.yml'
       - 'claude-review.yml'
       - 'claude-triage.yml'
+
+  dangerous-triggers:
+    ignore:
+      # issue_comment is what makes `@claude` work on issues and PR conversations.
+      # It runs the workflow from the default branch, so a PR cannot change that
+      # code, and the job's `if:` only lets through a human OWNER, MEMBER or
+      # COLLABORATOR whose comment contains `@claude`. Accepted risk: the job's
+      # write permissions, and Claude acting on the issue or PR content it reads.
+      - 'claude.yml'
 
   artipacked:
     ignore:

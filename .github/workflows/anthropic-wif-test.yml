@@ -1,0 +1,50 @@
+# On-demand check that GitHub OIDC -> Anthropic workload identity federation
+# works. It only mints a short-lived token and throws it away. The Claude
+# workflows (`claude*.yml`) authenticate through the same federation rule.
+#
+# This repository is public, so its logs are world-readable: only an allow-list
+# of non-secret response fields is printed, and the job fails unless the
+# exchange really returned a token.
+name: 'anthropic-wif-test'
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  exchange-token:
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 5
+    permissions:
+      id-token: 'write'
+    steps:
+      - name: 'Fetch GitHub OIDC token'
+        id: 'oidc'
+        uses: 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd' # ratchet:actions/github-script@v8
+        with:
+          script: |
+            const token = await core.getIDToken('https://api.anthropic.com');
+            core.setSecret(token);
+            core.setOutput('jwt', token);
+
+      - name: 'Exchange for an Anthropic access token'
+        env:
+          JWT: '${{ steps.oidc.outputs.jwt }}'
+        run: |
+          resp=$(curl -sS --fail-with-body --max-time 30 https://api.anthropic.com/v1/oauth/token \
+            -H "content-type: application/json" \
+            --data @- <<JSON
+          {
+            "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+            "assertion": "$JWT",
+            "federation_rule_id": "fdrl_01NmswSzm9ibXzjSZF6QMS5q",
+            "organization_id": "d6e15781-4fe8-4a92-a70d-0addae3f1e3b",
+            "service_account_id": "svac_01G7r2PqCCibLn2kCMVUrzFt",
+            "workspace_id": "wrkspc_018qveQFkAiauo9xyvEzeKXC"
+          }
+          JSON
+          ) || { echo "Token exchange failed: $resp"; exit 1; }
+          jq -e 'has("access_token")' <<<"$resp" >/dev/null
+          jq -r '"::add-mask::" + .access_token' <<<"$resp"
+          jq '{token_type, scope, expires_in, workspace_id}' <<<"$resp"
