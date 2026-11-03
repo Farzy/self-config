@@ -1,7 +1,6 @@
 # On-demand check that GitHub OIDC -> Anthropic workload identity federation
-# works. It only mints a short-lived token and throws it away. The PR review
-# workflow uses the same federation rule; `claude.yml` and `claude-triage.yml`
-# still authenticate with ANTHROPIC_API_KEY.
+# works. It only mints a short-lived token and throws it away. The Claude
+# workflows (`claude*.yml`) authenticate through the same federation rule.
 #
 # This repository is public, so its logs are world-readable: only an allow-list
 # of non-secret response fields is printed, and the job fails unless the

@@ -2,6 +2,6 @@
 # workload identity federation inputs, which the action's own action.yml defines.
 # Remove this once actionlint knows them.
 paths:
-  .github/workflows/claude-review.yml:
+  .github/workflows/claude*.yml:
     ignore:
       - 'input "anthropic_(federation_rule_id|organization_id|service_account_id|workspace_id)" is not defined in action "anthropics/claude-code-action@v1"'

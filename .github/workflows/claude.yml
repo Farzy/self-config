@@ -38,7 +38,14 @@ jobs:
       - name: 'Run Claude Code'
         uses: 'anthropics/claude-code-action@v1' # ratchet:exclude
         with:
-          anthropic_api_key: '${{ secrets.ANTHROPIC_API_KEY }}'
+          # Workload identity federation instead of a static API key: the action
+          # exchanges the job's GitHub OIDC token (hence `id-token: write`) for a
+          # short-lived Anthropic token and refreshes it during the run. These
+          # are identifiers, not secrets.
+          anthropic_federation_rule_id: 'fdrl_01NmswSzm9ibXzjSZF6QMS5q'
+          anthropic_organization_id: 'd6e15781-4fe8-4a92-a70d-0addae3f1e3b'
+          anthropic_service_account_id: 'svac_01G7r2PqCCibLn2kCMVUrzFt'
+          anthropic_workspace_id: 'wrkspc_018qveQFkAiauo9xyvEzeKXC'
           trigger_phrase: '@claude'
           claude_args: |-
             --max-turns 30
