@@ -5,7 +5,7 @@
 # This repository is public, so its logs are world-readable: only an allow-list
 # of non-secret response fields is printed, and the job fails unless the
 # exchange really returned a token.
-name: 'anthropic-wif-test'
+name: '🔑 Anthropic WIF Test'
 
 on:
   workflow_dispatch:
