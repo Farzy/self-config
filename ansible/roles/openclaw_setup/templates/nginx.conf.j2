@@ -1,3 +1,7 @@
+# Throttle the token-authenticated hook endpoint (iPhone Siri shortcut): a few
+# requests a minute is plenty for a human, and it caps token brute-forcing.
+limit_req_zone $binary_remote_addr zone=openclaw_hooks:1m rate=10r/m;
+
 server {
     listen 80;
     server_name {{ openclaw_setup_domain }};
@@ -36,6 +40,16 @@ server {
 
     # Allow larger image/file uploads for OpenClaw
     client_max_body_size 50M;
+
+    location /hooks/ {
+        limit_req zone=openclaw_hooks burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass http://127.0.0.1:{{ openclaw_setup_port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 
     location / {
         proxy_pass http://127.0.0.1:{{ openclaw_setup_port }};
