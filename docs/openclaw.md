@@ -723,7 +723,7 @@ Gateway HTTP hooks let an iOS Shortcut send a dictated message straight to the a
    ```
    Append the block to [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml), keep the plaintext file until the smoke test (step 3) has passed and the token is pasted into the Shortcut (step 4).
 
-2. **Deploy**. When `openclaw_hooks_token` is defined, the role:
+2. **Deploy**. When `openclaw_hooks_token` is set (non-empty), the role:
    - writes `OPENCLAW_HOOKS_TOKEN` to `/etc/openclaw/secrets.env` ([4.1](#41-systemd-secrets-externalization--security-sandboxing));
    - renders `hooks` in `openclaw.json` with `token: "${OPENCLAW_HOOKS_TOKEN}"`. `hooks.token` does not accept SecretRef objects, only a whole `${NAME}` env reference;
    - restricts targets to `openclaw_setup_hooks_allowed_agent_ids` (default `[main]`) and keeps `allowRequestSessionKey: false`, so callers cannot pick a session.
