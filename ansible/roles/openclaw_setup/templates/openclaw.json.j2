@@ -44,7 +44,7 @@
   "commands": {
     "ownerAllowFrom": {{ openclaw_setup_owner_allow_from | to_json }}
   },
-{% if openclaw_hooks_token is defined and openclaw_hooks_token | length > 0 %}
+{% if openclaw_setup_hooks_enabled | bool %}
 {#- Inbound HTTP hooks (POST /hooks/agent), used by the iPhone Siri shortcut.
     hooks.token does not accept SecretRef objects, only a whole "${NAME}" env
     reference, which the Gateway resolves from /etc/openclaw/secrets.env.

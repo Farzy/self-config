@@ -721,7 +721,7 @@ Gateway HTTP hooks let an iOS Shortcut send a dictated message straight to the a
    openssl rand -hex 32 > /tmp/openclaw-hooks-token
    uv run ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key --name openclaw_hooks_token "$(cat /tmp/openclaw-hooks-token)"
    ```
-   Append the block to [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml), keep the plaintext only long enough to paste it into the Shortcut, then `rm -f /tmp/openclaw-hooks-token`.
+   Append the block to [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml), keep the plaintext file until the smoke test (step 3) has passed and the token is pasted into the Shortcut (step 4).
 
 2. **Deploy**. When `openclaw_hooks_token` is defined, the role:
    - writes `OPENCLAW_HOOKS_TOKEN` to `/etc/openclaw/secrets.env` ([4.1](#41-systemd-secrets-externalization--security-sandboxing));
@@ -739,7 +739,10 @@ Gateway HTTP hooks let an iOS Shortcut send a dictated message straight to the a
    ```
    Expect `200 {"ok":true,"runId":"..."}`, then the reply on Telegram.
 
-4. **iOS Shortcut**: *Dictate Text* → *Get Contents of URL* (`POST`, headers `Authorization: Bearer <token>` and `Content-Type: application/json`, JSON body `message` = Dictated Text, `agentId` = `main`, `channel` = `telegram`, `to` = the Telegram chat id) → optional *Speak Text* "Sent". Name the shortcut after the Siri phrase.
+4. **iOS Shortcut**: *Dictate Text* → *Get Contents of URL* (`POST`, headers `Authorization: Bearer <token>` and `Content-Type: application/json`, JSON body `message` = Dictated Text, `agentId` = `main`, `channel` = `telegram`, `to` = the Telegram chat id) → optional *Speak Text* "Sent". Name the shortcut after the Siri phrase. Once the token is in the Shortcut, delete the plaintext copy:
+   ```bash
+   rm -f /tmp/openclaw-hooks-token
+   ```
 
 **Rotation**: re-run step 1, redeploy, and update the token in the Shortcut. Each request runs in a fresh isolated session (`hook:<uuid>`), without the main conversation history.
 
