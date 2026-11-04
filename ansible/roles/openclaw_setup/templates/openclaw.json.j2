@@ -44,6 +44,19 @@
   "commands": {
     "ownerAllowFrom": {{ openclaw_setup_owner_allow_from | to_json }}
   },
+{% if openclaw_setup_hooks_enabled | bool %}
+{#- Inbound HTTP hooks (POST /hooks/agent), used by the iPhone Siri shortcut.
+    hooks.token does not accept SecretRef objects, only a whole "${NAME}" env
+    reference, which the Gateway resolves from /etc/openclaw/secrets.env.
+    See docs/openclaw.md §6.7. #}
+  "hooks": {
+    "enabled": true,
+    "token": "${OPENCLAW_HOOKS_TOKEN}",
+    "path": "/hooks",
+    "allowedAgentIds": {{ openclaw_setup_hooks_allowed_agent_ids | to_json }},
+    "allowRequestSessionKey": false
+  },
+{% endif %}
 {% set ns = namespace(models={}, allow_models=[]) %}
 {% if openclaw_setup_claude_cli_enabled %}
 {% set ns.models = ns.models | combine({openclaw_setup_model: {"agentRuntime": {"id": "claude-cli"}}}) %}

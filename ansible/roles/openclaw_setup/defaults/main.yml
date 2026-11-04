@@ -54,6 +54,16 @@ openclaw_setup_domain: claw.farzad.tech
 openclaw_setup_avatar: ""
 
 openclaw_setup_port: 18789
+
+# Inbound HTTP hooks (/hooks/agent) are enabled only once the vaulted
+# `openclaw_hooks_token` is set (non-empty). Computed once here so openclaw.json.j2
+# (which references ${OPENCLAW_HOOKS_TOKEN}) and secrets.env.j2 (which sets it)
+# can never disagree. See docs/openclaw.md §6.7.
+openclaw_setup_hooks_enabled: "{{ (openclaw_hooks_token | default('', true)) | length > 0 }}"
+# Agents the inbound HTTP hooks may target.
+openclaw_setup_hooks_allowed_agent_ids:
+  - main
+
 openclaw_setup_ssh_key: ""
 
 # Where gog stores the OAuth client credentials once imported. Both the guard

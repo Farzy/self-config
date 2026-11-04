@@ -98,7 +98,7 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 To protect API tokens and sensitive credentials from unauthorized process access or shell environment leaks, OpenClaw isolates credentials into a restricted secrets file and applies Systemd process sandboxing:
 
 #### 1. Secrets File Isolation (`/etc/openclaw/secrets.env`)
-- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`OPENCLAW_GATEWAY_TOKEN`, `TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`, `NOTION_API_TOKEN`, `SCALEWAY_API_KEY`) are templated into `/etc/openclaw/secrets.env`, the only place on the host where the role keeps them in plaintext. There is deliberately **no `ANSIBLE_VAULT_PASSWORD`** — see [4.5](#45-no-vault-password-on-the-host). `gh` no longer keeps its own login (the PAT copy in `~/.config/gh/hosts.yml` is removed; see [6.3](#63-github-personal-access-token-pat-integration)).
+- Instead of declaring inline `Environment=` lines in unit files, sensitive variables (`OPENCLAW_GATEWAY_TOKEN`, `TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`, `NOTION_API_TOKEN`, `SCALEWAY_API_KEY`, `OPENCLAW_HOOKS_TOKEN`) are templated into `/etc/openclaw/secrets.env`, the only place on the host where the role keeps them in plaintext. There is deliberately **no `ANSIBLE_VAULT_PASSWORD`** — see [4.5](#45-no-vault-password-on-the-host). `gh` no longer keeps its own login (the PAT copy in `~/.config/gh/hosts.yml` is removed; see [6.3](#63-github-personal-access-token-pat-integration)).
 - **OpenClaw's own credential stores hold references only.** Besides `openclaw.json`, OpenClaw keeps auth profiles in SQLite (`state/openclaw.sqlite`, and a per-agent `agents/main/agent/openclaw-agent.sqlite`) and a generated `agents/main/agent/models.json`. Ansible cannot template those, so the role audits them on every converge with `openclaw secrets audit` (read-only, so it also runs in `--check` and the drift check reports residue). On findings, it fixes them the way OpenClaw documents:
   - it logs out every profile holding a plaintext key or token, plus profiles this repo does not manage (`openai:default` — no model in the config uses that provider);
   - it recreates the Claude profile `anthropic:manual` as a `tokenRef` to `CLAUDE_CODE_OAUTH_TOKEN`, from the committed plan [`files/secrets-plan.json`](../ansible/roles/openclaw_setup/files/secrets-plan.json) (references only), applied with `openclaw secrets apply`;
@@ -710,6 +710,41 @@ ssh claw "sudo bash -c '
 '"
 ```
 then redeploy.
+
+### 6.7 Inbound HTTP Hooks (iPhone Siri Shortcut)
+
+Gateway HTTP hooks let an iOS Shortcut send a dictated message straight to the agent over HTTPS (`POST https://claw.farzad.tech/hooks/agent`), without going through the Telegram app. The agent runs an isolated turn and replies on Telegram.
+
+1. **Generate and vault a dedicated token** (never reuse `OPENCLAW_GATEWAY_TOKEN`):
+   ```bash
+   cd ansible
+   openssl rand -hex 32 > /tmp/openclaw-hooks-token
+   uv run ansible-vault encrypt_string --vault-id personal@~/.ansible-personal-key --name openclaw_hooks_token "$(cat /tmp/openclaw-hooks-token)"
+   ```
+   Append the block to [ansible/vars/openclaw.yml](../ansible/vars/openclaw.yml), keep the plaintext file until the smoke test (step 3) has passed and the token is pasted into the Shortcut (step 4).
+
+2. **Deploy**. When `openclaw_hooks_token` is set (non-empty), the role:
+   - writes `OPENCLAW_HOOKS_TOKEN` to `/etc/openclaw/secrets.env` ([4.1](#41-systemd-secrets-externalization--security-sandboxing));
+   - renders `hooks` in `openclaw.json` with `token: "${OPENCLAW_HOOKS_TOKEN}"`. `hooks.token` does not accept SecretRef objects, only a whole `${NAME}` env reference;
+   - restricts targets to `openclaw_setup_hooks_allowed_agent_ids` (default `[main]`) and keeps `allowRequestSessionKey: false`, so callers cannot pick a session.
+
+   Without the variable, nothing is rendered and hooks stay disabled. nginx always rate-limits `/hooks/` (10 requests/minute per IP, burst 5, then `429`).
+
+3. **Smoke test** from any machine:
+   ```bash
+   curl -i https://claw.farzad.tech/hooks/agent \
+     -H "Authorization: Bearer $(cat /tmp/openclaw-hooks-token)" \
+     -H 'Content-Type: application/json' \
+     --data '{"message":"Hook smoke test, reply OK.","agentId":"main","channel":"telegram","to":"<telegram-chat-id>"}'
+   ```
+   Expect `200 {"ok":true,"runId":"..."}`, then the reply on Telegram.
+
+4. **iOS Shortcut**: *Dictate Text* → *Get Contents of URL* (`POST`, headers `Authorization: Bearer <token>` and `Content-Type: application/json`, JSON body `message` = Dictated Text, `agentId` = `main`, `channel` = `telegram`, `to` = the Telegram chat id) → optional *Speak Text* "Sent". Name the shortcut after the Siri phrase. Once the token is in the Shortcut, delete the plaintext copy:
+   ```bash
+   rm -f /tmp/openclaw-hooks-token
+   ```
+
+**Rotation**: re-run step 1, redeploy, and update the token in the Shortcut. Each request runs in a fresh isolated session (`hook:<uuid>`), without the main conversation history.
 
 ---
 
