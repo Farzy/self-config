@@ -63,6 +63,12 @@
 {% for extra_claude_cli_model in openclaw_setup_extra_claude_cli_models | default([]) %}
 {% set ns.models = ns.models | combine({extra_claude_cli_model: {"agentRuntime": {"id": "claude-cli"}}}) %}
 {% endfor %}
+{#- Catch-all written by `openclaw models auth login --provider anthropic
+    --method cli`; templated so a converge keeps it instead of removing it.
+    It only supplies the runtime: a Claude model must still be in
+    modelPolicy.allow below (e.g. via openclaw_setup_extra_claude_cli_models)
+    to be selectable. #}
+{% set ns.models = ns.models | combine({"anthropic/*": {"agentRuntime": {"id": "claude-cli"}}}) %}
 {% endif %}
 {% if openclaw_setup_scaleway_enabled | default(false) %}
 {% for scaleway_model_id in openclaw_setup_scaleway_reasoning_model_ids %}
