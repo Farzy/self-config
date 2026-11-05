@@ -182,11 +182,13 @@
     }
   },
 {% endif %}
+{% if openclaw_setup_version is version('2026.11', '>=') %}
   "browser": {
     "extensionRelay": {
       "allowLegacyAuth": {{ openclaw_setup_browser_relay_allow_legacy_auth | bool | to_json }}
     }
   },
+{% endif %}
   "skills": {
     "load": {
       "extraDirs": ["{{ openclaw_setup_home }}/src/agent-skills/skills"],
