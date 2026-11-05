@@ -182,6 +182,11 @@
     }
   },
 {% endif %}
+  "browser": {
+    "extensionRelay": {
+      "allowLegacyAuth": {{ openclaw_setup_browser_relay_allow_legacy_auth | bool | to_json }}
+    }
+  },
   "skills": {
     "load": {
       "extraDirs": ["{{ openclaw_setup_home }}/src/agent-skills/skills"],
