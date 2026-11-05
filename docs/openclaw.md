@@ -510,7 +510,7 @@ OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `c
    ```bash
    ssh claw "sudo openclaw-admin agent --session-key agent:main:verify --message 'reply with exactly: OK' --model anthropic/claude-sonnet-5-5 --json" \
      | python3 -c "import json,sys; r=json.load(sys.stdin)['result']; print(r['payloads'][0]['text']); print(r['meta']['systemPromptReport']['provider'])"
-   # expect: OK / claude-cli  (not gemini-3.1-pro-preview or scaleway/*)
+   # expect: OK / claude-cli  (not a google/* fallback)
    ```
    Or just send a real message through Telegram/Signal and check which model answered.
 
@@ -520,13 +520,13 @@ OpenClaw's primary model runs on Anthropic Claude, routed through the bundled `c
 
 **Allow-listing an extra model without switching the primary**: `openclaw_setup_extra_claude_cli_models` (same file, default `["anthropic/claude-opus-5-5"]`) adds entries to both the `claude-cli` `agentRuntime` mapping and `modelPolicy.allow`, so a session can be switched to Opus 5.5 on demand (e.g. for a harder task) without making it the standing primary or fallback. Both additions only take effect when `openclaw_setup_claude_cli_enabled` is `true` — with it `false`, these entries are omitted from both, so nothing ends up allow-listed without a runtime able to serve it.
 
-**Reverting to Gemini as primary**: set `openclaw_setup_model: "google/gemini-3.1-pro-preview"` and `openclaw_setup_claude_cli_enabled: false`, then redeploy. `GEMINI_API_KEY` and the `google` plugin stay wired regardless (needed for `memory.search` embeddings).
+**Reverting to Gemini as primary**: set `openclaw_setup_model: "google/gemini-4-argon"`, `openclaw_setup_claude_cli_enabled: false`, and override `openclaw_setup_model_fallbacks` (e.g. `["scaleway/glm-5.2"]`, or `[]` for none; otherwise the only fallback is the primary itself), then redeploy. `GEMINI_API_KEY` and the `google` plugin stay wired regardless (needed for `memory.search` embeddings).
 
 ### 6.5 Model Fallback Chain & Reasoning Config
 
 `agents.defaults.model` failover order and the per-model reasoning tuning are template-driven from `ansible/roles/openclaw_setup/defaults/main.yml`:
 
-* **`openclaw_setup_model_fallbacks`** (default: `["google/gemini-3.1-pro-preview", "scaleway/glm-5.2", "scaleway/qwen3.6-35b-a3b"]`) — ordered failover list rendered into `agents.defaults.model.fallbacks`, tried in order if the primary Claude model errors or rate-limits. Empty list omits the `fallbacks` key entirely.
+* **`openclaw_setup_model_fallbacks`** (default: `["google/gemini-4-argon"]`; the Scaleway models were dropped from the chain and stay selectable on demand, so a Google failure leaves no automatic fallback) — ordered failover list rendered into `agents.defaults.model.fallbacks`, tried in order if the primary Claude model errors or rate-limits. Empty list omits the `fallbacks` key entirely.
 * **`agents.defaults.models`** is built in the template (`openclaw.json.j2`, via a Jinja `namespace`/`combine`) rather than hand-authored, so it never has to choose between the Claude `agentRuntime` entry and the Scaleway reasoning params — both are merged in:
   - The primary model and every id in `openclaw_setup_extra_claude_cli_models` get `{"agentRuntime": {"id": "claude-cli"}}` when `openclaw_setup_claude_cli_enabled` is `true`.
   - Every id in **`openclaw_setup_scaleway_reasoning_model_ids`** (default: `glm-5.2`, `qwen3.6-35b-a3b`) gets `{"params": {"extra_body": {"thinking": {"type": "enabled"}, "reasoning_effort": "high"}}}` when `openclaw_setup_scaleway_enabled` is `true`. `mistral-small-3.2-24b-instruct-2506` is deliberately excluded (no extended-thinking support).

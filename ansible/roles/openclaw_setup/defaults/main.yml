@@ -75,10 +75,12 @@ openclaw_setup_gog_credentials_path: "{{ openclaw_setup_home }}/.local/share/gog
 openclaw_setup_email: farzy@farzy.org
 openclaw_setup_model: "anthropic/claude-sonnet-5-5"
 openclaw_setup_claude_cli_enabled: true
+# Newest Gemini Pro-class model the account can use (checked against the
+# Gemini models API). When openclaw_setup_scaleway_enabled is true, Scaleway
+# models stay registered and selectable on demand but are no longer automatic
+# fallbacks, so a Google failure leaves no automatic fallback.
 openclaw_setup_model_fallbacks:
-  - "google/gemini-3.1-pro-preview"
-  - "scaleway/glm-5.2"
-  - "scaleway/qwen3.6-35b-a3b"
+  - "google/gemini-4-argon"
 # Allow-listed and claude-cli-routed like the primary model, but not selected
 # by default: lets a session be switched to Opus 5.5 on demand (heavier,
 # costlier reasoning) without making it the standing primary or fallback.
