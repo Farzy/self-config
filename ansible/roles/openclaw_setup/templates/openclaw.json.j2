@@ -63,6 +63,11 @@
 {% for extra_claude_cli_model in openclaw_setup_extra_claude_cli_models | default([]) %}
 {% set ns.models = ns.models | combine({extra_claude_cli_model: {"agentRuntime": {"id": "claude-cli"}}}) %}
 {% endfor %}
+{#- Catch-all written by `openclaw models auth login --provider anthropic
+    --method cli`: Claude models not listed above (new releases, ids typed by
+    hand) also run through Claude Code instead of failing on a missing
+    Anthropic API key. Explicit entries above still win. #}
+{% set ns.models = ns.models | combine({"anthropic/*": {"agentRuntime": {"id": "claude-cli"}}}) %}
 {% endif %}
 {% if openclaw_setup_scaleway_enabled | default(false) %}
 {% for scaleway_model_id in openclaw_setup_scaleway_reasoning_model_ids %}
