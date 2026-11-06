@@ -134,7 +134,9 @@ openclaw_setup_telegram_rich_messages: true
 # Off because ~55 command-visible skills plus ~48 built-ins overflow Telegram's
 # 100-command menu (the gateway then drops commands and shortens descriptions).
 # Skills still run when typed or asked for in plain language. Set to "auto" or
-# true to bring them back to the menu.
+# true to bring them back, after trimming skills so built-ins + skills stay
+# under 100. The key exists since at least 2026.8.1, the role's minimum
+# version, so the template does not gate it on openclaw_setup_version.
 openclaw_setup_telegram_native_skill_commands: false
 
 openclaw_setup_allowed_origins:
