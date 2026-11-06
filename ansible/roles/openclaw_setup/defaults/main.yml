@@ -130,6 +130,12 @@ openclaw_setup_telegram_thread_bindings_enabled: true
 # checkboxes instead of plain-text fallbacks. Enabled by the 2026.10.5 Doctor
 # migration on claw; kept here so a converge does not revert it.
 openclaw_setup_telegram_rich_messages: true
+# channels.telegram.commands.nativeSkills: one Telegram menu entry per skill.
+# Off because ~55 command-visible skills plus ~48 built-ins overflow Telegram's
+# 100-command menu (the gateway then drops commands and shortens descriptions).
+# Skills still run when typed or asked for in plain language. Set to "auto" or
+# true to bring them back to the menu.
+openclaw_setup_telegram_native_skill_commands: false
 
 openclaw_setup_allowed_origins:
   - "https://{{ openclaw_setup_domain }}"
