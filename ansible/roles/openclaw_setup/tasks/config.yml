@@ -22,6 +22,17 @@
       (rendered as channels.telegram.allowFrom/groupAllowFrom); put owner ids from
       other channels in openclaw_setup_owner_allow_from instead.
 
+- name: Assert the Telegram nativeSkills setting is a boolean or "auto"
+  ansible.builtin.assert:
+    that:
+      - >-
+        openclaw_setup_telegram_native_skill_commands is boolean
+        or openclaw_setup_telegram_native_skill_commands == "auto"
+    fail_msg: >-
+      openclaw_setup_telegram_native_skill_commands must be true, false or "auto"
+      (rendered as channels.telegram.commands.nativeSkills); a string such as
+      "false" passes the JSON syntax check but the gateway schema rejects it.
+
 - name: Create OpenClaw config directory
   ansible.builtin.file:
 

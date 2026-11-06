@@ -162,7 +162,10 @@
         "enabled": {{ openclaw_setup_telegram_thread_bindings_enabled | to_json }}
       },
       "groupAllowFrom": {{ openclaw_setup_telegram_allow_from | to_json }},
-      "richMessages": {{ openclaw_setup_telegram_rich_messages | to_json }}
+      "richMessages": {{ openclaw_setup_telegram_rich_messages | to_json }},
+      "commands": {
+        "nativeSkills": {{ openclaw_setup_telegram_native_skill_commands | to_json }}
+      }
     }
 {% endif %}
   },
