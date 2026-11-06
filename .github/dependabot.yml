@@ -30,8 +30,8 @@ updates:
     # applies cooldown to version updates only — security updates are never
     # delayed by it.
     cooldown:
+      # semver-major-days is not supported for this ecosystem.
       default-days: 7
-      semver-major-days: 14
     groups:
       security-updates:
         applies-to: "security-updates"
@@ -72,8 +72,8 @@ updates:
     # applies cooldown to version updates only — security updates are never
     # delayed by it.
     cooldown:
+      # semver-major-days is not supported for this ecosystem.
       default-days: 7
-      semver-major-days: 14
     groups:
       security-updates:
         applies-to: "security-updates"
