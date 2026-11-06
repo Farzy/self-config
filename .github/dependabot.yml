@@ -52,8 +52,9 @@ updates:
     # applies cooldown to version updates only — security updates are never
     # delayed by it.
     cooldown:
+      # semver-major-days is rejected by Dependabot's config validation for
+      # this ecosystem, so major bumps share the 7-day default cooldown.
       default-days: 7
-      semver-major-days: 14
     groups:
       security-updates:
         applies-to: "security-updates"
