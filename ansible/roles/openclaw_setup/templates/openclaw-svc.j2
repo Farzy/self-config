@@ -31,6 +31,9 @@
 #   help                      this list (no root needed)
 #   logs [journalctl args]    gateway journal, e.g. `logs -f`, `logs --since -1h`
 #                             (no args: the last 100 lines; any args replace that)
+#                             Use options to filter (`-p err`, `--since`, `-g`):
+#                             a bare match such as PRIORITY=3 would only apply
+#                             to the user manager's lines.
 #
 # Doctor stop/fix/start sequence:
 #   sudo openclaw-svc stop && sudo openclaw-admin doctor --fix && sudo openclaw-svc start

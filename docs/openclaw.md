@@ -736,7 +736,7 @@ OpenClaw workspace skills are automatically provisioned via Ansible:
 > openclaw-gateway` asks the system manager and answers "could not be found". The
 > root-only wrapper **`sudo openclaw-svc <command>`** (`/usr/local/sbin/openclaw-svc`,
 > templated from `openclaw-svc.j2`) does it for you: `status` (the default), `start`,
-> `stop`, `restart`, `is-active`, `show [-p …]`, `cat` (the unit file) and
+> `stop`, `restart`, `is-active`, `show [-p …]`, `cat` (the unit file and its drop-ins) and
 > `logs [journalctl args]` (last 100 lines by default); extra arguments go to
 > `systemctl` or `journalctl`. It only drives the service; `openclaw-svc help` lists
 > the commands, without root. Every `openclaw` CLI command goes
@@ -752,7 +752,7 @@ OpenClaw workspace skills are automatically provisioned via Ansible:
   ```bash
   ssh -t claw "sudo openclaw-svc logs -f"
   ```
-  It shows the gateway's own lines and the user manager's lines about the unit (`Started`, `Main process exited`, `Failed with result`, `Scheduled restart job`, which you need when debugging a crash loop), both pinned to `claw`'s uid: `sudo journalctl _UID=1001 _SYSTEMD_USER_UNIT=openclaw-gateway.service + _UID=1001 USER_UNIT=openclaw-gateway.service -f`. That is what `journalctl --user-unit=…` does for the calling user, but as root it filters on root's own uid and shows nothing, and `journalctl -M claw@` needs `systemd-machined`, which isn't installed. As `claw` itself, `journalctl --user -u openclaw-gateway -f` works.
+  It shows the gateway's own lines and the user manager's lines about the unit (`Started`, `Main process exited`, `Failed with result`, `Scheduled restart job`, which you need when debugging a crash loop), both pinned to `claw`'s uid: `sudo journalctl _UID=$(id -u claw) _SYSTEMD_USER_UNIT=openclaw-gateway.service + _UID=$(id -u claw) USER_UNIT=openclaw-gateway.service -f`. That is what `journalctl --user-unit=…` does for the calling user, but as root it filters on root's own uid and shows nothing, and `journalctl -M claw@` needs `systemd-machined`, which isn't installed. As `claw` itself, `journalctl --user -u openclaw-gateway -f` works.
 * **Run OpenClaw Deep Diagnostics**:
   ```bash
   ssh claw "sudo openclaw-admin status --deep"
