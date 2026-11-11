@@ -11,6 +11,17 @@
     mode: '0755'
     validate: bash -n %s
 
+# Root's shortcut to the gateway's *user* unit (status, start/stop/restart,
+# logs), which a plain `systemctl` cannot see. See docs/openclaw.md §8.
+- name: Deploy openclaw-svc wrapper for managing the gateway user unit as root
+  ansible.builtin.template:
+    src: openclaw-svc.j2
+    dest: /usr/local/sbin/openclaw-svc
+    owner: root
+    group: root
+    mode: '0755'
+    validate: bash -n %s
+
 - name: Assert the pinned openclaw version tolerates PrivateUsers=true in the gateway unit
   ansible.builtin.assert:
     that:

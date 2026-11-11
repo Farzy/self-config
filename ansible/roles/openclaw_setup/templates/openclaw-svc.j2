@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+#
+# Manages the OpenClaw gateway from root without remembering where it lives.
+#
+# The gateway is not a system service: {{ openclaw_setup_systemd_unit }} is a
+# systemd *user* unit running in {{ openclaw_setup_user }}'s own service manager
+# (user@<uid>.service, kept up at boot by lingering). A plain
+# `systemctl status {{ openclaw_setup_systemd_unit }}` asks the system manager
+# and answers "could not be found". This wrapper runs the right command instead:
+#   * service actions go to that user manager: `systemctl --user -M {{ openclaw_setup_user }}@ ...`
+#   * logs use the journal field match _SYSTEMD_USER_UNIT=. As root,
+#     `journalctl --user-unit=` also filters on the caller's own uid and shows
+#     nothing, and `journalctl -M {{ openclaw_setup_user }}@` needs systemd-machined,
+#     which is not installed.
+#
+# It only drives the service. Run `openclaw` CLI commands (doctor, update,
+# status --deep, ...) through `sudo openclaw-admin <cmd>`, which gives them the
+# service environment. See docs/openclaw.md §8.
+#
+# Usage: sudo openclaw-svc <command> [args...]
+#   status [systemctl args]   unit status and its process tree (default command)
+#   start | stop | restart    service lifecycle
+#   is-active                 prints active/inactive; exit code 0 only if active
+#   show [systemctl args]     unit properties, e.g. `show -p MainPID --value`
+#   cat                       the unit file as systemd loaded it
+#   logs [journalctl args]    gateway journal, e.g. `logs -f`, `logs --since -1h`
+#                             (default: the last 100 lines)
+#
+# Doctor stop/fix/start sequence:
+#   sudo openclaw-svc stop && sudo openclaw-admin doctor --fix && sudo openclaw-svc start
+
+set -euo pipefail
+
+readonly UNIT="{{ openclaw_setup_systemd_unit }}"
+readonly OWNER="{{ openclaw_setup_user }}"
+
+usage() {
+  # Print the Usage block of the header comment, up to its first empty "#" line.
+  awk '/^# Usage:/{p=1} p&&/^#$/{exit} p{sub(/^# ?/, ""); print}' "$0"
+}
+
+if [[ ${EUID} -ne 0 ]]; then
+  echo "openclaw-svc must be run as root (sudo openclaw-svc ...): it reaches the ${OWNER} user manager" >&2
+  exit 1
+fi
+
+cmd="${1:-status}"
+[[ $# -gt 0 ]] && shift
+
+# User-manager form of systemctl, for the gateway unit.
+svc() {
+  systemctl --user --machine="${OWNER}@" "$@"
+}
+
+case "${cmd}" in
+  status) svc status "${UNIT}" "$@" ;;
+  start | stop | restart) svc "${cmd}" "${UNIT}" ;;
+  is-active) svc is-active "${UNIT}" ;;
+  show) svc show "${UNIT}" "$@" ;;
+  cat) svc cat "${UNIT}" ;;
+  logs)
+    [[ $# -eq 0 ]] && set -- -n 100
+    exec journalctl "_SYSTEMD_USER_UNIT=${UNIT}" "$@"
+    ;;
+  -h | --help | help) usage ;;
+  *)
+    echo "openclaw-svc: unknown command '${cmd}'" >&2
+    usage >&2
+    exit 2
+    ;;
+esac

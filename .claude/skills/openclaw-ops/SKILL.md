@@ -114,7 +114,8 @@ ansible-playbook playbooks/openclaw.yml -v --diff -t fastmail_mcp
   restart via the role's handlers — check the play recap (`changed=`) and, if
   in doubt, confirm with `ssh claw@claw journalctl --user -u openclaw-gateway -n 50`
   (or `journalctl -u fastmail-mcp` for that role); use `ssh debian@claw sudo
-  systemctl --user -M claw@ status openclaw-gateway` if you need more than the
-  journal. Run `openclaw` CLI commands as `ssh debian@claw sudo openclaw-admin …`.
+  openclaw-svc status` (or `openclaw-svc logs`, `restart`, ...) if you need more
+  than the journal: the gateway is a systemd *user* unit, which a plain
+  `systemctl` as root does not see. Run `openclaw` CLI commands as `ssh debian@claw sudo openclaw-admin …`.
 - Always run the matching `--check --diff` dry run first unless the user has
   explicitly said to apply directly.
