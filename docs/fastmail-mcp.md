@@ -58,7 +58,7 @@ The installation version is managed by the default variable `fastmail_mcp_versio
 
 ```yaml
 fastmail_mcp_version: "v1.13.4"
-fastmail_mcp_supergateway_version: "4.2.1"
+fastmail_mcp_supergateway_version: "4.2.2"
 ```
 
 To upgrade `fastmail-mcp` to a new release:
