@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+#
+# Manages the OpenClaw gateway from root without remembering where it lives.
+#
+# The gateway is not a system service: {{ openclaw_setup_systemd_unit }} is a
+# systemd *user* unit running in {{ openclaw_setup_user }}'s own service manager
+# (user@<uid>.service, kept up at boot by lingering). A plain
+# `systemctl status {{ openclaw_setup_systemd_unit }}` asks the system manager
+# and answers "could not be found". This wrapper runs the right command instead:
+#   * service actions go to that user manager: `systemctl --user -M {{ openclaw_setup_user }}@ ...`
+#   * logs match the gateway's own lines (_SYSTEMD_USER_UNIT=) OR the user
+#     manager's lines about the unit (USER_UNIT=: Started, Main process exited,
+#     Failed with result, Scheduled restart job...), both pinned to
+#     {{ openclaw_setup_user }}'s uid. That is what `journalctl --user-unit=`
+#     does for the calling user; as root it filters on root's own uid and shows
+#     nothing, and `journalctl -M {{ openclaw_setup_user }}@` needs
+#     systemd-machined, which is not installed.
+#
+# It only drives the service. Run `openclaw` CLI commands (doctor, update,
+# status --deep, ...) through `sudo openclaw-admin <cmd>`, which gives them the
+# service environment. See docs/openclaw.md §8.
+#
+# Usage: sudo openclaw-svc <command> [args...]
+#   status [systemctl args]   unit status and its process tree (default command)
+#   start | stop | restart    service lifecycle (extra args go to systemctl,
+#                             e.g. `restart --no-block`)
+#   is-active                 prints active/inactive; exit code 0 only if active
+#   show [systemctl args]     unit properties, e.g. `show -p MainPID --value`
+#   cat                       the unit file and its drop-ins, as systemd loaded them
+#   help                      this list (no root needed)
+#   logs [journalctl args]    gateway journal, e.g. `logs -f`, `logs --since -1h`
+#                             (no args: the last 100 lines; any args replace that)
+#                             Use options to filter (`-p err`, `--since`, `-g`):
+#                             a bare match such as PRIORITY=3 would only apply
+#                             to the user manager's lines.
+#
+# Doctor stop/fix/start sequence:
+#   sudo openclaw-svc stop && sudo openclaw-admin doctor --fix && sudo openclaw-svc start
+
+set -euo pipefail
+
+readonly UNIT="{{ openclaw_setup_systemd_unit }}"
+readonly OWNER="{{ openclaw_setup_user }}"
+
+usage() {
+  # Print the Usage block of the header comment, up to its first empty "#" line.
+  awk '/^# Usage:/{p=1} p&&/^#$/{exit} p{sub(/^# ?/, ""); print}' "$0"
+}
+
+cmd="${1:-status}"
+[[ $# -gt 0 ]] && shift
+
+# Printing help needs no privileges.
+case "${cmd}" in
+  -h | --help | help)
+    usage
+    exit 0
+    ;;
+esac
+
+if [[ ${EUID} -ne 0 ]]; then
+  echo "openclaw-svc must be run as root (sudo openclaw-svc ...): it reaches the ${OWNER} user manager" >&2
+  exit 1
+fi
+
+# User-manager form of systemctl, for the gateway unit.
+svc() {
+  systemctl --user --machine="${OWNER}@" "$@"
+}
+
+case "${cmd}" in
+  status) svc status "${UNIT}" "$@" ;;
+  start | stop | restart | is-active | show) svc "${cmd}" "${UNIT}" "$@" ;;
+  cat)
+    # `systemctl cat` refuses with --machine ("Cannot remotely cat units"), so
+    # print the files the user manager reports as loaded.
+    fragment="$(svc show "${UNIT}" -p FragmentPath --value)"
+    read -r -a dropins <<<"$(svc show "${UNIT}" -p DropInPaths --value)"
+    for f in "${fragment}" "${dropins[@]}"; do
+      [[ -n ${f} ]] || continue
+      printf '# %s\n' "${f}"
+      cat -- "${f}"
+      echo
+    done
+    ;;
+  logs)
+    [[ $# -eq 0 ]] && set -- -n 100
+    uid="$(id -u "${OWNER}")"
+    # Two match groups ORed by "+": the gateway's own lines, and the user
+    # manager's lines about the unit.
+    exec journalctl "_UID=${uid}" "_SYSTEMD_USER_UNIT=${UNIT}" + \
+      "_UID=${uid}" "USER_UNIT=${UNIT}" "$@"
+    ;;
+  *)
+    echo "openclaw-svc: unknown command '${cmd}'" >&2
+    usage >&2
+    exit 2
+    ;;
+esac

@@ -90,6 +90,7 @@ uv run ansible-playbook --diff --vault-id personal@~/.ansible-personal-key playb
 * **Configuration Template**: [ansible/roles/openclaw_setup/templates/openclaw.json.j2](../ansible/roles/openclaw_setup/templates/openclaw.json.j2)
 * **Systemd User Unit Template**: [ansible/roles/openclaw_setup/templates/openclaw-gateway.service.j2](../ansible/roles/openclaw_setup/templates/openclaw-gateway.service.j2)
 * **Admin Wrapper Template**: [ansible/roles/openclaw_setup/templates/openclaw-admin.j2](../ansible/roles/openclaw_setup/templates/openclaw-admin.j2)
+* **Service Wrapper Template**: [ansible/roles/openclaw_setup/templates/openclaw-svc.j2](../ansible/roles/openclaw_setup/templates/openclaw-svc.j2)
 * **Secrets Environment Template**: [ansible/roles/openclaw_setup/templates/secrets.env.j2](../ansible/roles/openclaw_setup/templates/secrets.env.j2)
 * **Nginx SSL Proxy Template**: [ansible/roles/openclaw_setup/templates/nginx.conf.j2](../ansible/roles/openclaw_setup/templates/nginx.conf.j2)
 
@@ -731,19 +732,27 @@ OpenClaw workspace skills are automatically provisioned via Ansible:
 > journal directly via its `systemd-journal` group membership (see §3).
 >
 > The gateway is a systemd **user** unit of `claw`, so root reaches it through that
-> user's manager: `systemctl --user -M claw@ …`. Every `openclaw` CLI command goes
+> user's manager: `systemctl --user -M claw@ …`. A plain `sudo systemctl status
+> openclaw-gateway` asks the system manager and answers "could not be found". The
+> root-only wrapper **`sudo openclaw-svc <command>`** (`/usr/local/sbin/openclaw-svc`,
+> templated from `openclaw-svc.j2`) does it for you: `status` (the default), `start`,
+> `stop`, `restart`, `is-active`, `show [-p …]`, `cat` (the unit file and its drop-ins) and
+> `logs [journalctl args]` (last 100 lines by default); extra arguments go to
+> `systemctl` or `journalctl`. It only drives the service; `openclaw-svc help` lists
+> the commands, without root. Every `openclaw` CLI command goes
 > through `sudo openclaw-admin …` (see [§4.1](#41-systemd-secrets-externalization--security-sandboxing)) —
 > a plain `sudo -u claw openclaw …` no longer finds the binary or the service environment.
 
 * **Check Systemd Status**:
   ```bash
-  ssh claw "sudo systemctl --user -M claw@ status openclaw-gateway"
+  ssh claw "sudo openclaw-svc status"
   ```
+  Same as `sudo systemctl --user -M claw@ status openclaw-gateway`.
 * **View Live Gateway Logs**:
   ```bash
-  ssh claw "sudo journalctl _SYSTEMD_USER_UNIT=openclaw-gateway.service -f"
+  ssh -t claw "sudo openclaw-svc logs -f"
   ```
-  Use the field match: as root, `journalctl --user-unit=…` also filters on the caller's own uid and shows nothing. As `claw` itself, `journalctl --user -u openclaw-gateway -f` works.
+  It shows the gateway's own lines and the user manager's lines about the unit (`Started`, `Main process exited`, `Failed with result`, `Scheduled restart job`, which you need when debugging a crash loop), both pinned to `claw`'s uid: `sudo journalctl _UID=$(id -u claw) _SYSTEMD_USER_UNIT=openclaw-gateway.service + _UID=$(id -u claw) USER_UNIT=openclaw-gateway.service -f`. That is what `journalctl --user-unit=…` does for the calling user, but as root it filters on root's own uid and shows nothing, and `journalctl -M claw@` needs `systemd-machined`, which isn't installed. As `claw` itself, `journalctl --user -u openclaw-gateway -f` works.
 * **Run OpenClaw Deep Diagnostics**:
   ```bash
   ssh claw "sudo openclaw-admin status --deep"
@@ -755,7 +764,7 @@ OpenClaw workspace skills are automatically provisioned via Ansible:
   ```
 * **Restart OpenClaw Gateway**:
   ```bash
-  ssh claw "sudo systemctl --user -M claw@ restart openclaw-gateway"
+  ssh claw "sudo openclaw-svc restart"
   ```
 * **Display Dashboard URL on Headless Servers (`--no-open`)**:
   Running `openclaw dashboard` on a remote server attempts to invoke desktop GUI helpers (`xdg-open`) and will delay ~10–12 seconds on headless systems. Pass `--no-open` to output the Gateway URL and token details instantly:
@@ -765,9 +774,9 @@ OpenClaw workspace skills are automatically provisioned via Ansible:
 * **Recovering from an `openclaw.json` schema migration crash-loop**:
   An OpenClaw version bump can ship a breaking `openclaw.json` schema change (e.g. the 2026.8.1 release moved `agents.list` → `agents.entries`, `agents.defaults.memorySearch` → top-level `memory.search`, and flattened `channels.<name>.cliPath` under a `transport` object). If the live config still uses the old shape, the gateway can crash-loop on startup. `openclaw doctor --fix` auto-migrates the on-disk config to the new schema and writes timestamped `openclaw.json.bak.*` snapshots before each rewrite — diff those against `ansible/roles/openclaw_setup/templates/openclaw.json.j2` to confirm the Ansible template matches. **Stop the systemd unit first**: `doctor --fix` refuses to touch the shared state database while it detects the gateway still owns it (`Doctor could not enter maintenance. Error: Gateway service ownership or shutdown could not be verified.`) — a bare `kill`/crash-loop restart loop doesn't count as a clean stop in its eyes, only `systemctl stop` does:
   ```bash
-  ssh claw "sudo systemctl --user -M claw@ stop openclaw-gateway"
+  ssh claw "sudo openclaw-svc stop"
   ssh claw "sudo openclaw-admin doctor --fix"
-  ssh claw "sudo systemctl --user -M claw@ start openclaw-gateway"
+  ssh claw "sudo openclaw-svc start"
   ```
   Run the repair itself through `openclaw-admin` (see [§4.1](#41-systemd-secrets-externalization--security-sandboxing)), not a bare `sudo -u claw openclaw doctor --fix` — the bare form sees none of the service's environment and `doctor` misreports perfectly normal config as broken (missing API keys, `NODE_COMPILE_CACHE`, `OPENCLAW_NO_RESPAWN`, ...). This still works normally even with `openclaw_setup_config_readonly: true` ([§4.3](#43-config-writes--openclaw_config_readonly)): `OPENCLAW_CONFIG_READONLY` is only set on the systemd unit's own `Environment=` line, never in `secrets.env`, so `openclaw-admin` never inherits it — no need to toggle anything off first.
 
