@@ -60,7 +60,7 @@ resource "google_dns_record_set" "dmarc" {
   managed_zone = google_dns_managed_zone.farzy-org.name
   name         = "_dmarc.${google_dns_managed_zone.farzy-org.dns_name}"
   rrdatas = [
-    "\"v=DMARC1; p=none; pct=100;\"",
+    "\"v=DMARC1; p=none; rua=mailto:dmarc-reports@farzy.org;\"",
   ]
   ttl  = 10800
   type = "TXT"
