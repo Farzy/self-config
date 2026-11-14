@@ -36,7 +36,7 @@ resource "scaleway_instance_server" "openclaw_server" {
 
   root_volume {
     delete_on_termination = false
-    size_in_gb            = 20
+    size_in_gb            = 25
   }
 
   security_group_id = scaleway_instance_security_group.openclaw_sg.id
