@@ -151,6 +151,14 @@ openclaw_setup_memory_search_extra_paths:
 openclaw_setup_dreaming_enabled: true
 openclaw_setup_memory_wiki_enabled: true
 
+# Knowledge (evidence-backed Markdown vault, browsable in the Control UI) as the
+# memory provider: rendered as plugins.slots.memory = "knowledge" when the pinned
+# version is >= 2026.11.10. It REPLACES memory-core as the active memory provider
+# (only one plugin owns the slot): dreaming, memory_search/memory_get, the
+# Gemini embeddings and extraPaths search stop being used. memory-core data is
+# left intact, and false restores it. See docs/openclaw.md §4.2.
+openclaw_setup_knowledge_enabled: true
+
 # Blocks OpenClaw's own config writers (setup, doctor --fix, plugin
 # install/update/enable/disable, `models auth paste-token`, mutating `update`
 # flows) on the systemd-managed gateway process, via OPENCLAW_CONFIG_READONLY=1
