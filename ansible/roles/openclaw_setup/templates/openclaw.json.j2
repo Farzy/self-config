@@ -140,7 +140,15 @@
         "enabled": true
       }
 {% endif %}
+    }{% if openclaw_setup_knowledge_enabled | bool and openclaw_setup_version is version('2026.11.10', '>=') %},
+{#- Knowledge (evidence-backed Markdown vault) as the memory provider. Selecting it
+    replaces memory-core: no dreaming, no memory_search/memory_get, no embeddings
+    (see docs/openclaw.md §4.2). memory-core data is left intact, and switching
+    back is `openclaw_setup_knowledge_enabled: false`. #}
+    "slots": {
+      "memory": "knowledge"
     }
+{% endif %}
   },
   "channels": {
     "signal": {
